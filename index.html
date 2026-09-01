@@ -72,7 +72,24 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .Placeholder{padding-top:80px;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding-left:24px;padding-right:24px;}
 .Placeholder-text{font-size:14px;color:var(--gray-600);max-width:280px;line-height:1.5;}
 
-/* ── Private (hidden, 7-tap logo access) ── */
+/* ── Schedule tab: accordion buttons + time off ── */
+.Sched-wrap{padding-top:80px;min-height:100vh;padding-left:20px;padding-right:20px;padding-bottom:32px;}
+.Sched-calendar-placeholder{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px 18px;text-align:center;color:var(--gray-600);font-size:13px;margin-bottom:16px;}
+.Accordion{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden;}
+.Accordion-head{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.Accordion-head-title{font-family:'Bebas Neue',system-ui,sans-serif;font-size:15px;letter-spacing:0.06em;}
+.Accordion-chevron{font-size:12px;color:var(--gray-400);transition:transform 0.15s;}
+.Accordion-body{padding:0 16px 16px;border-top:1px solid var(--gray-100);}
+.addnew-link{display:block;padding:12px 0;color:var(--red);font-weight:700;font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.TO-entry{border-bottom:1px solid var(--gray-100);padding:10px 0;font-size:13px;}
+.TO-entry-name{font-weight:700;}
+.TO-entry-meta{color:var(--gray-600);font-size:12px;margin-top:2px;}
+.TO-form{padding:8px 0;}
+.TO-roster{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.date-input{width:100%;padding:10px;border:2px solid var(--gray-200);border-radius:8px;font-size:14px;margin-bottom:12px;}
+.shift-options{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
+.shift-opt{border:2px solid var(--gray-200);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.shift-opt.selected{border-color:var(--red);background:#FBEAE8;font-weight:700;}
 .Priv-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;}
 .Priv-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-top:16px;}
 .Priv-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
@@ -117,7 +134,6 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const LOCATIONS = [
   { key: "westmont", name: "Westmont", pin: "2220" },
-  { key: "darien",   name: "Darien",   pin: "4788" },
 ];
 
 const ROSTERS = {
@@ -166,7 +182,7 @@ function LockScreen({ location, onUnlock, onBack }) {
 
   return h("div", { className: "Lock" },
     h("div", { className: "Lock-icon" }, "\uD83D\uDD12"),
-    h("div", { className: "Lock-title" }, location.name),
+    h("div", { className: "Lock-title" }, location.name + " Scheduling"),
     h("div", { className: "Lock-sub" }, "Enter PIN to continue"),
     h("input", {
       type: "text", className: "pin-input", value: pin, placeholder: "\u2022 \u2022 \u2022 \u2022",
@@ -355,9 +371,120 @@ function LocationGrid({ location, person, onHome, onPickSection, onLogoTap, onCh
   );
 }
 
+function TimeOffPanel({ location }) {
+  const [adding, setAdding] = useState(false);
+  const [name, setName] = useState(null);
+  const [date, setDate] = useState("");
+  const [shift, setShift] = useState(null);
+  const [status, setStatus] = useState("");
+  const [list, setList] = useState(null);
+  const roster = ROSTERS[location.key] || [];
+
+  function loadList() {
+    const today = new Date();
+    const start = today.toISOString().slice(0, 10);
+    const end = new Date(today.getTime() + 14 * 86400000).toISOString().slice(0, 10);
+    fetch(SUPABASE_URL + '/rest/v1/time_off_requests?location=eq.' + location.key +
+      '&request_date=gte.' + start + '&request_date=lte.' + end + '&select=name,request_date,shift_type&order=request_date', {
+      headers: sbHeaders()
+    })
+      .then(r => r.json())
+      .then(rows => setList(Array.isArray(rows) ? rows : []))
+      .catch(() => setList([]));
+  }
+
+  React.useEffect(() => { loadList(); }, []);
+
+  function submit() {
+    if (!name) { setStatus("Pick who this is for."); return; }
+    if (!date) { setStatus("Pick a date."); return; }
+    if (!shift) { setStatus("Pick full day, morning, or night."); return; }
+    setStatus("Saving\u2026");
+    fetch(SUPABASE_URL + '/rest/v1/time_off_requests', {
+      method: 'POST',
+      headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+      body: JSON.stringify([{ location: location.key, name, request_date: date, shift_type: shift }])
+    })
+      .then(r => { if (!r.ok) throw new Error(); setStatus(""); setAdding(false); setName(null); setDate(""); setShift(null); loadList(); })
+      .catch(() => setStatus("Couldn't save. Try again."));
+  }
+
+  const shiftLabel = { full: "Full Day", morning: "Half Day \u2014 Morning", night: "Half Day \u2014 Night" };
+
+  return h("div", null,
+    !adding && h("div", { className: "addnew-link", onClick: () => setAdding(true) }, "+ Add New Time Off Request"),
+    adding && h("div", { className: "TO-form" },
+      h("div", { className: "Msg-label" }, "Who"),
+      h("div", { className: "TO-roster" },
+        roster.map(n => h("div", {
+          key: n, className: "Chip" + (name === n ? " selected" : ""), onClick: () => setName(n)
+        }, n))
+      ),
+      h("div", { className: "Msg-label" }, "Date"),
+      h("input", { type: "date", className: "date-input", value: date, onChange: e => setDate(e.target.value) }),
+      h("div", { className: "Msg-label" }, "Which shift"),
+      h("div", { className: "shift-options" },
+        ["full", "morning", "night"].map(s => h("div", {
+          key: s, className: "shift-opt" + (shift === s ? " selected" : ""), onClick: () => setShift(s)
+        }, shiftLabel[s]))
+      ),
+      h("button", { className: "send-btn", onClick: submit }, "SAVE REQUEST"),
+      h("div", { className: "Msg-status" }, status),
+      h("div", { className: "back-link", onClick: () => setAdding(false) }, "\u2190 Cancel")
+    ),
+    h("div", { className: "Msg-label" }, "Next 2 Weeks"),
+    list === null && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026"),
+    list && list.length === 0 && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No time off requested for the next two weeks."),
+    list && list.map((r, i) => h("div", { key: i, className: "TO-entry" },
+      h("div", { className: "TO-entry-name" }, r.name),
+      h("div", { className: "TO-entry-meta" }, r.request_date, " \u2014 ", shiftLabel[r.shift_type] || r.shift_type)
+    ))
+  );
+}
+
+function ScheduleScreen({ location, onHome, onBackToGrid, onLogoTap }) {
+  const [open, setOpen] = useState(null);
+
+  function toggle(key) {
+    setOpen(prev => prev === key ? null : key);
+  }
+
+  return h("div", null,
+    h(LocationHeader, { location, onHome, onLogoTap }),
+    h("div", { className: "Sched-wrap" },
+      h("div", { className: "Sched-calendar-placeholder" }, "Calendar goes here next."),
+      h("div", { className: "Accordion" },
+        h("div", { className: "Accordion-head", onClick: () => toggle("issues") },
+          h("div", { className: "Accordion-head-title" }, "ISSUES"),
+          h("div", { className: "Accordion-chevron" }, open === "issues" ? "\u25B2" : "\u25BC")
+        ),
+        open === "issues" && h("div", { className: "Accordion-body" },
+          h("div", { style: { fontSize: 13, color: "var(--gray-600)", padding: "12px 0" } },
+            "Error checking for this week and next week goes here next.")
+        )
+      ),
+      h("div", { className: "Accordion" },
+        h("div", { className: "Accordion-head", onClick: () => toggle("timeoff") },
+          h("div", { className: "Accordion-head-title" }, "TIME OFF REQUESTS"),
+          h("div", { className: "Accordion-chevron" }, open === "timeoff" ? "\u25B2" : "\u25BC")
+        ),
+        open === "timeoff" && h("div", { className: "Accordion-body" },
+          h(TimeOffPanel, { location })
+        )
+      ),
+      h("div", { style: { textAlign: "center", marginTop: 16 } },
+        h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
+      )
+    )
+  );
+}
+
 function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogoTap }) {
   if (section.key === "messages") {
     return h(MessagesScreen, { location, person, onHome, onBackToGrid, onLogoTap });
+  }
+  if (section.key === "schedule") {
+    return h(ScheduleScreen, { location, onHome, onBackToGrid, onLogoTap });
   }
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
@@ -413,7 +540,7 @@ function PrivateScreen({ location, onHome, onBackToGrid }) {
 }
 
 function App() {
-  const [screen, setScreen] = useState({ view: "home" });
+  const [screen, setScreen] = useState({ view: "lock", location: LOCATIONS[0] });
   const logoTapCount = useRef(0);
   const logoTapTimer = useRef(null);
 
