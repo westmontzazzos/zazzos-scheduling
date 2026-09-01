@@ -1752,6 +1752,122 @@ function RunSheetsScreen({ location, onHome, onBackToGrid, onLogoTap }) {
   );
 }
 
+function parseFOHHours(entry, di, role) {
+  if (!entry || !Array.isArray(entry)) return null;
+  var start = entry[0], end = entry[1];
+  if (!start) return null;
+  var isFriSat = (di === 4 || di === 5);
+  var st = hitlistHour(start, di);
+  if (st === null) return null;
+  var isAM = st < 12;
+  var isClose = (end !== null && end !== undefined && String(end).trim().toLowerCase().match(/^c[l]?$|^close$/));
+  var hasEnd = (end !== null && end !== undefined && String(end).trim() !== '');
+  var en;
+  var r = (role || '').toLowerCase();
+  if (r === 'servers' || r === 'server') {
+    if (isClose) { en = isFriSat ? 22.25 : 21.25; }
+    else if (!hasEnd) { en = isAM ? (isFriSat ? 23.25 : 22.25) : (isFriSat ? 20.5 : 19.5); }
+    else { en = hitlistHour(end, di); }
+  } else if (r === 'cashiers' || r === 'cashier' || r === 'hosts' || r === 'host') {
+    if (isClose) { en = isFriSat ? 21.0 : 19.0; }
+    else if (!hasEnd) { en = isFriSat ? 20.0 : 19.0; }
+    else { en = hitlistHour(end, di); }
+  } else if (r === 'bartenders' || r === 'bartender') {
+    if (!hasEnd) { en = isFriSat ? 23.25 : 22.25; }
+    else { en = hitlistHour(end, di); }
+  } else {
+    if (isClose || !hasEnd) { en = isFriSat ? 23.25 : 22.25; }
+    else { en = hitlistHour(end, di); }
+  }
+  if (en === null || en <= st) return null;
+  return { st: st, en: en };
+}
+
+function HeatMapScreen({ location, onHome, onBackToGrid, onLogoTap }) {
+  const [weekStart, setWeekStart] = useState(fmtISO(mondayOf(new Date())));
+  const [dayIdx, setDayIdx] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [boh, setBoh] = useState({});
+  const [foh, setFoh] = useState({});
+
+  React.useEffect(() => {
+    setLoading(true);
+    fetchWeekRow(weekStart).then(rec => {
+      let bohObj = {}, fohObj = {};
+      if (rec) {
+        try { bohObj = rec.boh_data ? JSON.parse(rec.boh_data) : {}; } catch (e) {}
+        try { fohObj = rec.foh_data ? JSON.parse(rec.foh_data) : {}; } catch (e) {}
+      }
+      setBoh(bohObj); setFoh(fohObj); setLoading(false);
+    });
+  }, [weekStart]);
+
+  const HOURS = [10,11,12,13,14,15,16,17,18,19,20,21,22];
+  function fmtH(h) { const ampm = h >= 12 ? 'PM' : 'AM'; const dh = h > 12 ? h - 12 : (h === 0 ? 12 : h); return dh + ampm; }
+  function getShiftHours(start, end) { const hrs = []; for (let h = Math.ceil(start); h < end; h++) hrs.push(h); return hrs; }
+
+  const grid = {};
+  HOURS.forEach(h => { grid[h] = { count: 0, cost: 0 }; });
+  const BOH_CATS_HM = ['MANAGERS','PIZZA','KITCHEN','PREP','BUS','DISH'];
+  BOH_CATS_HM.forEach(cat => {
+    Object.entries(boh[cat] || {}).forEach(([name, days]) => {
+      if (SALARIED_EMPLOYEES[name]) return;
+      const rate = RATES[name] || 9;
+      const sh = parseBOHHours(days && days[dayIdx], dayIdx);
+      if (!sh) return;
+      getShiftHours(sh.st, sh.en).forEach(h => { if (grid[h]) { grid[h].count++; grid[h].cost += rate; } });
+    });
+  });
+  const FOH_RATES = { SERVERS: 9, BARTENDERS: 9, CASHIERS: 15, HOSTS: 15 };
+  Object.keys(FOH_RATES).forEach(cat => {
+    Object.entries(foh[cat] || {}).forEach(([name, days]) => {
+      const sh = parseFOHHours(days && days[dayIdx], dayIdx, cat.toLowerCase());
+      if (!sh) return;
+      getShiftHours(sh.st, sh.en).forEach(h => { if (grid[h]) { grid[h].count++; grid[h].cost += FOH_RATES[cat]; } });
+    });
+  });
+
+  let maxCost = 0;
+  HOURS.forEach(h => { if (grid[h].cost > maxCost) maxCost = grid[h].cost; });
+  function heatColor(cost) {
+    if (!cost) return '#F0EFED';
+    const pct = cost / maxCost;
+    if (pct < 0.15) return '#FDE9D9'; if (pct < 0.30) return '#FBCFA3';
+    if (pct < 0.45) return '#F7A96B'; if (pct < 0.60) return '#F0803A';
+    if (pct < 0.80) return '#D9491C'; return '#A6342F';
+  }
+  let peak = { h: 10, cost: 0 };
+  HOURS.forEach(h => { if (grid[h].cost > peak.cost) peak = { h, cost: grid[h].cost }; });
+
+  return h("div", null,
+    h(LocationHeader, { location, onHome, onLogoTap }),
+    h("div", { className: "Sched-wrap" },
+      h("div", { className: "WD-weeknav" },
+        h("button", { className: "Cal-nav-btn", onClick: () => setWeekStart(prevWeekOf(weekStart)) }, "\u2039"),
+        h("div", { className: "WD-weeklabel" }, "Week of " + weekStart),
+        h("button", { className: "Cal-nav-btn", onClick: () => setWeekStart(nextWeekOf(weekStart)) }, "\u203A")
+      ),
+      h("div", { className: "RS-daytabs" },
+        DAY_LABELS.map((d, i) => h("div", { key: d, className: "RS-daytab" + (dayIdx === i ? ' active' : ''), onClick: () => setDayIdx(i) }, d))
+      ),
+      loading ? h("div", { style: { textAlign: "center", padding: 20, color: "var(--gray-600)" } }, "Loading\u2026") :
+      h("div", { className: "WD-section" },
+        h("div", { style: { fontSize: 12, color: "var(--gray-600)", marginBottom: 10 } },
+          "Peak: ", h("strong", null, fmtH(peak.h)), " \u2014 $", Math.round(peak.cost), "/hr scheduled"),
+        HOURS.map(hr => h("div", { key: hr, style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 4 } },
+          h("div", { style: { width: 44, fontSize: 11, color: "var(--gray-600)" } }, fmtH(hr)),
+          h("div", { style: { flex: 1, background: heatColor(grid[hr].cost), borderRadius: 4, padding: "6px 8px", fontSize: 11, fontWeight: 700, color: grid[hr].cost / maxCost > 0.5 ? '#fff' : 'var(--black)' } },
+            grid[hr].count, " staff \u2014 $", Math.round(grid[hr].cost), "/hr")
+        )),
+        h("div", { style: { fontSize: 11, color: "var(--gray-400)", marginTop: 10 } }, "Internal reference only \u2014 scheduled labor, not actual sales.")
+      ),
+      h("div", { style: { textAlign: "center", marginTop: 16 } },
+        h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
+      )
+    )
+  );
+}
+
 function ScheduleScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
   const [open, setOpen] = useState(null);
   const [openWeek, setOpenWeek] = useState(null);
@@ -1816,6 +1932,9 @@ function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogo
   }
   if (section.key === "runsheets") {
     return h(RunSheetsScreen, { location, onHome, onBackToGrid, onLogoTap });
+  }
+  if (section.key === "heatmap") {
+    return h(HeatMapScreen, { location, onHome, onBackToGrid, onLogoTap });
   }
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
