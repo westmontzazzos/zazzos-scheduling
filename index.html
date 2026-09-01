@@ -11,8 +11,8 @@
 <title>Zazzo's Scheduling</title>
 <style>
 :root {
-  --red: #A6342F;
-  --red-dark: #7C2521;
+  --red: #C41E3A;
+  --red-dark: #9E1830;
   --green: #3E6B45;
   --black: #171512;
   --white: #FFFFFF;
@@ -61,7 +61,7 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .B:hover{background:rgba(255,255,255,0.15);}
 
 /* ── Location tile grid (Schedule / Run Sheets / Heat Map / Drawer Counts / Uploads) ── */
-.LocGrid-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding-left:20px;padding-right:20px;padding-bottom:32px;}
+.LocGrid-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-left:20px;padding-right:20px;padding-bottom:32px;}
 .LocGrid{display:grid;grid-template-columns:170px 170px;grid-auto-rows:110px;gap:14px;justify-content:center;margin-top:10px;}
 .TCard{width:170px;height:110px;background:var(--white);border:2px solid var(--green);border-radius:14px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;transition:border-color 0.15s,box-shadow 0.15s,transform 0.15s;user-select:none;-webkit-tap-highlight-color:transparent;}
 .TCard:hover{border-color:var(--red);box-shadow:var(--shadow-md);transform:translateY(-3px);}
@@ -73,13 +73,13 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .Placeholder-text{font-size:14px;color:var(--gray-600);max-width:280px;line-height:1.5;}
 
 /* ── Private (hidden, 7-tap logo access) ── */
-.Priv-wrap{padding-top:80px;min-height:100vh;padding-left:20px;padding-right:20px;}
+.Priv-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;}
 .Priv-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-top:16px;}
 .Priv-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
 .Priv-version{font-family:'Bebas Neue',system-ui,sans-serif;font-size:22px;letter-spacing:0.05em;color:var(--black);}
 
 /* ── Identify (who are you) + personal PIN ── */
-.Who-wrap{padding-top:80px;min-height:100vh;padding-left:20px;padding-right:20px;padding-bottom:32px;}
+.Who-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;padding-bottom:32px;}
 .Who-title{font-size:13px;color:var(--gray-600);text-align:center;margin:6px 0 14px;}
 .Who-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .NCard{background:var(--white);border:2px solid var(--red);border-radius:12px;padding:16px 8px;text-align:center;font-family:Georgia,'Libre Baskerville',serif;font-size:15px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -88,7 +88,7 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .Pin-loading{font-size:13px;color:var(--gray-600);}
 
 /* ── Messages ── */
-.Msg-wrap{padding-top:80px;min-height:100vh;padding-left:20px;padding-right:20px;padding-bottom:32px;}
+.Msg-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;padding-bottom:32px;}
 .Msg-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin:16px 0 8px;}
 .Msg-recipients{display:flex;flex-wrap:wrap;gap:8px;}
 .Chip{border:2px solid var(--gray-200);border-radius:20px;padding:8px 14px;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
@@ -387,6 +387,10 @@ function App() {
   const [screen, setScreen] = useState({ view: "home" });
   const logoTapCount = useRef(0);
   const logoTapTimer = useRef(null);
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [screen.view]);
 
   function handleLogoTap(location, backToView) {
     logoTapCount.current += 1;
