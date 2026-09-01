@@ -181,10 +181,10 @@ function LockScreen({ location, onUnlock, onBack }) {
   );
 }
 
-function WhoAmI({ location, onPicked }) {
+function WhoAmI({ location, onPicked, onHome, onLogoTap }) {
   const roster = ROSTERS[location.key] || [];
   return h("div", null,
-    h(LocationHeader, { location, onHome: () => {}, onLogoTap: () => {} }),
+    h(LocationHeader, { location, onHome, onLogoTap }),
     h("div", { className: "Who-wrap" },
       h("div", { className: "Who-title" }, "Who are you?"),
       h("div", { className: "Who-grid" },
@@ -338,10 +338,14 @@ function LocationHeader({ location, onHome, onLogoTap }) {
   );
 }
 
-function LocationGrid({ location, onHome, onPickSection, onLogoTap }) {
+function LocationGrid({ location, person, onHome, onPickSection, onLogoTap, onChangeUser }) {
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
     h("div", { className: "LocGrid-wrap" },
+      person && h("div", { style: { fontSize: 12, color: "var(--gray-600)", marginBottom: 12, textAlign: "center" } },
+        "Signed in as ", h("strong", null, person), " \u2014 ",
+        h("span", { className: "back-link", style: { marginTop: 0 }, onClick: onChangeUser }, "Change User")
+      ),
       h("div", { className: "LocGrid" },
         SECTIONS.map(s => h("div", { key: s.key, className: "TCard", onClick: () => onPickSection(s) },
           h("div", { className: "TCard-name" }, s.name)
@@ -369,12 +373,37 @@ function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogo
 }
 
 function PrivateScreen({ location, onHome, onBackToGrid }) {
+  const [pins, setPins] = useState(null);
+  const [error, setError] = useState("");
+
+  React.useEffect(() => {
+    fetch(SUPABASE_URL + '/rest/v1/staff_pins?select=location,name,pin&order=location,name', { headers: sbHeaders() })
+      .then(r => r.json())
+      .then(rows => setPins(Array.isArray(rows) ? rows : []))
+      .catch(() => setError("Couldn't load saved PINs."));
+  }, []);
+
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap: () => {} }),
     h("div", { className: "Priv-wrap" },
       h("div", { className: "Priv-section" },
         h("div", { className: "Priv-label" }, "App Version"),
         h("div", { className: "Priv-version" }, "v" + APP_VERSION)
+      ),
+      h("div", { className: "Priv-section" },
+        h("div", { className: "Priv-label" }, "Location PINs"),
+        LOCATIONS.map(loc => h("div", { key: loc.key, style: { fontSize: 14, padding: "3px 0" } },
+          loc.name, ": ", h("strong", null, loc.pin)
+        ))
+      ),
+      h("div", { className: "Priv-section" },
+        h("div", { className: "Priv-label" }, "Personal PINs"),
+        error && h("div", { style: { fontSize: 13, color: "var(--red)" } }, error),
+        pins === null && !error && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026"),
+        pins && pins.length === 0 && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No one has registered a PIN yet."),
+        pins && pins.map(p => h("div", { key: p.location + p.name, style: { fontSize: 14, padding: "3px 0" } },
+          p.name, " (", p.location, "): ", h("strong", null, p.pin)
+        ))
       ),
       h("div", { style: { marginTop: 16, textAlign: "center" } },
         h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
@@ -402,35 +431,70 @@ function App() {
     }
   }
 
+  function enterLocation(location) {
+    const locationUnlocked = sessionStorage.getItem('za_unlocked_' + location.key) === '1';
+    const rememberedPerson = localStorage.getItem('za_person_' + location.key);
+    if (!locationUnlocked) {
+      setScreen({ view: "lock", location });
+    } else if (rememberedPerson) {
+      setScreen({ view: "location", location, person: rememberedPerson });
+    } else {
+      setScreen({ view: "whoami", location });
+    }
+  }
+
+  function onLocationPinVerified(location) {
+    sessionStorage.setItem('za_unlocked_' + location.key, '1');
+    const rememberedPerson = localStorage.getItem('za_person_' + location.key);
+    if (rememberedPerson) {
+      setScreen({ view: "location", location, person: rememberedPerson });
+    } else {
+      setScreen({ view: "whoami", location });
+    }
+  }
+
+  function onPersonVerified(location, person) {
+    localStorage.setItem('za_person_' + location.key, person);
+    setScreen({ view: "location", location, person });
+  }
+
+  function changeUser(location) {
+    setScreen({ view: "whoami", location, changingUser: true });
+  }
+
   if (screen.view === "home") {
-    return h(HomeScreen, { onPick: loc => setScreen({ view: "lock", location: loc }) });
+    return h(HomeScreen, { onPick: enterLocation });
   }
   if (screen.view === "lock") {
     return h(LockScreen, {
       location: screen.location,
-      onUnlock: () => setScreen({ view: "whoami", location: screen.location }),
+      onUnlock: () => onLocationPinVerified(screen.location),
       onBack: () => setScreen({ view: "home" })
     });
   }
   if (screen.view === "whoami") {
     return h(WhoAmI, {
       location: screen.location,
-      onPicked: person => setScreen({ view: "personalpin", location: screen.location, person })
+      onPicked: person => setScreen({ view: "personalpin", location: screen.location, person }),
+      onHome: () => setScreen({ view: "home" }),
+      onLogoTap: () => {}
     });
   }
   if (screen.view === "personalpin") {
     return h(PersonalPinGate, {
       location: screen.location,
       person: screen.person,
-      onVerified: () => setScreen({ view: "location", location: screen.location, person: screen.person })
+      onVerified: () => onPersonVerified(screen.location, screen.person)
     });
   }
   if (screen.view === "location") {
     return h(LocationGrid, {
       location: screen.location,
+      person: screen.person,
       onHome: () => setScreen({ view: "home" }),
       onPickSection: section => setScreen({ view: "section", location: screen.location, person: screen.person, section }),
-      onLogoTap: () => handleLogoTap(screen.location, "location")
+      onLogoTap: () => handleLogoTap(screen.location, "location"),
+      onChangeUser: () => changeUser(screen.location)
     });
   }
   if (screen.view === "section") {
