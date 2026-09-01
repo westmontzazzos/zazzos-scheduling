@@ -51,14 +51,30 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .pin-error{font-size:12px;color:var(--red);height:14px;}
 .back-link{margin-top:6px;font-size:12px;color:var(--gray-600);text-decoration:underline;cursor:pointer;}
 
-/* ── Placeholder location screen ── */
+/* ── Per-location header (logo is the hidden 7-tap Private trigger) ── */
 .H{position:fixed;top:0;left:0;right:0;width:100%;height:56px;background:var(--red);border-bottom:4px solid var(--green);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:200;}
-.H-logo{font-family:Georgia,'Libre Baskerville',serif;font-size:18px;font-weight:700;color:var(--white);letter-spacing:0.03em;}
+.H-logo{font-family:Georgia,'Libre Baskerville',serif;font-size:18px;font-weight:700;color:var(--white);letter-spacing:0.03em;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
 .H-right{margin-left:auto;}
 .B{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:34px;padding:0 14px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.02em;cursor:pointer;border:2px solid var(--white);white-space:nowrap;background:transparent;color:var(--white);}
 .B:hover{background:rgba(255,255,255,0.15);}
+
+/* ── Location tile grid (Schedule / Run Sheets / Heat Map / Drawer Counts / Uploads) ── */
+.LocGrid-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding-left:20px;padding-right:20px;padding-bottom:32px;}
+.LocGrid{display:grid;grid-template-columns:170px 170px;grid-auto-rows:110px;gap:14px;justify-content:center;margin-top:10px;}
+.TCard{width:170px;height:110px;background:var(--white);border:2px solid var(--green);border-radius:14px;box-shadow:var(--shadow);cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px;transition:border-color 0.15s,box-shadow 0.15s,transform 0.15s;user-select:none;-webkit-tap-highlight-color:transparent;}
+.TCard:hover{border-color:var(--red);box-shadow:var(--shadow-md);transform:translateY(-3px);}
+.TCard:active{transform:translateY(0);}
+.TCard-name{font-family:'Bebas Neue',system-ui,sans-serif;font-size:16px;letter-spacing:0.06em;color:var(--black);}
+
+/* ── Generic placeholder for a not-yet-built section screen ── */
 .Placeholder{padding-top:80px;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding-left:24px;padding-right:24px;}
 .Placeholder-text{font-size:14px;color:var(--gray-600);max-width:280px;line-height:1.5;}
+
+/* ── Private (hidden, 7-tap logo access) ── */
+.Priv-wrap{padding-top:80px;min-height:100vh;padding-left:20px;padding-right:20px;}
+.Priv-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-top:16px;}
+.Priv-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
+.Priv-version{font-family:'Bebas Neue',system-ui,sans-serif;font-size:22px;letter-spacing:0.05em;color:var(--black);}
 </style>
 </head>
 <body>
@@ -70,9 +86,19 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 const h = React.createElement;
 const { useState, useRef } = React;
 
+const APP_VERSION = "1.0";
+
 const LOCATIONS = [
   { key: "westmont", name: "Westmont", pin: "2220" },
   { key: "darien",   name: "Darien",   pin: "4788" },
+];
+
+const SECTIONS = [
+  { key: "schedule",  name: "Schedule" },
+  { key: "runsheets", name: "Run Sheets" },
+  { key: "heatmap",   name: "Heat Map" },
+  { key: "drawer",    name: "Drawer Counts" },
+  { key: "uploads",   name: "Uploads" },
 ];
 
 function HomeScreen({ onPick }) {
@@ -90,18 +116,6 @@ function HomeScreen({ onPick }) {
 function LockScreen({ location, onUnlock, onBack }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
-  const tapCount = useRef(0);
-  const tapTimer = useRef(null);
-
-  function handleLockTap() {
-    tapCount.current += 1;
-    if (tapTimer.current) clearTimeout(tapTimer.current);
-    tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 2000);
-    if (tapCount.current >= 9) {
-      tapCount.current = 0;
-      onUnlock();
-    }
-  }
 
   function checkPin() {
     if (pin === location.pin) {
@@ -114,7 +128,7 @@ function LockScreen({ location, onUnlock, onBack }) {
   }
 
   return h("div", { className: "Lock" },
-    h("div", { className: "Lock-icon", onClick: handleLockTap }, "\uD83D\uDD12"),
+    h("div", { className: "Lock-icon" }, "\uD83D\uDD12"),
     h("div", { className: "Lock-title" }, location.name),
     h("div", { className: "Lock-sub" }, "Enter PIN to continue"),
     h("input", {
@@ -130,23 +144,71 @@ function LockScreen({ location, onUnlock, onBack }) {
   );
 }
 
-function LocationPlaceholder({ location, onHome }) {
+function LocationHeader({ location, onHome, onLogoTap }) {
+  return h("header", { className: "H" },
+    h("div", { className: "H-logo", onClick: onLogoTap }, location.name),
+    h("div", { className: "H-right" },
+      h("button", { className: "B", onClick: onHome }, "\u2190 Home")
+    )
+  );
+}
+
+function LocationGrid({ location, onHome, onPickSection, onLogoTap }) {
   return h("div", null,
-    h("header", { className: "H" },
-      h("div", { className: "H-logo" }, location.name),
-      h("div", { className: "H-right" },
-        h("button", { className: "B", onClick: onHome }, "\u2190 Home")
+    h(LocationHeader, { location, onHome, onLogoTap }),
+    h("div", { className: "LocGrid-wrap" },
+      h("div", { className: "LocGrid" },
+        SECTIONS.map(s => h("div", { key: s.key, className: "TCard", onClick: () => onPickSection(s) },
+          h("div", { className: "TCard-name" }, s.name)
+        ))
       )
-    ),
+    )
+  );
+}
+
+function SectionPlaceholder({ location, section, onHome, onBackToGrid, onLogoTap }) {
+  return h("div", null,
+    h(LocationHeader, { location, onHome, onLogoTap }),
     h("div", { className: "Placeholder" },
       h("div", { className: "Placeholder-text" },
-        "You're in \u2014 ", location.name, " section tiles go here next.")
+        section.name, " for ", location.name, " goes here next.",
+        h("div", { style: { marginTop: 14 } },
+          h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
+        )
+      )
+    )
+  );
+}
+
+function PrivateScreen({ location, onHome, onBackToGrid }) {
+  return h("div", null,
+    h(LocationHeader, { location, onHome, onLogoTap: () => {} }),
+    h("div", { className: "Priv-wrap" },
+      h("div", { className: "Priv-section" },
+        h("div", { className: "Priv-label" }, "App Version"),
+        h("div", { className: "Priv-version" }, "v" + APP_VERSION)
+      ),
+      h("div", { style: { marginTop: 16, textAlign: "center" } },
+        h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
+      )
     )
   );
 }
 
 function App() {
   const [screen, setScreen] = useState({ view: "home" });
+  const logoTapCount = useRef(0);
+  const logoTapTimer = useRef(null);
+
+  function handleLogoTap(location, backToView) {
+    logoTapCount.current += 1;
+    if (logoTapTimer.current) clearTimeout(logoTapTimer.current);
+    logoTapTimer.current = setTimeout(() => { logoTapCount.current = 0; }, 2500);
+    if (logoTapCount.current >= 7) {
+      logoTapCount.current = 0;
+      setScreen({ view: "private", location, backToView });
+    }
+  }
 
   if (screen.view === "home") {
     return h(HomeScreen, { onPick: loc => setScreen({ view: "lock", location: loc }) });
@@ -159,9 +221,27 @@ function App() {
     });
   }
   if (screen.view === "location") {
-    return h(LocationPlaceholder, {
+    return h(LocationGrid, {
       location: screen.location,
-      onHome: () => setScreen({ view: "home" })
+      onHome: () => setScreen({ view: "home" }),
+      onPickSection: section => setScreen({ view: "section", location: screen.location, section }),
+      onLogoTap: () => handleLogoTap(screen.location, "location")
+    });
+  }
+  if (screen.view === "section") {
+    return h(SectionPlaceholder, {
+      location: screen.location,
+      section: screen.section,
+      onHome: () => setScreen({ view: "home" }),
+      onBackToGrid: () => setScreen({ view: "location", location: screen.location }),
+      onLogoTap: () => handleLogoTap(screen.location, "section")
+    });
+  }
+  if (screen.view === "private") {
+    return h(PrivateScreen, {
+      location: screen.location,
+      onHome: () => setScreen({ view: "home" }),
+      onBackToGrid: () => setScreen({ view: "location", location: screen.location })
     });
   }
   return null;
