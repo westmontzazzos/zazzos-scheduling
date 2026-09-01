@@ -11,14 +11,14 @@
 <title>Zazzo's Scheduling</title>
 <style>
 :root {
-  --red: #E31010;
-  --red-dark: #B50D0D;
-  --green: #27AE60;
-  --black: #0D0D0D;
+  --red: #A6342F;
+  --red-dark: #7C2521;
+  --green: #3E6B45;
+  --black: #171512;
   --white: #FFFFFF;
-  --off-white: #F8F7F5;
-  --gray-100: #F0EFED;
-  --gray-200: #E2E0DC;
+  --off-white: #F7F6F3;
+  --gray-100: #EDEBE6;
+  --gray-200: #DEDBD3;
   --gray-400: #A8A49E;
   --gray-600: #6B6660;
   --radius: 10px;
@@ -52,8 +52,10 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .back-link{margin-top:6px;font-size:12px;color:var(--gray-600);text-decoration:underline;cursor:pointer;}
 
 /* ── Per-location header (logo is the hidden 7-tap Private trigger) ── */
-.H{position:fixed;top:0;left:0;right:0;width:100%;height:56px;background:var(--red);border-bottom:4px solid var(--green);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:200;}
-.H-logo{font-family:Georgia,'Libre Baskerville',serif;font-size:18px;font-weight:700;color:var(--white);letter-spacing:0.03em;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
+.H{position:fixed;top:0;left:0;right:0;width:100%;height:56px;background:var(--black);border-bottom:2px solid var(--red);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:200;}
+.H-logo{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
+.H-logo-icon{width:24px;height:24px;object-fit:contain;border-radius:5px;}
+.H-logo-text{font-family:Georgia,'Libre Baskerville',serif;font-size:18px;font-weight:700;color:var(--white);letter-spacing:0.03em;}
 .H-right{margin-left:auto;}
 .B{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:34px;padding:0 14px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.02em;cursor:pointer;border:2px solid var(--white);white-space:nowrap;background:transparent;color:var(--white);}
 .B:hover{background:rgba(255,255,255,0.15);}
@@ -146,7 +148,10 @@ function LockScreen({ location, onUnlock, onBack }) {
 
 function LocationHeader({ location, onHome, onLogoTap }) {
   return h("header", { className: "H" },
-    h("div", { className: "H-logo", onClick: onLogoTap }, location.name),
+    h("div", { className: "H-logo", onClick: onLogoTap },
+      h("img", { className: "H-logo-icon", src: "/schedules.png", alt: "" }),
+      h("span", { className: "H-logo-text" }, location.name)
+    ),
     h("div", { className: "H-right" },
       h("button", { className: "B", onClick: onHome }, "\u2190 Home")
     )
