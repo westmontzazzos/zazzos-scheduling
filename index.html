@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ZA Scheduling" />
+<link rel="apple-touch-icon" href="/schedules.png" />
+<link rel="icon" type="image/png" href="/schedules.png" />
+<title>Zazzo's Scheduling</title>
+<style>
+:root {
+  --red: #E31010;
+  --red-dark: #B50D0D;
+  --green: #27AE60;
+  --black: #0D0D0D;
+  --white: #FFFFFF;
+  --off-white: #F8F7F5;
+  --gray-100: #F0EFED;
+  --gray-200: #E2E0DC;
+  --gray-400: #A8A49E;
+  --gray-600: #6B6660;
+  --radius: 10px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.10), 0 8px 32px rgba(0,0,0,0.08);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-apple-system,'Segoe UI',Arial,sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased;}
+#root{min-height:100vh;}
+
+/* ── Home screen ── */
+.Home{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;gap:26px;}
+.Home-logo{width:104px;height:104px;object-fit:contain;border-radius:22px;box-shadow:var(--shadow-md);}
+.Home-title{font-family:'Bebas Neue',system-ui,sans-serif;font-weight:800;font-size:15px;letter-spacing:0.28em;color:var(--gray-600);text-transform:uppercase;text-align:center;}
+.Home-grid{display:grid;grid-template-columns:170px 170px;grid-auto-rows:128px;gap:14px;justify-content:center;margin-top:6px;}
+.LCard{width:170px;height:128px;background:var(--white);border:2px solid var(--green);border-radius:14px;box-shadow:var(--shadow);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;transition:border-color 0.15s,box-shadow 0.15s,transform 0.15s;user-select:none;-webkit-tap-highlight-color:transparent;padding:8px;text-align:center;}
+.LCard:hover{border-color:var(--red);box-shadow:var(--shadow-md);transform:translateY(-3px);}
+.LCard:active{transform:translateY(0);}
+.LCard-name{font-family:Georgia,'Libre Baskerville',serif;font-size:19px;font-weight:700;color:var(--black);}
+
+/* ── PIN gate ── */
+.Lock{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:16px;}
+.Lock-icon{font-size:34px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;}
+.Lock-title{font-family:'Bebas Neue',system-ui,sans-serif;font-size:22px;letter-spacing:0.08em;color:var(--black);text-align:center;}
+.Lock-sub{font-size:12px;color:var(--gray-600);text-align:center;margin-top:-8px;}
+.pin-input{width:180px;padding:14px;font-size:22px;letter-spacing:0.3em;text-align:center;border:2px solid var(--gray-200);border-radius:10px;outline:none;color:var(--black);-webkit-text-security:disc;}
+.pin-input:focus{border-color:var(--red);}
+.unlock-btn{width:180px;padding:13px;background:var(--red);color:var(--white);border:none;border-radius:10px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.12em;cursor:pointer;}
+.unlock-btn:hover{background:var(--red-dark);}
+.pin-error{font-size:12px;color:var(--red);height:14px;}
+.back-link{margin-top:6px;font-size:12px;color:var(--gray-600);text-decoration:underline;cursor:pointer;}
+
+/* ── Placeholder location screen ── */
+.H{position:fixed;top:0;left:0;right:0;width:100%;height:56px;background:var(--red);border-bottom:4px solid var(--green);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:200;}
+.H-logo{font-family:Georgia,'Libre Baskerville',serif;font-size:18px;font-weight:700;color:var(--white);letter-spacing:0.03em;}
+.H-right{margin-left:auto;}
+.B{display:inline-flex;align-items:center;justify-content:center;gap:5px;height:34px;padding:0 14px;border-radius:6px;font-size:12px;font-weight:700;letter-spacing:0.02em;cursor:pointer;border:2px solid var(--white);white-space:nowrap;background:transparent;color:var(--white);}
+.B:hover{background:rgba(255,255,255,0.15);}
+.Placeholder{padding-top:80px;min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding-left:24px;padding-right:24px;}
+.Placeholder-text{font-size:14px;color:var(--gray-600);max-width:280px;line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+const h = React.createElement;
+const { useState, useRef } = React;
+
+const LOCATIONS = [
+  { key: "westmont", name: "Westmont", pin: "2220" },
+  { key: "darien",   name: "Darien",   pin: "4788" },
+];
+
+function HomeScreen({ onPick }) {
+  return h("div", { className: "Home" },
+    h("img", { className: "Home-logo", src: "/schedules.png", alt: "Zazzo's Scheduling" }),
+    h("div", { className: "Home-title" }, "Zazzo's Scheduling"),
+    h("div", { className: "Home-grid" },
+      LOCATIONS.map(loc => h("div", { key: loc.key, className: "LCard", onClick: () => onPick(loc) },
+        h("div", { className: "LCard-name" }, loc.name)
+      ))
+    )
+  );
+}
+
+function LockScreen({ location, onUnlock, onBack }) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const tapCount = useRef(0);
+  const tapTimer = useRef(null);
+
+  function handleLockTap() {
+    tapCount.current += 1;
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+    tapTimer.current = setTimeout(() => { tapCount.current = 0; }, 2000);
+    if (tapCount.current >= 9) {
+      tapCount.current = 0;
+      onUnlock();
+    }
+  }
+
+  function checkPin() {
+    if (pin === location.pin) {
+      setError("");
+      onUnlock();
+    } else {
+      setError("Incorrect PIN. Try again.");
+      setPin("");
+    }
+  }
+
+  return h("div", { className: "Lock" },
+    h("div", { className: "Lock-icon", onClick: handleLockTap }, "\uD83D\uDD12"),
+    h("div", { className: "Lock-title" }, location.name),
+    h("div", { className: "Lock-sub" }, "Enter PIN to continue"),
+    h("input", {
+      type: "text", className: "pin-input", value: pin, placeholder: "\u2022 \u2022 \u2022 \u2022",
+      inputMode: "numeric", pattern: "[0-9]*", autoComplete: "off", autoCorrect: "off",
+      autoCapitalize: "off", spellCheck: false, maxLength: 6,
+      onChange: e => setPin(e.target.value.replace(/[^0-9]/g, "")),
+      onKeyDown: e => { if (e.key === "Enter") checkPin(); }
+    }),
+    h("button", { className: "unlock-btn", onClick: checkPin }, "UNLOCK"),
+    h("div", { className: "pin-error" }, error),
+    h("div", { className: "back-link", onClick: onBack }, "\u2190 Back")
+  );
+}
+
+function LocationPlaceholder({ location, onHome }) {
+  return h("div", null,
+    h("header", { className: "H" },
+      h("div", { className: "H-logo" }, location.name),
+      h("div", { className: "H-right" },
+        h("button", { className: "B", onClick: onHome }, "\u2190 Home")
+      )
+    ),
+    h("div", { className: "Placeholder" },
+      h("div", { className: "Placeholder-text" },
+        "You're in \u2014 ", location.name, " section tiles go here next.")
+    )
+  );
+}
+
+function App() {
+  const [screen, setScreen] = useState({ view: "home" });
+
+  if (screen.view === "home") {
+    return h(HomeScreen, { onPick: loc => setScreen({ view: "lock", location: loc }) });
+  }
+  if (screen.view === "lock") {
+    return h(LockScreen, {
+      location: screen.location,
+      onUnlock: () => setScreen({ view: "location", location: screen.location }),
+      onBack: () => setScreen({ view: "home" })
+    });
+  }
+  if (screen.view === "location") {
+    return h(LocationPlaceholder, {
+      location: screen.location,
+      onHome: () => setScreen({ view: "home" })
+    });
+  }
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(App));
+</script>
+</body>
+</html>
