@@ -203,6 +203,22 @@ function sbHeaders() {
   return { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };
 }
 
+// Hidden-iframe print — no window.open(), so iOS Safari's pop-up blocker
+// never comes into play. Same technique the live app already uses for
+// Dom's/Manager Notes printing.
+function printViaIframe(html) {
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
+  setTimeout(function () {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  }, 400);
+}
+
 // ── Ported from the live app: which sections each person is allowed to work ──
 const ROLE_MAP = {
   'Arturo':['Kitchen','Pizza'],'Arturo Viveros':['Kitchen','Pizza'],
@@ -1339,8 +1355,7 @@ function ManagerNotesPanel({ location, person }) {
     if (activeNote.foh) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Front of House</h3><p style="white-space:pre-wrap;margin:0 0 20px;">' + activeNote.foh + '</p>';
     if (activeNote.boh) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Back of House</h3><p style="white-space:pre-wrap;margin:0 0 20px;">' + activeNote.boh + '</p>';
     const html = '<!DOCTYPE html><html><head><title>Manager Notes</title><style>body{font-family:Arial,sans-serif;padding:28px;font-size:13px;}h1{font-size:18px;color:#c8102e;margin:0 0 4px;}</style></head><body><h1>Manager Notes</h1>' + body + '</body></html>';
-    const w = window.open('', '_blank');
-    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
+    printViaIframe(html);
   }
 
   if (activeNote === undefined) return h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026");
@@ -1559,8 +1574,7 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
     if (which === 'boh' || which === 'all') BOH_CATS.forEach(c => { html += tableHtml(c, boh[c]); });
     if (which === 'foh' || which === 'all') FOH_CATS.forEach(c => { html += tableHtml(c, Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)]))); });
     if (which === 'drivers' || which === 'all') html += tableHtml('Drivers', drv);
-    const w = window.open('', '_blank');
-    if (w) { w.document.write('<html><body style="font-family:Arial;padding:20px;">' + html + '</body></html>'); w.document.close(); setTimeout(() => w.print(), 300); }
+    printViaIframe('<html><body style="font-family:Arial;padding:20px;">' + html + '</body></html>');
   }
 
   function runCopyToNextWeek() {
@@ -1597,9 +1611,9 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
         h("button", { className: "Cal-nav-btn", onClick: () => onChangeWeek(nextWeekOf(weekStart)) }, "\u203A")
       ),
       h("div", { className: "WD-tabs" },
-        h("div", { className: "WD-tab" + (tab === 'view' ? ' active' : ''), onClick: () => setTab('view') }, "VIEW SCHEDULE"),
-        h("div", { className: "WD-tab" + (tab === 'edit' ? ' active' : ''), onClick: () => setTab('edit') }, "EDIT SCHEDULE"),
-        h("div", { className: "WD-tab" + (tab === 'copy' ? ' active' : ''), onClick: () => setTab('copy') }, "COPY TO NEXT WEEK")
+        h("div", { className: "WD-tab" + (tab === 'view' ? ' active' : ''), onClick: () => setTab('view') }, h("div", null, "VIEW"), h("div", null, "SCHEDULE")),
+        h("div", { className: "WD-tab" + (tab === 'edit' ? ' active' : ''), onClick: () => setTab('edit') }, h("div", null, "EDIT"), h("div", null, "SCHEDULE")),
+        h("div", { className: "WD-tab" + (tab === 'copy' ? ' active' : ''), onClick: () => setTab('copy') }, h("div", null, "COPY TO NEXT"), h("div", null, "WEEK"))
       ),
       loading && h("div", { style: { textAlign: "center", padding: 20, color: "var(--gray-600)" } }, "Loading\u2026"),
 
@@ -1706,8 +1720,7 @@ function RunSheetsScreen({ location, onHome, onBackToGrid, onLogoTap }) {
       html += '<table border="1" cellpadding="4" style="border-collapse:collapse;font-size:12px;margin-bottom:14px;"><tr><th>Name</th><th>Shift</th></tr>' +
         s.people.map(p => '<tr><td>' + p.n + '</td><td>' + p.shift + '</td></tr>').join('') + '</table>';
     });
-    const w = window.open('', '_blank');
-    if (w) { w.document.write('<html><body style="font-family:Arial;padding:20px;">' + html + '</body></html>'); w.document.close(); setTimeout(() => w.print(), 300); }
+    printViaIframe('<html><body style="font-family:Arial;padding:20px;">' + html + '</body></html>');
   }
 
   return h("div", null,
