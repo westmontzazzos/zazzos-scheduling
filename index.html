@@ -109,7 +109,25 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .MN-thread-entry{border-top:1px solid var(--gray-100);padding:8px 0;font-size:12px;}
 .MN-thread-who{font-weight:700;}
 .MN-thread-when{color:var(--gray-400);font-size:11px;}
-.MN-reply-box{margin-top:6px;}
+.WD-wrap{padding-top:80px;min-height:100vh;padding-left:16px;padding-right:16px;padding-bottom:32px;}
+.WD-tabs{display:flex;gap:6px;margin-bottom:14px;}
+.WD-tab{flex:1;text-align:center;padding:10px 4px;border-radius:8px;font-size:12px;font-weight:700;letter-spacing:0.03em;background:var(--white);border:2px solid var(--gray-200);cursor:pointer;}
+.WD-tab.active{border-color:var(--red);color:var(--red-dark);}
+.WD-weeknav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.WD-weeklabel{font-family:'Bebas Neue',sans-serif;font-size:16px;}
+.WD-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;margin-bottom:12px;overflow-x:auto;}
+.WD-section-title{font-size:12px;font-weight:700;color:var(--red-dark);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
+.WD-table{width:100%;border-collapse:collapse;font-size:11px;min-width:520px;}
+.WD-table th{padding:4px 3px;color:var(--gray-600);font-weight:700;text-align:center;}
+.WD-table td{padding:3px;text-align:center;}
+.WD-table td:first-child, .WD-table th:first-child{text-align:left;padding-left:4px;min-width:80px;}
+.WD-cell-input{width:52px;padding:4px;font-size:11px;border:1px solid var(--gray-200);border-radius:4px;text-align:center;}
+.WD-addperson{display:flex;gap:6px;margin-top:8px;}
+.WD-addperson input{flex:1;padding:6px;font-size:12px;border:1px solid var(--gray-200);border-radius:6px;}
+.WD-addperson button{padding:6px 12px;font-size:12px;background:var(--gray-100);border:none;border-radius:6px;cursor:pointer;}
+.WD-print-menu{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.WD-print-btn{padding:8px 12px;font-size:12px;border:2px solid var(--gray-200);border-radius:8px;background:var(--white);cursor:pointer;}
+.WD-copy-check{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);font-size:14px;}
 .Priv-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;}
 .Priv-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-top:16px;}
 .Priv-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
@@ -155,6 +173,10 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const LOCATIONS = [
   { key: "westmont", name: "Westmont", pin: "2220" },
 ];
+
+const FULL_STAFF = {
+  westmont: ['Abby','Alexis','Alexis A','Allie','Armani','Armani Finley','Arturo','Arturo Viveros','Brett','Brianna','Bridget','Brooke','Carlos','Carlos Jr','Carlos Mora','Charlie','Cheeks','Claudia','Courtney','Danielle','Derek','Dom','Dorris','Eddie','Eddie Cruz','Eddy','Elena','Ellianna','Ely','Emilie','Eric','Erika','Ever','Gonzalo','Gonzo','Hannah','Hannah M','Jack Ruane','Jaime','Jaxon','Jesus','Jesus Murillo','Jose B','Julia','Justin','Kamini','Keegan','Kelly','Lea','Leo','Lindsay','Lisa','Luis','Luis Perez','Luis Soto','Marco','Marco Sanchez','Mary','Matt','Mike','Molly','Monico','Monico Esparza','Natalie','Nicholas Urbana','Nick','Nithia Maldonado','Oscar','Oscar Velazquez','Presley','Raul','Selena','Sio McAvoy','Soto','Sylvia','Tia','Victor','Victor Cruz']
+};
 
 const ROSTERS = {
   westmont: ["Alexis A", "Brett", "Dom", "Ely", "Selena"],
@@ -788,7 +810,8 @@ function LockScreen({ location, onUnlock }) {
       onKeyDown: e => { if (e.key === "Enter") checkPin(); }
     }),
     h("button", { className: "unlock-btn", onClick: checkPin }, "UNLOCK"),
-    h("div", { className: "pin-error" }, error)
+    h("div", { className: "pin-error" }, error),
+    h("div", { style: { fontSize: 11, color: "var(--gray-400)", marginTop: 20 } }, "v" + APP_VERSION)
   );
 }
 
@@ -973,7 +996,11 @@ function TimeOffPanel({ location }) {
   const [shift, setShift] = useState(null);
   const [status, setStatus] = useState("");
   const [list, setList] = useState(null);
-  const roster = ROSTERS[location.key] || [];
+  const [search, setSearch] = useState("");
+  const fullStaff = FULL_STAFF[location.key] || [];
+  const matches = search.trim()
+    ? fullStaff.filter(n => n.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 8)
+    : [];
 
   function loadList() {
     const today = new Date();
@@ -1010,11 +1037,20 @@ function TimeOffPanel({ location }) {
     !adding && h("div", { className: "addnew-link", onClick: () => setAdding(true) }, "+ Add New Time Off Request"),
     adding && h("div", { className: "TO-form" },
       h("div", { className: "Msg-label" }, "Who"),
-      h("div", { className: "TO-roster" },
-        roster.map(n => h("div", {
-          key: n, className: "Chip" + (name === n ? " selected" : ""), onClick: () => setName(n)
-        }, n))
-      ),
+      name
+        ? h("div", { className: "Chip selected", style: { display: "inline-block" }, onClick: () => { setName(null); setSearch(""); } }, name + " \u2715")
+        : h("div", null,
+            h("input", {
+              type: "text", className: "date-input", placeholder: "Type a name\u2026", value: search,
+              onChange: e => setSearch(e.target.value)
+            }),
+            matches.length > 0 && h("div", { style: { marginTop: 6 } },
+              matches.map(n => h("div", {
+                key: n, className: "TO-entry", style: { cursor: "pointer" },
+                onClick: () => { setName(n); setSearch(""); }
+              }, n))
+            )
+          ),
       h("div", { className: "Msg-label" }, "Date"),
       h("input", { type: "date", className: "date-input", value: date, onChange: e => setDate(e.target.value) }),
       h("div", { className: "Msg-label" }, "Which shift"),
@@ -1037,7 +1073,7 @@ function TimeOffPanel({ location }) {
   );
 }
 
-function MonthCalendar({ location }) {
+function MonthCalendar({ location, onOpenWeek }) {
   const [monthOffset, setMonthOffset] = useState(0);
   const [dataByWeek, setDataByWeek] = useState({});
   const [timeOffDates, setTimeOffDates] = useState({});
@@ -1123,7 +1159,7 @@ function MonthCalendar({ location }) {
       const weekStartDate = new Date(ws + 'T00:00:00');
 
       return h("div", {
-        key: ws, className: "Cal-week",
+        key: ws, className: "Cal-week", onClick: () => onOpenWeek(ws),
         style: { borderLeft: "4px solid " + color, background: bg }
       },
         Array.from({ length: 7 }).map((_, i) => {
@@ -1345,17 +1381,290 @@ function ManagerNotesPanel({ location, person }) {
   );
 }
 
+const DAY_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const BOH_CATS = ['MANAGERS','PIZZA','KITCHEN','PREP','BUS','DISH'];
+const FOH_CATS = ['SERVERS','BARTENDERS','CASHIERS','HOSTS'];
+
+function fohEntryToStr(e) {
+  if (!e || !Array.isArray(e)) return '';
+  return e[1] ? (e[0] || '') + '-' + e[1] : (e[0] || '');
+}
+function strToFohEntry(s) {
+  if (!s || !s.trim()) return null;
+  const parts = s.split('-');
+  return parts.length > 1 ? [parts[0].trim(), parts.slice(1).join('-').trim()] : [parts[0].trim(), null];
+}
+
+function nextWeekOf(weekStart) {
+  const d = new Date(weekStart + 'T00:00:00'); d.setDate(d.getDate() + 7);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function prevWeekOf(weekStart) {
+  const d = new Date(weekStart + 'T00:00:00'); d.setDate(d.getDate() - 7);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+async function fetchWeekRow(weekStart) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=eq.' + weekStart + '&select=*', { headers: sbHeaders() });
+  const rows = await r.json();
+  return (Array.isArray(rows) && rows.length) ? rows[0] : null;
+}
+
+async function saveWeekRow(weekStart, patch) {
+  const existing = await fetchWeekRow(weekStart);
+  if (existing) {
+    return fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=eq.' + weekStart, {
+      method: 'PATCH', headers: sbHeaders(), body: JSON.stringify(patch)
+    });
+  } else {
+    return fetch(SUPABASE_URL + '/rest/v1/schedules', {
+      method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+      body: JSON.stringify([Object.assign({ week_start: weekStart }, patch)])
+    });
+  }
+}
+
+function SectionTable({ title, data, days, editable, onChange, onAddPerson }) {
+  const [newName, setNewName] = useState("");
+  const names = Object.keys(data || {});
+  return h("div", { className: "WD-section" },
+    h("div", { className: "WD-section-title" }, title),
+    names.length === 0
+      ? h("div", { style: { fontSize: 12, color: "var(--gray-400)" } }, "Nobody scheduled.")
+      : h("table", { className: "WD-table" },
+          h("thead", null, h("tr", null, h("th", null, "Name"), days.map(d => h("th", { key: d }, d)))),
+          h("tbody", null,
+            names.map(name => h("tr", { key: name },
+              h("td", null, name),
+              Array.from({ length: 7 }).map((_, di) => {
+                const val = data[name][di] || '';
+                return h("td", { key: di },
+                  editable
+                    ? h("input", { className: "WD-cell-input", value: val, onChange: e => onChange(name, di, e.target.value) })
+                    : (val || '\u2014')
+                );
+              })
+            ))
+          )
+        ),
+    editable && h("div", { className: "WD-addperson" },
+      h("input", { placeholder: "Add person\u2026", value: newName, onChange: e => setNewName(e.target.value) }),
+      h("button", { onClick: () => { if (newName.trim()) { onAddPerson(newName.trim()); setNewName(""); } } }, "Add")
+    )
+  );
+}
+
+function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, onLogoTap, onBackToSchedule }) {
+  const [tab, setTab] = useState('view');
+  const [loading, setLoading] = useState(true);
+  const [boh, setBoh] = useState({});
+  const [foh, setFoh] = useState({});
+  const [drv, setDrv] = useState({});
+  const [saveStatus, setSaveStatus] = useState("");
+  const [copyChecks, setCopyChecks] = useState({ BOH: true, FOH: true, Drivers: true, Events: true });
+  const [copyStatus, setCopyStatus] = useState("");
+
+  function load() {
+    setLoading(true);
+    fetchWeekRow(weekStart).then(rec => {
+      let bohObj = {}, fohObj = {}, drvObj = {};
+      if (rec) {
+        try { bohObj = rec.boh_data ? JSON.parse(rec.boh_data) : {}; } catch (e) {}
+        try { fohObj = rec.foh_data ? JSON.parse(rec.foh_data) : {}; } catch (e) {}
+        try { drvObj = rec.driver_data ? JSON.parse(rec.driver_data) : {}; } catch (e) {}
+      }
+      BOH_CATS.forEach(c => { if (!bohObj[c]) bohObj[c] = {}; });
+      FOH_CATS.forEach(c => { if (!fohObj[c]) fohObj[c] = {}; });
+      setBoh(bohObj); setFoh(fohObj); setDrv(drvObj);
+      setLoading(false);
+    });
+  }
+
+  React.useEffect(() => { load(); }, [weekStart]);
+
+  function editBOHCell(cat, name, di, val) {
+    setBoh(prev => {
+      const next = Object.assign({}, prev);
+      next[cat] = Object.assign({}, next[cat]);
+      next[cat][name] = (next[cat][name] || [null,null,null,null,null,null,null]).slice();
+      next[cat][name][di] = val;
+      return next;
+    });
+  }
+  function addBOHPerson(cat, name) {
+    setBoh(prev => {
+      const next = Object.assign({}, prev);
+      next[cat] = Object.assign({}, next[cat]);
+      if (!next[cat][name]) next[cat][name] = [null,null,null,null,null,null,null];
+      return next;
+    });
+  }
+  function editFOHCell(cat, name, di, val) {
+    setFoh(prev => {
+      const next = Object.assign({}, prev);
+      next[cat] = Object.assign({}, next[cat]);
+      next[cat][name] = (next[cat][name] || [null,null,null,null,null,null,null]).slice();
+      next[cat][name][di] = strToFohEntry(val);
+      return next;
+    });
+  }
+  function addFOHPerson(cat, name) {
+    setFoh(prev => {
+      const next = Object.assign({}, prev);
+      next[cat] = Object.assign({}, next[cat]);
+      if (!next[cat][name]) next[cat][name] = [null,null,null,null,null,null,null];
+      return next;
+    });
+  }
+  function editDrvCell(name, di, val) {
+    setDrv(prev => {
+      const next = Object.assign({}, prev);
+      next[name] = (next[name] || [null,null,null,null,null,null,null]).slice();
+      next[name][di] = val;
+      return next;
+    });
+  }
+  function addDrvPerson(name) {
+    setDrv(prev => {
+      const next = Object.assign({}, prev);
+      if (!next[name]) next[name] = [null,null,null,null,null,null,null];
+      return next;
+    });
+  }
+
+  function saveAll() {
+    setSaveStatus("Saving\u2026");
+    saveWeekRow(weekStart, {
+      boh_data: JSON.stringify(boh), foh_data: JSON.stringify(foh), driver_data: JSON.stringify(drv)
+    }).then(r => { if (!r.ok && r.status !== 201) throw new Error(); setSaveStatus("Saved."); load(); })
+      .catch(() => setSaveStatus("Couldn't save. Try again."));
+  }
+
+  function printSection(which) {
+    let html = '<h1 style="font-family:Arial;color:#c8102e;">' + location.name + ' Schedule \u2014 Week of ' + weekStart + '</h1>';
+    function tableHtml(title, data) {
+      const names = Object.keys(data || {});
+      if (!names.length) return '';
+      let t = '<h3>' + title + '</h3><table border="1" cellpadding="4" style="border-collapse:collapse;font-size:12px;"><tr><th>Name</th>' + DAY_LABELS.map(d => '<th>' + d + '</th>').join('') + '</tr>';
+      names.forEach(n => { t += '<tr><td>' + n + '</td>' + data[n].map(v => '<td>' + (v || '') + '</td>').join('') + '</tr>'; });
+      return t + '</table><br/>';
+    }
+    if (which === 'boh' || which === 'all') BOH_CATS.forEach(c => { html += tableHtml(c, boh[c]); });
+    if (which === 'foh' || which === 'all') FOH_CATS.forEach(c => { html += tableHtml(c, Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)]))); });
+    if (which === 'drivers' || which === 'all') html += tableHtml('Drivers', drv);
+    const w = window.open('', '_blank');
+    if (w) { w.document.write('<html><body style="font-family:Arial;padding:20px;">' + html + '</body></html>'); w.document.close(); setTimeout(() => w.print(), 300); }
+  }
+
+  function runCopyToNextWeek() {
+    setCopyStatus("Copying\u2026");
+    const target = nextWeekOf(weekStart);
+    fetchWeekRow(target).then(existing => {
+      let targetBoh = {}, targetFoh = {}, targetDrv = {}, targetEvents = existing && existing.events_list_data || null;
+      if (existing) {
+        try { targetBoh = existing.boh_data ? JSON.parse(existing.boh_data) : {}; } catch (e) {}
+        try { targetFoh = existing.foh_data ? JSON.parse(existing.foh_data) : {}; } catch (e) {}
+        try { targetDrv = existing.driver_data ? JSON.parse(existing.driver_data) : {}; } catch (e) {}
+      }
+      if (copyChecks.BOH) targetBoh = boh;
+      if (copyChecks.FOH) targetFoh = foh;
+      if (copyChecks.Drivers) targetDrv = drv;
+      const patch = { boh_data: JSON.stringify(targetBoh), foh_data: JSON.stringify(targetFoh), driver_data: JSON.stringify(targetDrv) };
+      if (copyChecks.Events) {
+        fetchWeekRow(weekStart).then(cur => { if (cur && cur.events_list_data) patch.events_list_data = cur.events_list_data; return saveWeekRow(target, patch); })
+          .then(() => setCopyStatus("Copied to week of " + target + "."))
+          .catch(() => setCopyStatus("Couldn't copy. Try again."));
+      } else {
+        saveWeekRow(target, patch).then(() => setCopyStatus("Copied to week of " + target + "."))
+          .catch(() => setCopyStatus("Couldn't copy. Try again."));
+      }
+    });
+  }
+
+  return h("div", null,
+    h(LocationHeader, { location, onHome, onLogoTap }),
+    h("div", { className: "WD-wrap" },
+      h("div", { className: "WD-weeknav" },
+        h("button", { className: "Cal-nav-btn", onClick: () => onChangeWeek(prevWeekOf(weekStart)) }, "\u2039"),
+        h("div", { className: "WD-weeklabel" }, "Week of " + weekStart),
+        h("button", { className: "Cal-nav-btn", onClick: () => onChangeWeek(nextWeekOf(weekStart)) }, "\u203A")
+      ),
+      h("div", { className: "WD-tabs" },
+        h("div", { className: "WD-tab" + (tab === 'view' ? ' active' : ''), onClick: () => setTab('view') }, "VIEW SCHEDULE"),
+        h("div", { className: "WD-tab" + (tab === 'edit' ? ' active' : ''), onClick: () => setTab('edit') }, "EDIT SCHEDULE"),
+        h("div", { className: "WD-tab" + (tab === 'copy' ? ' active' : ''), onClick: () => setTab('copy') }, "COPY TO NEXT WEEK")
+      ),
+      loading && h("div", { style: { textAlign: "center", padding: 20, color: "var(--gray-600)" } }, "Loading\u2026"),
+
+      !loading && tab === 'view' && h("div", null,
+        h("div", { className: "WD-print-menu" },
+          h("div", { className: "WD-print-btn", onClick: () => printSection('drivers') }, "Print Drivers"),
+          h("div", { className: "WD-print-btn", onClick: () => printSection('foh') }, "Print FOH"),
+          h("div", { className: "WD-print-btn", onClick: () => printSection('boh') }, "Print BOH"),
+          h("div", { className: "WD-print-btn", onClick: () => printSection('all') }, "Print All")
+        ),
+        BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: false })),
+        FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: false })),
+        h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: false }),
+        h("div", { className: "Accordion", style: { marginTop: 14 } },
+          h("div", { className: "Accordion-head" }, h("div", { className: "Accordion-head-title" }, "MANAGER NOTES")),
+          h("div", { className: "Accordion-body" }, h(ManagerNotesPanel, { location, person }))
+        ),
+        h("div", { className: "Accordion" },
+          h("div", { className: "Accordion-head" }, h("div", { className: "Accordion-head-title" }, "SCHEDULE LOG")),
+          h("div", { className: "Accordion-body" }, h(ScheduleLogPanel, { location }))
+        )
+      ),
+
+      !loading && tab === 'edit' && h("div", null,
+        BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: true,
+          onChange: (name, di, val) => editBOHCell(c, name, di, val), onAddPerson: name => addBOHPerson(c, name) })),
+        FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: true,
+          onChange: (name, di, val) => editFOHCell(c, name, di, val), onAddPerson: name => addFOHPerson(c, name) })),
+        h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: true,
+          onChange: (name, di, val) => editDrvCell(name, di, val), onAddPerson: addDrvPerson }),
+        h("button", { className: "send-btn", onClick: saveAll }, "SAVE SCHEDULE"),
+        h("div", { className: "Msg-status" }, saveStatus)
+      ),
+
+      !loading && tab === 'copy' && h("div", { className: "WD-section" },
+        h("div", { style: { fontSize: 13, marginBottom: 10 } }, "Copy this week (", weekStart, ") to next week (", nextWeekOf(weekStart), "):"),
+        ['BOH','FOH','Drivers','Events'].map(k => h("label", { key: k, className: "WD-copy-check" },
+          h("input", { type: "checkbox", checked: copyChecks[k], onChange: e => setCopyChecks(prev => Object.assign({}, prev, { [k]: e.target.checked })) }),
+          k
+        )),
+        h("button", { className: "send-btn", onClick: runCopyToNextWeek }, "COPY TO NEXT WEEK"),
+        h("div", { className: "Msg-status" }, copyStatus)
+      ),
+
+      h("div", { style: { textAlign: "center", marginTop: 16 } },
+        h("span", { className: "back-link", onClick: onBackToSchedule }, "\u2190 Back to Schedule")
+      )
+    )
+  );
+}
+
 function ScheduleScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
   const [open, setOpen] = useState(null);
+  const [openWeek, setOpenWeek] = useState(null);
 
   function toggle(key) {
     setOpen(prev => prev === key ? null : key);
   }
 
+  if (openWeek) {
+    return h(WeekDetailScreen, {
+      location, person, weekStart: openWeek,
+      onChangeWeek: ws => setOpenWeek(ws),
+      onHome, onLogoTap,
+      onBackToSchedule: () => setOpenWeek(null)
+    });
+  }
+
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
     h("div", { className: "Sched-wrap" },
-      h(MonthCalendar, { location }),
+      h(MonthCalendar, { location, onOpenWeek: setOpenWeek }),
       h("div", { className: "Accordion" },
         h("div", { className: "Accordion-head", onClick: () => toggle("issues") },
           h("div", { className: "Accordion-head-title" }, "SCHEDULE LOG"),
@@ -1410,7 +1719,60 @@ function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogo
   );
 }
 
-function PrivateScreen({ location, onHome, onBackToGrid }) {
+function ManageRosterPanel({ location, person }) {
+  const [search, setSearch] = useState("");
+  const [overrides, setOverrides] = useState({});
+  const [editing, setEditing] = useState(null);
+  const [editRate, setEditRate] = useState("");
+  const [status, setStatus] = useState("");
+  const fullStaff = FULL_STAFF[location.key] || [];
+  const matches = search.trim() ? fullStaff.filter(n => n.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 10) : [];
+
+  React.useEffect(() => {
+    fetch(SUPABASE_URL + '/rest/v1/roster_overrides?location=eq.' + location.key + '&select=name,rate', { headers: sbHeaders() })
+      .then(r => r.json())
+      .then(rows => {
+        const map = {};
+        (Array.isArray(rows) ? rows : []).forEach(r => { map[r.name] = r.rate; });
+        setOverrides(map);
+      }).catch(() => {});
+  }, [location.key]);
+
+  function rateFor(name) {
+    return overrides[name] !== undefined ? overrides[name] : (RATES[name] !== undefined ? RATES[name] : (SALARIED_EMPLOYEES[name] ? 'Salaried' : '\u2014'));
+  }
+
+  function saveRate(name) {
+    const val = parseFloat(editRate);
+    if (isNaN(val)) { setStatus("Enter a number."); return; }
+    fetch(SUPABASE_URL + '/rest/v1/roster_overrides', {
+      method: 'POST',
+      headers: Object.assign({ Prefer: 'resolution=merge-duplicates,return=minimal' }, sbHeaders()),
+      body: JSON.stringify([{ location: location.key, name, rate: val, updated_by: person }])
+    }).then(r => { if (!r.ok) throw new Error(); setOverrides(prev => Object.assign({}, prev, { [name]: val })); setEditing(null); setStatus(""); })
+      .catch(() => setStatus("Couldn't save. Try again."));
+  }
+
+  return h("div", null,
+    h("input", { type: "text", className: "date-input", placeholder: "Search staff\u2026", value: search, onChange: e => setSearch(e.target.value) }),
+    matches.map(name => h("div", { key: name, className: "TO-entry" },
+      h("div", { className: "TO-entry-name" }, name),
+      editing === name
+        ? h("div", { style: { display: "flex", gap: 6, marginTop: 4 } },
+            h("input", { className: "date-input", style: { width: 90 }, value: editRate, onChange: e => setEditRate(e.target.value) }),
+            h("span", { className: "back-link", style: { marginTop: 0 }, onClick: () => saveRate(name) }, "Save")
+          )
+        : h("div", { className: "TO-entry-meta" },
+            "Rate: ", rateFor(name),
+            "  ",
+            h("span", { className: "back-link", style: { marginTop: 0, display: "inline" }, onClick: () => { setEditing(name); setEditRate(String(rateFor(name))); } }, "Edit")
+          )
+    )),
+    h("div", { className: "Msg-status" }, status)
+  );
+}
+
+function PrivateScreen({ location, person, onHome, onBackToGrid }) {
   const [pins, setPins] = useState(null);
   const [error, setError] = useState("");
 
@@ -1442,6 +1804,10 @@ function PrivateScreen({ location, onHome, onBackToGrid }) {
         pins && pins.map(p => h("div", { key: p.location + p.name, style: { fontSize: 14, padding: "3px 0" } },
           p.name, " (", p.location, "): ", h("strong", null, p.pin)
         ))
+      ),
+      h("div", { className: "Priv-section" },
+        h("div", { className: "Priv-label" }, "Manage Roster"),
+        h(ManageRosterPanel, { location, person })
       ),
       h("div", { style: { marginTop: 16, textAlign: "center" } },
         h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
@@ -1544,6 +1910,7 @@ function App() {
   if (screen.view === "private") {
     return h(PrivateScreen, {
       location: screen.location,
+      person: screen.person,
       onHome: () => setScreen({ view: "location", location: screen.location, person: screen.person }),
       onBackToGrid: () => setScreen({ view: "location", location: screen.location, person: screen.person })
     });
