@@ -74,7 +74,18 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 
 /* ── Schedule tab: accordion buttons + time off ── */
 .Sched-wrap{padding-top:80px;min-height:100vh;padding-left:20px;padding-right:20px;padding-bottom:32px;}
-.Sched-calendar-placeholder{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px 18px;text-align:center;color:var(--gray-600);font-size:13px;margin-bottom:16px;}
+.Cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.Cal-nav-btn{padding:6px 12px;font-size:18px;line-height:1;background:var(--white);border:2px solid var(--gray-200);border-radius:8px;cursor:pointer;}
+.Cal-month-label{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;}
+.Cal-legend{display:flex;gap:10px;margin-bottom:12px;font-size:11px;color:var(--gray-600);flex-wrap:wrap;}
+.Cal-daynames{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;}
+.Cal-dayname{text-align:center;font-size:10px;font-weight:700;color:var(--gray-600);letter-spacing:0.06em;}
+.Cal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;border-radius:8px;overflow:hidden;cursor:pointer;}
+.Cal-day{text-align:center;padding:8px 2px 6px;height:60px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;position:relative;}
+.Cal-daynum{font-size:13px;}
+.Cal-cost{font-size:9px;margin-top:auto;}
+.Cal-timeoff-dot{width:5px;height:5px;border-radius:50%;background:var(--red);position:absolute;top:3px;right:3px;}
+.Sched-calendar-placeholder{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:16px;}
 .Accordion{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:12px;overflow:hidden;}
 .Accordion-head{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .Accordion-head-title{font-family:'Bebas Neue',system-ui,sans-serif;font-size:15px;letter-spacing:0.06em;}
@@ -89,7 +100,16 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .date-input{width:100%;padding:10px;border:2px solid var(--gray-200);border-radius:8px;font-size:14px;margin-bottom:12px;}
 .shift-options{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
 .shift-opt{border:2px solid var(--gray-200);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
-.shift-opt.selected{border-color:var(--red);background:#FBEAE8;font-weight:700;}
+.MN-textarea{width:100%;min-height:60px;padding:10px;border:2px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:10px;}
+.MN-textarea:focus{outline:none;border-color:var(--red);}
+.MN-cat-label{font-size:11px;font-weight:700;color:var(--red-dark);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
+.MN-note-display{background:var(--gray-100);border-radius:8px;padding:10px 12px;margin-bottom:10px;}
+.MN-note-cat{font-size:12px;font-weight:700;color:var(--red-dark);margin-top:8px;}
+.MN-note-text{font-size:13px;white-space:pre-wrap;color:var(--black);}
+.MN-thread-entry{border-top:1px solid var(--gray-100);padding:8px 0;font-size:12px;}
+.MN-thread-who{font-weight:700;}
+.MN-thread-when{color:var(--gray-400);font-size:11px;}
+.MN-reply-box{margin-top:6px;}
 .Priv-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;}
 .Priv-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-top:16px;}
 .Priv-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
@@ -142,16 +162,592 @@ const ROSTERS = {
 };
 
 const SECTIONS = [
-  { key: "messages",  name: "Messages" },
   { key: "schedule",  name: "Schedule" },
   { key: "runsheets", name: "Run Sheets" },
   { key: "heatmap",   name: "Heat Map" },
   { key: "drawer",    name: "Drawer Counts" },
   { key: "uploads",   name: "Uploads" },
+  { key: "messages",  name: "Messages" },
 ];
 
 function sbHeaders() {
   return { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };
+}
+
+// ── Ported from the live app: which sections each person is allowed to work ──
+const ROLE_MAP = {
+  'Arturo':['Kitchen','Pizza'],'Arturo Viveros':['Kitchen','Pizza'],
+  'Carlos':['Kitchen','Pizza'],'Carlos Mora':['Kitchen','Pizza'],
+  'Jesus':['Kitchen','Pizza'],'Jesus Murillo':['Kitchen','Pizza'],
+  'Jose B':['Kitchen'],'Derek':['Kitchen'],'Nithia Maldonado':['Kitchen'],'Nithia':['Kitchen'],
+  'Ever':['Kitchen','Pizza'],'Carlos Jr':['Pizza'],'Eddie':['Pizza'],'Eddie Cruz':['Pizza'],'Eddy':['Pizza'],
+  'Gonzo':['Pizza','Dish','Bus'],'Gonzalo':['Pizza','Dish','Bus'],
+  'Leo':['Pizza'],'Luis':['Pizza'],'Luis Perez':['Pizza'],'Luis Soto':['Pizza'],
+  'Monico':['Pizza'],'Monico Esparza':['Pizza'],'Soto':['Pizza'],
+  'Oscar':['Pizza'],'Oscar Velazquez':['Pizza'],'Victor':['Pizza'],'Victor Cruz':['Pizza'],
+  'Nick':['Prep','Kitchen'],'Nicholas Urbana':['Prep','Kitchen'],'Sylvia':['Prep'],'Laura Z':['Kitchen','Pizza'],
+  'Marco':['Pizza','Dish','Bus'],'Marco Sanchez':['Pizza','Dish','Bus'],
+  'Armani':['Dish','Bus'],'Armani Finley':['Dish','Bus'],
+  'Jaxon':['Dish','Bus'],'Eric':['Dish','Bus'],'Matt':['Dish'],'Raul':['Dish','Bus'],
+  'Abby':['Servers','Cashiers','Hosts'],'Alexis':['Servers'],'Bridget':['Servers'],
+  'Claudia':['Servers'],'Dorris':['Servers','Cashiers'],
+  'Hannah':['Servers'],'Hannah M':['Servers'],'Hannah M.':['Servers'],'Hannah Z':['Servers','Cashiers'],'Hannah Z.':['Servers','Cashiers'],
+  'Jaime':['Servers','Bartenders'],'Kelly':['Servers','Bartenders'],
+  'Sio':['Servers','Cashiers','Bartenders'],'Sio McAvoy':['Servers','Cashiers','Bartenders'],
+  'Annaka':['Servers'],'Allie':['Servers'],
+  'Courtney':['Servers'],'Kamini':['Servers'],
+  'Justin':['Servers','Bartenders'],'Julia':['Servers'],'Brianna':['Servers'],'Erika':['Servers'],'Elena':['Servers'],
+  'Lindsay':['Bartenders'],'Brooke':['Bartenders'],'Cheeks':['Bartenders'],
+  'Danielle':['Bartenders'],'Mary':['Bartenders'],'Lea':['Bartenders'],'Carrie':['Bartenders'],
+  'Jack':['Cashiers'],'Jack Ruane':['Cashiers'],'Mike':['Cashiers'],'Natalie':['Cashiers','Hosts'],'Presley':['Cashiers','Hosts'],
+  'Tia':['Cashiers','Hosts'],'Emilie':['Cashiers','Hosts'],'Ellianna':['Cashiers','Hosts'],
+  'Keegan':['Cashiers','Hosts'],'Molly':['Cashiers','Hosts'],'Charlie':['Cashiers','Hosts'],
+  'Claudia G':['Servers'],'Claudia G.':['Servers'],'Claudia M':['Servers'],'Claudia M.':['Servers']
+};
+
+// ── Ported directly from the live Westmont app for real calendar costs ──
+const SALARIED_EMPLOYEES = {'Brett':1,'Dom':1,'Ely':1,'Selena':1,'Lisa':1,'Alexis A':1};
+const RATES = {
+  'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie Cruz':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
+  'Victor':20.50,'Arturo':21,'Jose B':23,'Nick':20,'Armani':16,'Marco':16,
+  'Nithia Maldonado':17.50,'Arturo Viveros':21,'Jesus Murillo':21,'Derek':19,
+  'Carlos Mora':19.25,'Nicholas Urbana':20,'Luis Perez':20,'Victor Cruz':20.50,
+  'Monico Esparza':20,'Oscar Velazquez':19,'Luis Soto':19,'Gonzo':17,
+  'Carlos Jr':17.50,'Leo':17.50,'Ever':17.50,'Sylvia':15,
+  'Jack Ruane':16,'Marco Sanchez':16,'Armani Finley':16,'Gonzalo':17,'Sio McAvoy':17,'Mike':15,
+  'Eric':15,'Jaxon':15,'Matt':15,'Raul':15,
+  'Abby':9,'Alexis':9,'Bridget':9,'Claudia':9,'Dorris':9,'Hannah':9,
+  'Jaime':9,'Kelly':9,'Hannah M':9,'Brianna':9,'Erika':9,'Elena':9,
+  'Allie':9,'Courtney':9,'Kamini':9,'Charlie':15,'Justin':9,'Lindsay':9,'Brooke':9,'Cheeks':9,
+  'Danielle':9,'Mary':9,'Natalie':15,'Presley':15,'Tia':15,'Emilie':15,'Ellianna':15,'Keegan':15,'Julia':9,'Molly':15,'Lea':9
+};
+
+function hitlistHour(t, di) {
+  if (t === null || t === undefined) return null;
+  var s = String(t).trim().toLowerCase();
+  if (s === '') return null;
+  if (s === 'c' || s === 'cl' || s === 'close') return (di === 4 || di === 5) ? 23.25 : 22.25;
+  var m = s.match(/^(\d+)(?:[:.](\d+))?\s*(am|pm)?$/);
+  if (!m) return null;
+  var h = parseInt(m[1], 10);
+  var mn;
+  if (m[2] === undefined) { mn = 0; }
+  else if (s.indexOf(':') !== -1) { mn = parseInt(m[2], 10); }
+  else { var frac = parseFloat('0.' + m[2]); mn = (Math.abs(frac - 0.3) < 0.001 || Math.abs(frac - 0.5) < 0.001) ? 30 : Math.round(frac * 60); }
+  var ap = m[3] ? m[3] : (h >= 7 && h <= 11 ? 'am' : 'pm');
+  if (ap === 'pm' && h !== 12) h += 12;
+  if (ap === 'am' && h === 12) h = 0;
+  return h + mn / 60;
+}
+
+function parseBOHHours(raw, di) {
+  if (!raw) return null;
+  var s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
+  if (!s || s === 'x' || s === 'darien' || ['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
+  var closeEnd = (di === 4 || di === 5) ? 23.25 : 22.25;
+  var st, en;
+  var closeM = s.match(/^(.+)-c(?:l(?:ose)?)?$/);
+  if (closeM) { st = hitlistHour(closeM[1].trim(), di); en = closeEnd; }
+  else {
+    var rangeM = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
+    if (rangeM) { st = hitlistHour(rangeM[1], di); en = hitlistHour(rangeM[2], di); }
+    else { st = hitlistHour(s, di); en = 20; }
+  }
+  if (st === null || en === null || en <= st) return null;
+  return { st: st, en: en };
+}
+
+function sectionHasContent(sectionData) {
+  if (!sectionData) return false;
+  var isWrapped = sectionData.MANAGERS !== undefined || sectionData.PIZZA !== undefined ||
+    sectionData.SERVERS !== undefined || sectionData.KITCHEN !== undefined;
+  var groups = isWrapped ? Object.values(sectionData) : [sectionData];
+  return groups.some(function (group) {
+    if (!group) return false;
+    return Object.values(group).some(function (days) {
+      if (!Array.isArray(days)) return false;
+      return days.some(function (d) {
+        if (!d) return false;
+        if (Array.isArray(d)) return !!(d[0] || d[1]);
+        return true;
+      });
+    });
+  });
+}
+
+function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
+  var daily = [0, 0, 0, 0, 0, 0, 0];
+  function addBOHStyle(sectionObj) {
+    if (!sectionObj) return;
+    Object.keys(sectionObj).forEach(function (name) {
+      if (SALARIED_EMPLOYEES[name]) return;
+      var rate = RATES[name] || 9;
+      var days = sectionObj[name];
+      if (!Array.isArray(days)) return;
+      for (var di = 0; di < 7; di++) {
+        var parsed = parseBOHHours(days[di], di);
+        if (!parsed) continue;
+        var hrs = parsed.en - parsed.st;
+        if (hrs > 0) daily[di] += hrs * rate;
+      }
+    });
+  }
+  function addFOHStyle(sectionObj) {
+    if (!sectionObj) return;
+    Object.keys(sectionObj).forEach(function (name) {
+      if (SALARIED_EMPLOYEES[name]) return;
+      var rate = RATES[name] || 9;
+      var days = sectionObj[name];
+      if (!Array.isArray(days)) return;
+      for (var di = 0; di < 7; di++) {
+        var e = days[di];
+        if (!e || !Array.isArray(e)) continue;
+        var st = hitlistHour(e[0], di);
+        if (st === null) continue;
+        var en = e[1] === 'C' ? ((di === 4 || di === 5) ? 23.25 : 22.25) : (e[1] ? hitlistHour(e[1], di) : null);
+        if (en === null) continue;
+        var hrs = en - st;
+        if (hrs > 0) daily[di] += hrs * rate;
+      }
+    });
+  }
+  ['MANAGERS', 'PIZZA', 'KITCHEN', 'PREP', 'BUS', 'DISH'].forEach(function (sec) { addBOHStyle(bohObj && bohObj[sec]); });
+  ['SERVERS', 'BARTENDERS', 'CASHIERS', 'HOSTS'].forEach(function (sec) { addFOHStyle(fohObj && fohObj[sec]); });
+  addBOHStyle(drvObj);
+  return daily;
+}
+
+function checkScheduleErrorsForWeek(weekStart, bohObj, fohObj, drvObj, bypassedKeys, MANAGER_NAMES) {
+  MANAGER_NAMES = MANAGER_NAMES || [];
+  bypassedKeys = bypassedKeys || {};
+  var MANAGERS = (bohObj && bohObj.MANAGERS) || {};
+  var PIZZA = (bohObj && bohObj.PIZZA) || {};
+  var KITCHEN = (bohObj && bohObj.KITCHEN) || {};
+  var PREP = (bohObj && bohObj.PREP) || {};
+  var BUS = (bohObj && bohObj.BUS) || {};
+  var DISH = (bohObj && bohObj.DISH) || {};
+  var SERVERS = (fohObj && fohObj.SERVERS) || {};
+  var BARTENDERS = (fohObj && fohObj.BARTENDERS) || {};
+  var CASHIERS = (fohObj && fohObj.CASHIERS) || {};
+  var HOSTS = (fohObj && fohObj.HOSTS) || {};
+  var DRIVERS = drvObj || {};
+
+  // Skip weeks that ended more than 2 weeks ago — recent past weeks still checked
+  if(weekStart) {
+    var wkStart = new Date(weekStart + 'T00:00:00');
+    var wkEnd   = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 6);
+    wkEnd.setHours(23,59,59,999);
+    var twoWeeksAgo = new Date(); twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    if(wkEnd < twoWeeksAgo) return { BOH: [], FOH: [], Drivers: [] };
+  }
+
+  var monthsShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var FULL_DATES = [];
+  if(weekStart) {
+    var _ws = new Date(weekStart + 'T00:00:00');
+    for(var _fi=0; _fi<7; _fi++) {
+      var _dd = new Date(_ws); _dd.setDate(_ws.getDate()+_fi);
+      FULL_DATES.push(monthsShort[_dd.getMonth()]+' '+_dd.getDate());
+    }
+  } else {
+    FULL_DATES = ['','','','','','',''];
+  }
+
+  // Check what's been uploaded
+  var hasBOHData =
+    Object.values(KITCHEN).some(function(d){ return d && d.some(Boolean); }) ||
+    Object.values(PIZZA).some(function(d){ return d && d.some(Boolean); });
+  var hasFOHData =
+    Object.values(SERVERS).some(function(d){ return d && d.some(Boolean); }) ||
+    Object.values(BARTENDERS).some(function(d){ return d && d.some(Boolean); }) ||
+    Object.values(CASHIERS).some(function(d){ return d && d.some(Boolean); });
+  var hasDriverData =
+    Object.values(DRIVERS).some(function(d){ return d && d.some(Boolean); });
+  if(!hasBOHData && !hasFOHData && !hasDriverData) return;
+  var weekLbl = weekStart ? ('week of ' + FULL_DATES[0]) : 'this week';
+
+  var DAYS_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var errors = { BOH: [], FOH: [], Drivers: [] };
+
+  function dayLabel(di) {
+    var full = FULL_DATES[di] || '';
+    return full ? DAYS_SHORT[di] + ', ' + full : DAYS_SHORT[di];
+  }
+
+  // Parse a BOH raw string — returns {st, en, hasClose} or null
+  function parseBOHRaw(raw, di) {
+    if(!raw) return null;
+    var s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
+    if(!s || s==='x' || ['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
+    var closeEnd = (di===4||di===5) ? 23.25 : 22.25;
+    var hasClose = false, st = null, en = null;
+    var cm = s.match(/^(.+)-c(?:l(?:ose)?)?$/);
+    if(cm) { st = hitlistHour(cm[1].trim(), di); en = closeEnd; hasClose = true; }
+    else {
+      var rm = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
+      if(rm) {
+        st = hitlistHour(rm[1], di);
+        var enRaw = rm[2].toLowerCase();
+        if(!/am|pm/.test(enRaw) && st !== null && st >= 12) {
+          var enH = parseInt(enRaw, 10);
+          if(enH < 12) enRaw = enH + 'pm';
+        }
+        en = hitlistHour(enRaw, di);
+      }
+      else   { st = hitlistHour(s, di); en = null; }
+    }
+    if(st === null) return null;
+    return { st: st, en: en, hasClose: hasClose };
+  }
+
+  // Parse a FOH entry [start, end] array — returns {st, hasClose, hasEnd} or null
+  function parseFOHRaw(entry) {
+    if(!entry) return null;
+    // Support both array format [start,end] and string format "9am-C"
+    var startVal, endVal;
+    if(Array.isArray(entry)) { startVal = entry[0]; endVal = entry[1]; }
+    else { var s = String(entry).trim(); var m = s.match(/^(.+?)\s*[-–]\s*(.+)$/); if(m){startVal=m[1];endVal=m[2];}else{startVal=s;endVal=null;} }
+    if(!startVal) return null;
+    var hasClose = endVal && String(endVal).trim().toLowerCase().match(/^c[l]?$|^close$/);
+    var hasEnd = endVal !== null && endVal !== undefined && String(endVal).trim() !== '';
+    return { st: startVal, hasClose: !!hasClose, hasEnd: !!hasEnd };
+  }
+
+  // Check if a FOH entry has a closer
+  function fohEntryIsCloser(entry) {
+    if(!entry) return false;
+    var endVal = Array.isArray(entry) ? entry[1] : null;
+    if(!endVal) {
+      // Could be a string like "4pm-C"
+      var s = String(entry);
+      return !!s.match(/-c[l]?$/i);
+    }
+    return !!String(endVal).trim().toLowerCase().match(/^c[l]?$|^close$/);
+  }
+
+  // Fire single "not uploaded" error if section missing
+  if(!hasBOHData) errors.BOH.push({di:0, day:'', name:'—', dept:'BOH', msg:'Back of House schedule for '+weekLbl+' has not been uploaded'});
+  if(!hasFOHData) errors.FOH.push({di:0, day:'', name:'—', dept:'FOH', msg:'Front of House schedule for '+weekLbl+' has not been uploaded'});
+
+  if(hasBOHData || hasFOHData || hasDriverData)
+  for(var di = 0; di < 7; di++) {
+   try {
+    var day = dayLabel(di);
+
+    // Skip BOH checks if no BOH scheduled today
+    var anyBOHToday = [KITCHEN,PIZZA,PREP,BUS,DISH,MANAGERS].some(function(sec){
+      return Object.values(sec).some(function(d){ return d[di]; });
+    });
+    var anyDriverToday = Object.values(DRIVERS).some(function(d){ return d[di]; });
+    if(!anyBOHToday && !anyDriverToday) continue;
+    if(!anyBOHToday) {
+      // Skip to driver checks
+      var _skipToBOHEnd = true;
+    } else {
+      var _skipToBOHEnd = false;
+    }
+
+    // AM shifts missing end time (BOH)
+    [
+      {d:PIZZA,lbl:'Pizza'},{d:KITCHEN,lbl:'Kitchen'},
+      {d:PREP,lbl:'Prep'},{d:BUS,lbl:'Bus'},{d:DISH,lbl:'Dish'},{d:MANAGERS,lbl:'Managers'}
+    ].forEach(function(sec){
+      Object.entries(sec.d).forEach(function(e){
+        var p = parseBOHRaw(e[1][di], di);
+        if(p && p.st < 12 && p.en === null && !p.hasClose)
+          errors.BOH.push({di:di, day:day, name:e[0], dept:sec.lbl, msg:'AM shift — missing end time'});
+      });
+    });
+
+    // Openers (start ≤ 9AM)
+    if(!Object.entries(KITCHEN).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'No Kitchen opener (nobody at or before 9AM)'});
+    if(!Object.entries(PIZZA).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'No Pizza opener (nobody at or before 9AM)'});
+    if(!Object.entries(PREP).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Prep', msg:'No Prep opener (nobody at or before 9AM)'});
+    if(!Object.entries(MANAGERS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Managers', msg:'No manager opener (nobody at or before 9AM)'});
+
+    // Closers (must have C)
+    if(!Object.entries(KITCHEN).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'No Kitchen closer (nobody with C)'});
+    if(!Object.entries(PIZZA).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'No Pizza closer (nobody with C)'});
+    if(!Object.entries(DISH).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Dish', msg:'No Dish closer (nobody with C)'});
+    if(!Object.entries(MANAGERS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Managers', msg:'No manager closer (nobody with C)'});
+
+    // Dish and Bus must have someone starting between 3-5PM
+    if(!Object.entries(DISH).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p && p.st>=15 && p.st<=17; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Dish', msg:'No Dish staff starting between 3-5PM'});
+    if(!Object.entries(BUS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p && p.st>=15 && p.st<=17; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Bus', msg:'No Bus staff starting between 3-5PM'});
+
+    // Pizza staffing minimums
+    var _pizzaAll = Object.values(PIZZA).concat(Object.values(MANAGERS));
+    var pizzaCount = _pizzaAll.filter(function(d){ return parseBOHRaw(d[di],di); }).length;
+    var pizzaPMCount = _pizzaAll.filter(function(d){
+      var p=parseBOHRaw(d[di],di); if(!p) return false;
+      var en = p.en !== null ? p.en : (p.hasClose ? 23 : 20);
+      return p.st < 20 && en > 16; // overlaps 4-8PM window
+    }).length;
+    if(di<=3) { // Mon-Thu
+      if(pizzaCount < 2)
+        errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'Only '+pizzaCount+' pizza cook(s) — need at least 2 Mon-Thu'});
+      if(pizzaPMCount < 2)
+        errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'Only '+pizzaPMCount+' pizza cook(s) between 4-8PM — need at least 2'});
+    }
+    if(di===4||di===5) { // Fri-Sat
+      if(pizzaCount < 6)
+        errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'Only '+pizzaCount+' pizza cook(s) — need at least 6 Fri-Sat'});
+    }
+
+    // Kitchen staffing minimums
+    var _kitchenAll = Object.values(KITCHEN).concat(Object.values(MANAGERS));
+    var kitchenCount = _kitchenAll.filter(function(d){ return parseBOHRaw(d[di],di); }).length;
+    var kitchenPMCount = _kitchenAll.filter(function(d){
+      var p=parseBOHRaw(d[di],di); if(!p) return false;
+      var en = p.en !== null ? p.en : (p.hasClose ? 23 : 20);
+      return p.st < 20 && en > 16; // overlaps 4-8PM window
+    }).length;
+    if(di===0||di===1||di===2||di===3||di===6) { // Sun-Thu
+      if(kitchenCount < 2)
+        errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'Only '+kitchenCount+' kitchen cook(s) — need at least 2 Sun-Thu'});
+      if(kitchenPMCount < 2)
+        errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'Only '+kitchenPMCount+' kitchen cook(s) between 4-8PM — need at least 2'});
+    }
+    if(di===4||di===5) { // Fri-Sat
+      if(kitchenCount < 3)
+        errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'Only '+kitchenCount+' kitchen cook(s) — need at least 3 Fri-Sat'});
+      if(kitchenPMCount < 2)
+        errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'Only '+kitchenPMCount+' kitchen cook(s) between 4-8PM — need at least 2'});
+    }
+   } catch(dayErr) { console.warn('BOH day check failed for day '+di+':', dayErr); }
+  }
+
+  // DOM'S NOTES
+  for(var di = 0; di < 7; di++) {
+   try {
+    var day = dayLabel(di);
+
+    // Helper: is this FOH entry actually a scheduled shift (not null/empty)
+    function fohHasShift(entry) {
+      if(!entry) return false;
+      if(Array.isArray(entry)) return entry[0] !== null && entry[0] !== undefined && String(entry[0]).trim() !== '';
+      return String(entry).trim() !== '' && String(entry).trim().toLowerCase() !== 'null';
+    }
+
+    // FOH checks — only if FOH schedule uploaded
+    if(hasFOHData) {
+    // AM shifts missing end time — Servers, Bartenders, Hosts only (Cashiers handled separately)
+    [{d:SERVERS,lbl:'Servers'},{d:BARTENDERS,lbl:'Bartenders'},{d:HOSTS,lbl:'Hosts'}].forEach(function(sec){
+      Object.entries(sec.d).forEach(function(e){
+        var p = parseFOHRaw(e[1][di]);
+        if(!p) return;
+        var stH = hitlistHour(p.st, di);
+        if(stH !== null && stH < 12 && !p.hasEnd && !p.hasClose)
+          errors.FOH.push({di:di, day:day, name:e[0], dept:sec.lbl, msg:'AM shift — missing end time'});
+      });
+    });
+
+    // Cashiers — AM shifts missing end time
+    Object.entries(CASHIERS).forEach(function(e){
+      var p = parseFOHRaw(e[1][di]);
+      if(!p) return;
+      var stH = hitlistHour(p.st, di);
+      if(stH !== null && stH < 12 && !p.hasEnd && !p.hasClose)
+        errors.FOH.push({di:di, day:day, name:e[0], dept:'Cashiers', msg:'AM shift — missing end time'});
+    });
+
+    // Bartender opener: at or before 10:30AM
+    if(Object.values(BARTENDERS).some(function(d){ return fohHasShift(d[di]); })) {
+      if(!Object.values(BARTENDERS).some(function(d){
+        var p=parseFOHRaw(d[di]); if(!p) return false;
+        var stH=hitlistHour(p.st,di); return stH!==null && stH<=10.5;
+      }))
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Bartenders', msg:'No bartender opener at or before 10:30AM'});
+    }
+
+    // Bartender closer
+    if(Object.values(BARTENDERS).some(function(d){ return fohHasShift(d[di]); })) {
+      if(!Object.values(BARTENDERS).some(function(d){ return fohEntryIsCloser(d[di]); }))
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Bartenders', msg:'No bartender closer (nobody with C)'});
+    }
+
+    // Cashier opener: must have someone in at or before 10:30AM
+    if(Object.values(CASHIERS).some(function(d){ return fohHasShift(d[di]); })) {
+      if(!Object.values(CASHIERS).some(function(d){
+        var p=parseFOHRaw(d[di]); if(!p) return false;
+        var stH=hitlistHour(p.st,di); return stH!==null && stH<=10.5;
+      }))
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Cashiers', msg:'No cashier in at or before 10:30AM'});
+    }
+
+    // Server opener: at or before 10:30AM, and the opening shift must run until at least 4PM
+    if(Object.values(SERVERS).some(function(d){ return fohHasShift(d[di]); })) {
+      var serverOpeners = Object.entries(SERVERS).filter(function(e){
+        var p=parseFOHRaw(e[1][di]); if(!p) return false;
+        var stH=hitlistHour(p.st,di); return stH!==null && stH<=10.5;
+      });
+      if(serverOpeners.length === 0) {
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Servers', msg:'No server opener at or before 10:30AM'});
+      } else {
+        var hasCoverageTo4 = serverOpeners.some(function(e){
+          var entry = e[1][di];
+          if(fohEntryIsCloser(entry)) return true;
+          var endVal = Array.isArray(entry) ? entry[1] : null;
+          if(!endVal) return false;
+          var enH = hitlistHour(endVal, di);
+          return enH !== null && enH >= 16;
+        });
+        if(!hasCoverageTo4)
+          errors.FOH.push({di:di, day:day, name:'—', dept:'Servers', msg:'Morning server shift does not run until 4PM — coverage gap before evening wave'});
+      }
+    }
+
+    // Cashier minimums
+    var cashierPMCount = Object.values(CASHIERS).filter(function(d){
+      var entry = d[di]; if(!entry) return false;
+      var startVal = Array.isArray(entry) ? entry[0] : String(entry).split(/[-–]/)[0];
+      var endVal = Array.isArray(entry) ? entry[1] : (String(entry).split(/[-–]/)[1]||null);
+      var stH = hitlistHour(startVal, di); if(stH===null) return false;
+      var hasClose = endVal && String(endVal).trim().toLowerCase().match(/^c[l]?$|^close$/);
+      var enH = hasClose ? 23 : (endVal ? hitlistHour(endVal, di) : 20);
+      if(enH===null) enH = 20;
+      return stH < 20 && enH > 16; // overlaps 4-8PM window
+    }).length;
+    var cashierCount = Object.values(CASHIERS).filter(function(d){ return fohHasShift(d[di]); }).length;
+    if(di<=3) { // Mon-Thu
+      if(cashierCount < 1)
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Cashiers', msg:'No cashiers scheduled — need at least 1 Mon-Thu'});
+    }
+    if(di===4||di===5) { // Fri-Sat
+      if(cashierPMCount < 3)
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Cashiers', msg:'Only '+cashierPMCount+' cashier(s) between 4-8PM — need at least 3 Fri-Sat'});
+    }
+
+    // Host minimums: must have 1 on Mon/Tue/Wed/Fri/Sat/Sun (not Thu=3)
+    if(di !== 3) {
+      var hostCount = Object.values(HOSTS).filter(function(d){ return fohHasShift(d[di]); }).length;
+      if(hostCount < 1)
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Hosts', msg:'No host scheduled — need at least 1'});
+    }
+
+    // Server closer
+    if(Object.values(SERVERS).some(function(d){ return fohHasShift(d[di]); })) {
+      if(!Object.values(SERVERS).some(function(d){ return fohEntryIsCloser(d[di]); }))
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Servers', msg:'No server closer (nobody with C)'});
+    }
+
+    // PM server minimums: Fri(4)/Sat(5) need 5, Sun(6) needs 4 — counts anyone
+    // actually working during the 3:30PM+ window, whether they start then or
+    // opened earlier and are still on through it.
+    if(di === 4 || di === 5 || di === 6) {
+      var pmServerCount = 0;
+      Object.values(SERVERS).forEach(function(days){
+        var e = days[di];
+        if(!e || !e[0]) return;
+        var st = hitlistHour(e[0], di);
+        if(st === null) return;
+        var en = e[1] ? hitlistHour(e[1], di) : null;
+        var workingThroughWindow = (st >= 15.5) || (en !== null && en >= 15.5);
+        if(workingThroughWindow) pmServerCount++;
+      });
+      var minPM = (di === 6) ? 4 : 5;
+      if(pmServerCount < minPM)
+        errors.FOH.push({di:di, day:day, name:'—', dept:'Servers', msg:'Only '+pmServerCount+' PM server(s) working 3:30PM+ — need at least '+minPM});
+    }
+  }
+   } catch(dayErr) { console.warn('FOH day check failed for day '+di+':', dayErr); }
+  } // end main BOH/FOH day loop
+
+  // Separate driver loop - runs regardless of BOH data
+  if(hasDriverData) {
+    for(var ddi=0; ddi<7; ddi++) {
+     try {
+      var dday = dayLabel(ddi);
+      var amCount = 0, closerCount = 0;
+      Object.values(DRIVERS).forEach(function(days){
+        var p = parseBOHRaw(days[ddi], ddi);
+        if(!p) return;
+        if(p.hasClose) closerCount++;
+        else if(p.st <= 10.5) amCount++;
+      });
+      var anyDriverToday = Object.values(DRIVERS).some(function(d){ return d[ddi]; });
+      if(!anyDriverToday) continue;
+      if(amCount < 2)
+        errors.Drivers.push({di:ddi, day:dday, name:'—', dept:'Drivers', msg:'Only '+amCount+' AM driver(s) at or before 10:30AM — need exactly 2'});
+      if(amCount > 2)
+        errors.Drivers.push({di:ddi, day:dday, name:'—', dept:'Drivers', msg:amCount+' AM drivers at or before 10:30AM — maximum is 2'});
+      if(closerCount === 0)
+        errors.Drivers.push({di:ddi, day:dday, name:'—', dept:'Drivers', msg:'No driver closer (nobody with C)'});
+      if(closerCount > 1)
+        errors.Drivers.push({di:ddi, day:dday, name:'—', dept:'Drivers', msg:closerCount+' driver closers — should be exactly 1'});
+     } catch(ddErr) { console.warn('Driver day check failed for day '+ddi+':', ddErr); }
+    }
+  }
+
+
+  // DOM'S NOTES
+  // Role violation checker
+  var ALL_SECS = [
+    {obj:KITCHEN,lbl:'Kitchen'},{obj:PIZZA,lbl:'Pizza'},{obj:PREP,lbl:'Prep'},
+    {obj:DISH,lbl:'Dish'},{obj:BUS,lbl:'Bus'},
+    {obj:SERVERS,lbl:'Servers'},{obj:BARTENDERS,lbl:'Bartenders'},
+    {obj:CASHIERS,lbl:'Cashiers'},{obj:HOSTS,lbl:'Hosts'}
+  ];
+  var BOH_SECS = ['Kitchen','Pizza','Prep','Dish','Bus'];
+  var _managerNames = MANAGER_NAMES;
+  // The roster controls the schedule: anyone added via the Private tab's
+  // Manage Roster panel is just as recognized as a hardcoded ROLE_MAP entry.
+  // Being on the roster with a real role is what makes someone allowed to
+  // appear on the schedule -- this map translates their Manage Roster
+  // role(s) into the same section-label vocabulary ROLE_MAP already uses.
+  var CUSTOM_ROLE_TO_SECLBL = {
+    'Server':'Servers','Bartender':'Bartenders','Cashier':'Cashiers','Host':'Hosts',
+    'Pizza':'Pizza','Kitchen':'Kitchen','Dish':'Dish','Prep':'Prep','Bus':'Bus'
+  };
+  var _customAllowedMap = {};
+  if(typeof CUSTOM_ROSTER !== 'undefined' && CUSTOM_ROSTER.length) {
+    CUSTOM_ROSTER.forEach(function(p){
+      if(p.is_salaried) return; // salaried staff aren't scheduled in these sections
+      var roles = [];
+      try { roles = JSON.parse(p.roles_json || '[]'); } catch(e) { roles = []; }
+      var secLbls = roles.map(function(r){ return CUSTOM_ROLE_TO_SECLBL[r]; }).filter(Boolean);
+      if(secLbls.length) _customAllowedMap[p.name] = secLbls;
+    });
+  }
+  ALL_SECS.forEach(function(sec) {
+    Object.keys(sec.obj).forEach(function(name) {
+      if(_managerNames.indexOf(name) !== -1) return; // managers can work any section
+      var allowed = ROLE_MAP[name] || _customAllowedMap[name];
+      // No entry in ROLE_MAP means this person has no defined role at all —
+      // that is not a pass, it's the strongest possible violation. Role
+      // controls placement, never name or spelling; an unrecognized name
+      // has no valid section anywhere and must always be flagged.
+      if(allowed && allowed.indexOf(sec.lbl) !== -1) return;
+      for(var d=0; d<7; d++) {
+        if(sec.obj[name][d] && String(sec.obj[name][d]).trim().toLowerCase() !== 'x') {
+          var msg = allowed
+            ? name+' added to '+sec.lbl+' — approve this role addition?'
+            : name+' is not a recognized employee and has no defined role — appearing in '+sec.lbl+'. Remove or add them to the roster with a real role first.';
+          var errObj = {di:d, day:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][d], name:name, dept:sec.lbl, msg:msg};
+          if(BOH_SECS.indexOf(sec.lbl) !== -1) errors.BOH.push(errObj);
+          else errors.FOH.push(errObj);
+        }
+      }
+    });
+  });
+
+    // Filter out bypassed errors
+  function notBypassed(e){ return !bypassedKeys[e.di+'|'+e.dept+'|'+e.msg] && !bypassedKeys['__day_cleared_'+e.di]; }
+  errors.BOH = errors.BOH.filter(notBypassed);
+  errors.FOH = errors.FOH.filter(notBypassed);
+  errors.Drivers = errors.Drivers.filter(notBypassed);
+
+  return errors;
 }
 
 function HomeScreen({ onPick }) {
@@ -166,7 +762,7 @@ function HomeScreen({ onPick }) {
   );
 }
 
-function LockScreen({ location, onUnlock, onBack }) {
+function LockScreen({ location, onUnlock }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
 
@@ -192,8 +788,7 @@ function LockScreen({ location, onUnlock, onBack }) {
       onKeyDown: e => { if (e.key === "Enter") checkPin(); }
     }),
     h("button", { className: "unlock-btn", onClick: checkPin }, "UNLOCK"),
-    h("div", { className: "pin-error" }, error),
-    h("div", { className: "back-link", onClick: onBack }, "\u2190 Back")
+    h("div", { className: "pin-error" }, error)
   );
 }
 
@@ -442,7 +1037,315 @@ function TimeOffPanel({ location }) {
   );
 }
 
-function ScheduleScreen({ location, onHome, onBackToGrid, onLogoTap }) {
+function MonthCalendar({ location }) {
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [dataByWeek, setDataByWeek] = useState({});
+  const [timeOffDates, setTimeOffDates] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const targetMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  function fmtDate(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  const firstOfMonth = new Date(targetMonth);
+  const firstDow = firstOfMonth.getDay();
+  const daysBackToMonday = firstDow === 0 ? 6 : firstDow - 1;
+  const gridStart = new Date(firstOfMonth); gridStart.setDate(firstOfMonth.getDate() - daysBackToMonday);
+
+  const lastOfMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
+  const lastDow = lastOfMonth.getDay();
+  const daysForwardToSunday = lastDow === 0 ? 0 : 7 - lastDow;
+  const gridEnd = new Date(lastOfMonth); gridEnd.setDate(lastOfMonth.getDate() + daysForwardToSunday);
+
+  const weekStarts = [];
+  const cur = new Date(gridStart);
+  while (cur <= gridEnd) { weekStarts.push(fmtDate(cur)); cur.setDate(cur.getDate() + 7); }
+
+  React.useEffect(() => {
+    setLoading(true);
+    Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=gte.' + weekStarts[0] + '&week_start=lte.' + weekStarts[weekStarts.length - 1] +
+        '&select=week_start,boh_data,foh_data,driver_data,events_list_data', { headers: sbHeaders() }).then(r => r.json()).catch(() => []),
+      fetch(SUPABASE_URL + '/rest/v1/time_off_requests?location=eq.' + location.key +
+        '&request_date=gte.' + fmtDate(gridStart) + '&request_date=lte.' + fmtDate(gridEnd) +
+        '&select=name,request_date,shift_type', { headers: sbHeaders() }).then(r => r.json()).catch(() => [])
+    ]).then(([weekRows, toRows]) => {
+      const byWeek = {};
+      (Array.isArray(weekRows) ? weekRows : []).forEach(r => { byWeek[r.week_start] = r; });
+      setDataByWeek(byWeek);
+      const byDate = {};
+      (Array.isArray(toRows) ? toRows : []).forEach(r => {
+        byDate[r.request_date] = (byDate[r.request_date] || []).concat(r);
+      });
+      setTimeOffDates(byDate);
+      setLoading(false);
+    });
+  }, [monthOffset, location.key]);
+
+  return h("div", { className: "Sched-calendar-placeholder" },
+    h("div", { className: "Cal-nav" },
+      h("button", { className: "Cal-nav-btn", onClick: () => setMonthOffset(m => m - 1) }, "\u2039"),
+      h("div", { className: "Cal-month-label" }, monthNames[targetMonth.getMonth()] + " " + targetMonth.getFullYear()),
+      h("button", { className: "Cal-nav-btn", onClick: () => setMonthOffset(m => m + 1) }, "\u203A")
+    ),
+    h("div", { className: "Cal-legend" },
+      h("span", null, "\uD83D\uDFE2 Fully input"), h("span", null, "\uD83D\uDFE1 Partially input"), h("span", null, "\uD83D\uDD34 Not started"),
+      h("span", { style: { marginLeft: "auto", color: "var(--gray-400)" } }, "\u25CF = time off requested")
+    ),
+    h("div", { className: "Cal-daynames" },
+      ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => h("div", { key: d, className: "Cal-dayname" }, d))
+    ),
+    loading && h("div", { style: { textAlign: "center", padding: 20, color: "var(--gray-600)", fontSize: 13 } }, "Loading\u2026"),
+    !loading && weekStarts.map(ws => {
+      const rec = dataByWeek[ws];
+      let bohObj = {}, fohObj = {}, drvObj = {};
+      if (rec) {
+        try { bohObj = rec.boh_data ? JSON.parse(rec.boh_data) : {}; } catch (e) {}
+        try { fohObj = rec.foh_data ? JSON.parse(rec.foh_data) : {}; } catch (e) {}
+        try { drvObj = rec.driver_data ? JSON.parse(rec.driver_data) : {}; } catch (e) {}
+      }
+      const count = (sectionHasContent(bohObj) ? 1 : 0) + (sectionHasContent(fohObj) ? 1 : 0) + (sectionHasContent(drvObj) ? 1 : 0);
+      const color = count === 3 ? '#27AE60' : count === 0 ? '#E31010' : '#C98A00';
+      const bg = count === 3 ? '#eafaf1' : count === 0 ? '#fff0f2' : '#fff8e6';
+      let dailyCosts = [0,0,0,0,0,0,0];
+      let dailyEvents = [[],[],[],[],[],[],[]];
+      if (rec) {
+        try { dailyCosts = computeWeekDailyLaborCost(bohObj, fohObj, drvObj); } catch (e) {}
+        try {
+          const evArr = rec.events_list_data ? JSON.parse(rec.events_list_data) : [[],[],[],[],[],[],[]];
+          for (let evi = 0; evi < 7; evi++) dailyEvents[evi] = Array.isArray(evArr[evi]) ? evArr[evi] : [];
+        } catch (e) {}
+      }
+      const weekStartDate = new Date(ws + 'T00:00:00');
+
+      return h("div", {
+        key: ws, className: "Cal-week",
+        style: { borderLeft: "4px solid " + color, background: bg }
+      },
+        Array.from({ length: 7 }).map((_, i) => {
+          const d = new Date(weekStartDate); d.setDate(weekStartDate.getDate() + i);
+          const inTargetMonth = d.getMonth() === targetMonth.getMonth();
+          const isToday = d.getTime() === today.getTime();
+          const dateStr = fmtDate(d);
+          const hasTimeOff = !!timeOffDates[dateStr];
+          const costStr = dailyCosts[i] > 0 ? '$' + Math.round(dailyCosts[i]) : '';
+          const evList = dailyEvents[i];
+          return h("div", { key: i, className: "Cal-day" },
+            hasTimeOff && h("div", { className: "Cal-timeoff-dot" }),
+            h("div", { className: "Cal-daynum", style: { fontWeight: isToday ? 800 : 500, color: inTargetMonth ? "var(--black)" : "var(--gray-400)", textDecoration: isToday ? "underline" : "none" } }, d.getDate()),
+            evList.slice(0, 1).map((ev, evi) => h("div", { key: evi, style: { fontSize: 8, fontWeight: 700, color: "var(--red)", lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }, (ev.name || '') + (ev.time ? ' ' + ev.time : ''))),
+            evList.length > 1 && h("div", { style: { fontSize: 7, fontWeight: 700, color: "var(--red)" } }, "+" + (evList.length - 1) + " more"),
+            h("div", { className: "Cal-cost", style: { color: inTargetMonth ? "var(--gray-600)" : "var(--gray-200)" } }, costStr)
+          );
+        })
+      );
+    })
+  );
+}
+
+function mondayOf(date) {
+  const d = new Date(date); d.setHours(0, 0, 0, 0);
+  const dow = d.getDay();
+  const back = dow === 0 ? 6 : dow - 1;
+  d.setDate(d.getDate() - back);
+  return d;
+}
+function fmtISO(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function ScheduleLogPanel({ location }) {
+  const [weeks, setWeeks] = useState(null);
+  const [bypassed, setBypassed] = useState({});
+
+  const thisWeekStart = fmtISO(mondayOf(new Date()));
+  const nextWeekDate = mondayOf(new Date()); nextWeekDate.setDate(nextWeekDate.getDate() + 7);
+  const nextWeekStart = fmtISO(nextWeekDate);
+
+  function load() {
+    Promise.all([
+      fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=in.(' + thisWeekStart + ',' + nextWeekStart + ')&select=week_start,boh_data,foh_data,driver_data', { headers: sbHeaders() }).then(r => r.json()).catch(() => []),
+      fetch(SUPABASE_URL + '/rest/v1/schedule_error_bypasses?location=eq.' + location.key + '&select=bypass_key', { headers: sbHeaders() }).then(r => r.json()).catch(() => [])
+    ]).then(([rows, bypassRows]) => {
+      const byWeek = {};
+      (Array.isArray(rows) ? rows : []).forEach(r => { byWeek[r.week_start] = r; });
+      const bypassMap = {};
+      (Array.isArray(bypassRows) ? bypassRows : []).forEach(r => { bypassMap[r.bypass_key] = true; });
+      setBypassed(bypassMap);
+
+      const results = [thisWeekStart, nextWeekStart].map(ws => {
+        const rec = byWeek[ws];
+        let bohObj = {}, fohObj = {}, drvObj = {};
+        if (rec) {
+          try { bohObj = rec.boh_data ? JSON.parse(rec.boh_data) : {}; } catch (e) {}
+          try { fohObj = rec.foh_data ? JSON.parse(rec.foh_data) : {}; } catch (e) {}
+          try { drvObj = rec.driver_data ? JSON.parse(rec.driver_data) : {}; } catch (e) {}
+        }
+        let errors = { BOH: [], FOH: [], Drivers: [] };
+        try { errors = checkScheduleErrorsForWeek(ws, bohObj, fohObj, drvObj, bypassMap, ROSTERS[location.key]) || errors; } catch (e) {}
+        return { weekStart: ws, errors };
+      });
+      setWeeks(results);
+    });
+  }
+
+  React.useEffect(() => { load(); }, [location.key]);
+
+  function bypassError(e) {
+    const key = e.di + '|' + e.dept + '|' + e.msg;
+    fetch(SUPABASE_URL + '/rest/v1/schedule_error_bypasses', {
+      method: 'POST',
+      headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+      body: JSON.stringify([{ location: location.key, bypass_key: key }])
+    }).then(() => load());
+  }
+
+  if (weeks === null) return h("div", { style: { fontSize: 13, color: "var(--gray-600)", padding: "12px 0" } }, "Loading\u2026");
+
+  const labels = { 0: "This Week", 1: "Next Week" };
+  return h("div", null,
+    weeks.map((w, wi) => {
+      const all = w.errors.BOH.concat(w.errors.FOH).concat(w.errors.Drivers);
+      return h("div", { key: w.weekStart, style: { marginBottom: 14 } },
+        h("div", { className: "Msg-label" }, labels[wi] + " (" + w.weekStart + ")"),
+        all.length === 0
+          ? h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No errors.")
+          : all.map((e, ei) => h("div", { key: ei, className: "TO-entry" },
+              h("div", { className: "TO-entry-name" }, e.dept + (e.day ? " \u2014 " + e.day : "")),
+              h("div", { className: "TO-entry-meta" }, e.msg),
+              h("span", { className: "back-link", style: { marginTop: 4, display: "inline-block" }, onClick: () => bypassError(e) }, "Accept / Bypass")
+            ))
+      );
+    })
+  );
+}
+
+function ManagerNotesPanel({ location, person }) {
+  const [activeNote, setActiveNote] = useState(undefined);
+  const [thread, setThread] = useState([]);
+  const [composing, setComposing] = useState(false);
+  const [drivers, setDrivers] = useState("");
+  const [foh, setFoh] = useState("");
+  const [boh, setBoh] = useState("");
+  const [replyOpenFor, setReplyOpenFor] = useState(null);
+  const [replyText, setReplyText] = useState("");
+  const [status, setStatus] = useState("");
+
+  function load() {
+    fetch(SUPABASE_URL + '/rest/v1/manager_notes?location=eq.' + location.key + '&status=eq.active&order=created_at.desc&limit=1', { headers: sbHeaders() })
+      .then(r => r.json())
+      .then(rows => {
+        const note = (Array.isArray(rows) && rows.length) ? rows[0] : null;
+        setActiveNote(note);
+        if (note) {
+          setDrivers(note.drivers || ""); setFoh(note.foh || ""); setBoh(note.boh || "");
+          return fetch(SUPABASE_URL + '/rest/v1/manager_notes_ack?note_id=eq.' + note.id + '&order=acknowledged_at.asc', { headers: sbHeaders() })
+            .then(r => r.json()).then(rows2 => setThread(Array.isArray(rows2) ? rows2 : []));
+        } else {
+          setThread([]);
+        }
+      })
+      .catch(() => setActiveNote(null));
+  }
+
+  React.useEffect(() => { load(); }, [location.key]);
+
+  function publish() {
+    if (!drivers.trim() && !foh.trim() && !boh.trim()) { setStatus("Enter at least one note."); return; }
+    setStatus("Publishing\u2026");
+    fetch(SUPABASE_URL + '/rest/v1/manager_notes?location=eq.' + location.key + '&status=eq.active', {
+      method: 'PATCH', headers: sbHeaders(), body: JSON.stringify({ status: 'archived' })
+    }).then(() => fetch(SUPABASE_URL + '/rest/v1/manager_notes', {
+      method: 'POST',
+      headers: Object.assign({ Prefer: 'return=representation' }, sbHeaders()),
+      body: JSON.stringify([{ location: location.key, drivers: drivers.trim(), foh: foh.trim(), boh: boh.trim(), created_by: person }])
+    })).then(r => r.json()).then(rows => {
+      const newId = (rows && rows[0] && rows[0].id) || null;
+      fetch(SUPABASE_URL + '/rest/v1/manager_notes_ack', {
+        method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+        body: JSON.stringify([{ note_id: newId, acknowledged_by: person, action: 'published' }])
+      }).catch(() => {});
+      setStatus(""); setComposing(false); load();
+    }).catch(() => setStatus("Couldn't publish. Try again."));
+  }
+
+  function acknowledge() {
+    if (!activeNote) return;
+    fetch(SUPABASE_URL + '/rest/v1/manager_notes_ack', {
+      method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+      body: JSON.stringify([{ note_id: activeNote.id, acknowledged_by: person, action: 'acknowledged' }])
+    }).then(load);
+  }
+
+  function sendReply() {
+    if (!replyText.trim() || !activeNote) return;
+    fetch(SUPABASE_URL + '/rest/v1/manager_notes_ack', {
+      method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+      body: JSON.stringify([{ note_id: activeNote.id, acknowledged_by: person, action: 'reply', reply_text: replyText.trim() }])
+    }).then(() => { setReplyText(""); setReplyOpenFor(null); load(); });
+  }
+
+  function printNote() {
+    if (!activeNote) return;
+    let body = '';
+    if (activeNote.drivers) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Drivers</h3><p style="white-space:pre-wrap;margin:0 0 20px;">' + activeNote.drivers + '</p>';
+    if (activeNote.foh) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Front of House</h3><p style="white-space:pre-wrap;margin:0 0 20px;">' + activeNote.foh + '</p>';
+    if (activeNote.boh) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Back of House</h3><p style="white-space:pre-wrap;margin:0 0 20px;">' + activeNote.boh + '</p>';
+    const html = '<!DOCTYPE html><html><head><title>Manager Notes</title><style>body{font-family:Arial,sans-serif;padding:28px;font-size:13px;}h1{font-size:18px;color:#c8102e;margin:0 0 4px;}</style></head><body><h1>Manager Notes</h1>' + body + '</body></html>';
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 300); }
+  }
+
+  if (activeNote === undefined) return h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026");
+
+  return h("div", null,
+    activeNote && !composing && h("div", { className: "MN-note-display" },
+      activeNote.drivers && h("div", null, h("div", { className: "MN-note-cat" }, "Drivers"), h("div", { className: "MN-note-text" }, activeNote.drivers)),
+      activeNote.foh && h("div", null, h("div", { className: "MN-note-cat" }, "Front of House"), h("div", { className: "MN-note-text" }, activeNote.foh)),
+      activeNote.boh && h("div", null, h("div", { className: "MN-note-cat" }, "Back of House"), h("div", { className: "MN-note-text" }, activeNote.boh))
+    ),
+    !activeNote && !composing && h("div", { style: { fontSize: 13, color: "var(--gray-600)", marginBottom: 10 } }, "No active note."),
+    !composing && h("div", { style: { display: "flex", gap: 14, marginBottom: 10, flexWrap: "wrap" } },
+      h("span", { className: "back-link", style: { marginTop: 0 }, onClick: () => setComposing(true) }, activeNote ? "Edit / Replace Note" : "+ Write Note"),
+      activeNote && h("span", { className: "back-link", style: { marginTop: 0 }, onClick: acknowledge }, "Acknowledge"),
+      activeNote && h("span", { className: "back-link", style: { marginTop: 0 }, onClick: printNote }, "Print")
+    ),
+    composing && h("div", null,
+      h("div", { className: "MN-cat-label" }, "Drivers"),
+      h("textarea", { className: "MN-textarea", value: drivers, onChange: e => setDrivers(e.target.value) }),
+      h("div", { className: "MN-cat-label" }, "Front of House"),
+      h("textarea", { className: "MN-textarea", value: foh, onChange: e => setFoh(e.target.value) }),
+      h("div", { className: "MN-cat-label" }, "Back of House"),
+      h("textarea", { className: "MN-textarea", value: boh, onChange: e => setBoh(e.target.value) }),
+      h("button", { className: "send-btn", onClick: publish }, "PUBLISH NOTE"),
+      h("div", { className: "Msg-status" }, status),
+      h("div", { className: "back-link", onClick: () => setComposing(false) }, "\u2190 Cancel")
+    ),
+    activeNote && thread.length > 0 && h("div", null,
+      h("div", { className: "Msg-label" }, "Thread"),
+      thread.map((t, i) => h("div", { key: i, className: "MN-thread-entry" },
+        h("span", { className: "MN-thread-who" }, t.acknowledged_by || "Someone"),
+        " \u2014 ", t.action,
+        h("div", { className: "MN-thread-when" }, t.acknowledged_at ? new Date(t.acknowledged_at).toLocaleString() : ""),
+        t.action === 'reply' && t.reply_text && h("div", { style: { marginTop: 2 } }, t.reply_text)
+      ))
+    ),
+    activeNote && h("div", { className: "MN-reply-box" },
+      replyOpenFor === activeNote.id
+        ? h("div", null,
+            h("textarea", { className: "MN-textarea", style: { minHeight: 40 }, value: replyText, onChange: e => setReplyText(e.target.value), placeholder: "Reply\u2026" }),
+            h("span", { className: "back-link", style: { marginTop: 0 }, onClick: sendReply }, "Send Reply")
+          )
+        : h("span", { className: "back-link", onClick: () => setReplyOpenFor(activeNote.id) }, "Reply")
+    )
+  );
+}
+
+function ScheduleScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
   const [open, setOpen] = useState(null);
 
   function toggle(key) {
@@ -452,15 +1355,23 @@ function ScheduleScreen({ location, onHome, onBackToGrid, onLogoTap }) {
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
     h("div", { className: "Sched-wrap" },
-      h("div", { className: "Sched-calendar-placeholder" }, "Calendar goes here next."),
+      h(MonthCalendar, { location }),
       h("div", { className: "Accordion" },
         h("div", { className: "Accordion-head", onClick: () => toggle("issues") },
-          h("div", { className: "Accordion-head-title" }, "ISSUES"),
+          h("div", { className: "Accordion-head-title" }, "SCHEDULE LOG"),
           h("div", { className: "Accordion-chevron" }, open === "issues" ? "\u25B2" : "\u25BC")
         ),
         open === "issues" && h("div", { className: "Accordion-body" },
-          h("div", { style: { fontSize: 13, color: "var(--gray-600)", padding: "12px 0" } },
-            "Error checking for this week and next week goes here next.")
+          h(ScheduleLogPanel, { location })
+        )
+      ),
+      h("div", { className: "Accordion" },
+        h("div", { className: "Accordion-head", onClick: () => toggle("notes") },
+          h("div", { className: "Accordion-head-title" }, "MANAGER NOTES"),
+          h("div", { className: "Accordion-chevron" }, open === "notes" ? "\u25B2" : "\u25BC")
+        ),
+        open === "notes" && h("div", { className: "Accordion-body" },
+          h(ManagerNotesPanel, { location, person })
         )
       ),
       h("div", { className: "Accordion" },
@@ -484,7 +1395,7 @@ function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogo
     return h(MessagesScreen, { location, person, onHome, onBackToGrid, onLogoTap });
   }
   if (section.key === "schedule") {
-    return h(ScheduleScreen, { location, onHome, onBackToGrid, onLogoTap });
+    return h(ScheduleScreen, { location, person, onHome, onBackToGrid, onLogoTap });
   }
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
@@ -589,21 +1500,17 @@ function App() {
     setScreen({ view: "whoami", location, changingUser: true });
   }
 
-  if (screen.view === "home") {
-    return h(HomeScreen, { onPick: enterLocation });
-  }
   if (screen.view === "lock") {
     return h(LockScreen, {
       location: screen.location,
-      onUnlock: () => onLocationPinVerified(screen.location),
-      onBack: () => setScreen({ view: "home" })
+      onUnlock: () => onLocationPinVerified(screen.location)
     });
   }
   if (screen.view === "whoami") {
     return h(WhoAmI, {
       location: screen.location,
       onPicked: person => setScreen({ view: "personalpin", location: screen.location, person }),
-      onHome: () => setScreen({ view: "home" }),
+      onHome: () => setScreen({ view: "lock", location: screen.location }),
       onLogoTap: () => {}
     });
   }
@@ -618,7 +1525,7 @@ function App() {
     return h(LocationGrid, {
       location: screen.location,
       person: screen.person,
-      onHome: () => setScreen({ view: "home" }),
+      onHome: () => setScreen({ view: "location", location: screen.location, person: screen.person }),
       onPickSection: section => setScreen({ view: "section", location: screen.location, person: screen.person, section }),
       onLogoTap: () => handleLogoTap(screen.location, "location"),
       onChangeUser: () => changeUser(screen.location)
@@ -629,7 +1536,7 @@ function App() {
       location: screen.location,
       person: screen.person,
       section: screen.section,
-      onHome: () => setScreen({ view: "home" }),
+      onHome: () => setScreen({ view: "location", location: screen.location, person: screen.person }),
       onBackToGrid: () => setScreen({ view: "location", location: screen.location, person: screen.person }),
       onLogoTap: () => handleLogoTap(screen.location, "section")
     });
@@ -637,7 +1544,7 @@ function App() {
   if (screen.view === "private") {
     return h(PrivateScreen, {
       location: screen.location,
-      onHome: () => setScreen({ view: "home" }),
+      onHome: () => setScreen({ view: "location", location: screen.location, person: screen.person }),
       onBackToGrid: () => setScreen({ view: "location", location: screen.location, person: screen.person })
     });
   }
