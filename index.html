@@ -134,7 +134,17 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .RS-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px;margin-bottom:10px;}
 .RS-section-hdr{font-size:12px;font-weight:700;color:var(--red-dark);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;}
 .RS-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px solid var(--gray-100);}
-.RS-none{font-size:12px;color:var(--gray-400);font-style:italic;}
+.DC-regbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.DC-regbtn{padding:8px 14px;font-size:13px;font-weight:700;border-radius:8px;background:var(--white);border:2px solid var(--gray-200);cursor:pointer;}
+.DC-regbtn.active{border-color:var(--red);color:var(--red-dark);}
+.DC-typebar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.DC-typebtn{padding:8px 12px;font-size:12px;font-weight:700;border-radius:8px;background:var(--white);border:2px solid var(--gray-200);cursor:pointer;}
+.DC-typebtn.active{border-color:var(--red);color:var(--red-dark);}
+.DC-item-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:13px;}
+.DC-item-input{width:60px;padding:5px;border:1px solid var(--gray-200);border-radius:6px;text-align:right;font-size:13px;}
+.DC-total{font-size:20px;font-weight:700;text-align:right;margin:10px 0 4px;}
+.DC-pullline{font-size:13px;font-weight:700;text-align:right;}
+.DC-history-row{border-bottom:1px solid var(--gray-100);padding:8px 0;font-size:12px;}
 .Priv-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;}
 .Priv-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-top:16px;}
 .Priv-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
@@ -1868,6 +1878,115 @@ function HeatMapScreen({ location, onHome, onBackToGrid, onLogoTap }) {
   );
 }
 
+const DRAWER_REGISTERS = ['5','8','3','12','9'];
+const DRAWER_ITEMS = {
+  coins: [{id:'penny',label:'Penny',value:0.01},{id:'nickel',label:'Nickel',value:0.05},{id:'dime',label:'Dime',value:0.10},{id:'quarter',label:'Quarter',value:0.25}],
+  rolls: [{id:'pennyRoll',label:'Penny Roll (50/roll)',value:0.50},{id:'nickelRoll',label:'Nickel Roll (40/roll)',value:2.00},{id:'dimeRoll',label:'Dime Roll (50/roll)',value:5.00},{id:'quarterRoll',label:'Quarter Roll (40/roll)',value:10.00}],
+  bills: [{id:'b1',label:'$1',value:1},{id:'b5',label:'$5',value:5},{id:'b10',label:'$10',value:10},{id:'b20',label:'$20',value:20},{id:'b50',label:'$50',value:50},{id:'b100',label:'$100',value:100}]
+};
+function drawerStartingBalance(reg) { return reg === '3' ? 300 : 250; }
+const DRAWER_TYPES = [['opener','Opener'],['shift_change','Shift Change'],['closer','Closer'],['spot_check','Spot Check']];
+
+function DrawerCountsScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
+  const [register, setRegister] = useState(null);
+  const [type, setType] = useState(null);
+  const [cashierName, setCashierName] = useState("");
+  const [countDate, setCountDate] = useState(fmtISO(new Date()));
+  const [qtys, setQtys] = useState({});
+  const [status, setStatus] = useState("");
+  const [recent, setRecent] = useState(null);
+
+  function loadRecent() {
+    fetch(SUPABASE_URL + '/rest/v1/drawer_counts?order=count_date.desc,counted_at.desc&limit=15', { headers: sbHeaders() })
+      .then(r => r.json()).then(rows => setRecent(Array.isArray(rows) ? rows : [])).catch(() => setRecent([]));
+  }
+  React.useEffect(() => { loadRecent(); }, []);
+
+  function selectRegister(reg) {
+    setRegister(reg); setType(null); setQtys({}); setCashierName("");
+  }
+
+  const allItems = [].concat(DRAWER_ITEMS.coins, DRAWER_ITEMS.rolls, DRAWER_ITEMS.bills);
+  const total = allItems.reduce((sum, it) => sum + (parseInt(qtys[it.id], 10) || 0) * it.value, 0);
+  const opening = drawerStartingBalance(register);
+  const diff = total - opening;
+
+  function pullLineText() {
+    if (type === 'spot_check') return { text: 'Spot check only \u2014 counted for reference, no pull', color: 'var(--gray-600)' };
+    if (Math.abs(diff) < 0.005) return { text: 'Even \u2014 no pull needed', color: 'var(--gray-600)' };
+    if (diff > 0) return { text: 'PULL $' + diff.toFixed(2), color: '#1a7a3c' };
+    return { text: '\u26A0\uFE0F SHORT $' + Math.abs(diff).toFixed(2), color: 'var(--red)' };
+  }
+
+  function save() {
+    if (!register) { setStatus("Select a register first."); return; }
+    if (!type) { setStatus("Select Opener, Shift Change, Closer, or Spot Check."); return; }
+    if (!cashierName.trim()) { setStatus("Enter who was on this drawer."); return; }
+    const breakdown = { coins: {}, rolls: {}, bills: {} };
+    DRAWER_ITEMS.coins.forEach(it => breakdown.coins[it.id] = parseInt(qtys[it.id], 10) || 0);
+    DRAWER_ITEMS.rolls.forEach(it => breakdown.rolls[it.id] = parseInt(qtys[it.id], 10) || 0);
+    DRAWER_ITEMS.bills.forEach(it => breakdown.bills[it.id] = parseInt(qtys[it.id], 10) || 0);
+    const pull = type === 'spot_check' ? null : Math.round(diff * 100) / 100;
+    setStatus("Saving\u2026");
+    fetch(SUPABASE_URL + '/rest/v1/drawer_counts', {
+      method: 'POST', headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+      body: JSON.stringify([{
+        register, count_type: type, count_date: countDate, cashier_name: cashierName.trim(),
+        counted_by: person, counted_at: new Date().toISOString(), counts_json: JSON.stringify(breakdown),
+        total: Math.round(total * 100) / 100, starting_balance: opening, pull_amount: pull
+      }])
+    }).then(r => { if (!r.ok) throw new Error(); setStatus("Saved."); setRegister(null); setType(null); setQtys({}); setCashierName(""); loadRecent(); })
+      .catch(() => setStatus("Couldn't save. Try again."));
+  }
+
+  const pl = pullLineText();
+
+  return h("div", null,
+    h(LocationHeader, { location, onHome, onLogoTap }),
+    h("div", { className: "Sched-wrap" },
+      h("div", { className: "DC-regbar" },
+        DRAWER_REGISTERS.map(r => h("div", { key: r, className: "DC-regbtn" + (register === r ? ' active' : ''), onClick: () => selectRegister(r) }, "Register " + r))
+      ),
+      register && h("div", null,
+        h("div", { className: "DC-typebar" },
+          DRAWER_TYPES.map(([k, label]) => h("div", { key: k, className: "DC-typebtn" + (type === k ? ' active' : ''), onClick: () => setType(k) }, label))
+        ),
+        h("div", { className: "WD-section" },
+          h("div", { style: { marginBottom: 10 } },
+            h("input", { className: "date-input", placeholder: "Cashier name", value: cashierName, onChange: e => setCashierName(e.target.value), style: { marginBottom: 8 } }),
+            h("input", { type: "date", className: "date-input", value: countDate, onChange: e => setCountDate(e.target.value) })
+          ),
+          ['coins','rolls','bills'].map(sec => h("div", { key: sec, style: { marginBottom: 10 } },
+            h("div", { className: "WD-section-title" }, sec),
+            DRAWER_ITEMS[sec].map(it => h("div", { key: it.id, className: "DC-item-row" },
+              h("span", null, it.label),
+              h("input", { type: "number", inputMode: "numeric", min: "0", className: "DC-item-input", placeholder: "0", value: qtys[it.id] || "", onChange: e => setQtys(prev => Object.assign({}, prev, { [it.id]: e.target.value })) })
+            ))
+          )),
+          h("div", { className: "DC-total" }, "$" + total.toFixed(2)),
+          h("div", { className: "DC-pullline", style: { color: pl.color } }, pl.text),
+          h("button", { className: "send-btn", onClick: save }, "SAVE COUNT"),
+          h("div", { className: "Msg-status" }, status),
+          h("div", { className: "back-link", onClick: () => setRegister(null) }, "\u2190 Cancel")
+        )
+      ),
+      !register && h("div", { className: "WD-section" },
+        h("div", { className: "WD-section-title" }, "Recent Counts"),
+        recent === null && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026"),
+        recent && recent.length === 0 && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No counts yet."),
+        recent && recent.map((r, i) => h("div", { key: i, className: "DC-history-row" },
+          h("strong", null, "Register " + r.register), " \u2014 ", r.count_type, " \u2014 ", r.count_date,
+          h("div", null, r.cashier_name, " \u2014 counted by ", r.counted_by, " \u2014 $", r.total,
+            r.pull_amount != null && (r.pull_amount >= 0 ? " \u2014 Pull $" + r.pull_amount : " \u2014 Short $" + Math.abs(r.pull_amount)))
+        ))
+      ),
+      h("div", { style: { textAlign: "center", marginTop: 16 } },
+        h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
+      )
+    )
+  );
+}
+
 function ScheduleScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
   const [open, setOpen] = useState(null);
   const [openWeek, setOpenWeek] = useState(null);
@@ -1935,6 +2054,9 @@ function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogo
   }
   if (section.key === "heatmap") {
     return h(HeatMapScreen, { location, onHome, onBackToGrid, onLogoTap });
+  }
+  if (section.key === "drawer") {
+    return h(DrawerCountsScreen, { location, person, onHome, onBackToGrid, onLogoTap });
   }
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
