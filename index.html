@@ -127,7 +127,14 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .WD-addperson button{padding:6px 12px;font-size:12px;background:var(--gray-100);border:none;border-radius:6px;cursor:pointer;}
 .WD-print-menu{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
 .WD-print-btn{padding:8px 12px;font-size:12px;border:2px solid var(--gray-200);border-radius:8px;background:var(--white);cursor:pointer;}
-.WD-copy-check{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--gray-100);font-size:14px;}
+.RS-daytabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:4px;}
+.RS-daytab{flex-shrink:0;padding:8px 12px;font-size:12px;font-weight:700;border-radius:8px;background:var(--white);border:2px solid var(--gray-200);cursor:pointer;}
+.RS-daytab.active{border-color:var(--red);color:var(--red-dark);}
+.RS-count{font-size:11px;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:10px;}
+.RS-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:10px 12px;margin-bottom:10px;}
+.RS-section-hdr{font-size:12px;font-weight:700;color:var(--red-dark);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px;}
+.RS-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px solid var(--gray-100);}
+.RS-none{font-size:12px;color:var(--gray-400);font-style:italic;}
 .Priv-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;}
 .Priv-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-top:16px;}
 .Priv-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
@@ -1644,6 +1651,94 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
   );
 }
 
+function RunSheetsScreen({ location, onHome, onBackToGrid, onLogoTap }) {
+  const [weekStart, setWeekStart] = useState(fmtISO(mondayOf(new Date())));
+  const [dayIdx, setDayIdx] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [boh, setBoh] = useState({});
+  const [foh, setFoh] = useState({});
+  const [drv, setDrv] = useState({});
+
+  React.useEffect(() => {
+    setLoading(true);
+    fetchWeekRow(weekStart).then(rec => {
+      let bohObj = {}, fohObj = {}, drvObj = {};
+      if (rec) {
+        try { bohObj = rec.boh_data ? JSON.parse(rec.boh_data) : {}; } catch (e) {}
+        try { fohObj = rec.foh_data ? JSON.parse(rec.foh_data) : {}; } catch (e) {}
+        try { drvObj = rec.driver_data ? JSON.parse(rec.driver_data) : {}; } catch (e) {}
+      }
+      setBoh(bohObj); setFoh(fohObj); setDrv(drvObj); setLoading(false);
+    });
+  }, [weekStart]);
+
+  function bohPeople(cat, di) {
+    const data = boh[cat] || {};
+    return Object.entries(data).filter(([n, days]) => days && days[di]).map(([n, days]) => ({ n, shift: days[di] }));
+  }
+  function fohPeople(cat, di) {
+    const data = foh[cat] || {};
+    return Object.entries(data).filter(([n, days]) => days && days[di]).map(([n, days]) => ({ n, shift: fohEntryToStr(days[di]) }));
+  }
+  function drvPeople(di) {
+    return Object.entries(drv).filter(([n, days]) => days && days[di]).map(([n, days]) => ({ n, shift: days[di] }));
+  }
+
+  const sections = [
+    { title: 'Managers', people: bohPeople('MANAGERS', dayIdx) },
+    { title: 'Pizza', people: bohPeople('PIZZA', dayIdx) },
+    { title: 'Kitchen', people: bohPeople('KITCHEN', dayIdx) },
+    { title: 'Prep / Utility', people: bohPeople('PREP', dayIdx) },
+    { title: 'Bus / Dish', people: bohPeople('BUS', dayIdx).concat(bohPeople('DISH', dayIdx)) },
+    { title: 'Host', people: fohPeople('HOSTS', dayIdx) },
+    { title: 'Servers', people: fohPeople('SERVERS', dayIdx) },
+    { title: 'Bartenders', people: fohPeople('BARTENDERS', dayIdx) },
+    { title: 'Cashiers', people: fohPeople('CASHIERS', dayIdx) },
+    { title: 'Drivers', people: drvPeople(dayIdx) }
+  ];
+  const totalStaff = sections.reduce((sum, s) => sum + s.people.length, 0);
+
+  function printDay() {
+    let html = '<h1 style="font-family:Arial;color:#c8102e;">' + DAY_LABELS[dayIdx] + ' \u2014 Week of ' + weekStart + '</h1>';
+    sections.forEach(s => {
+      html += '<h3>' + s.title + '</h3>';
+      if (s.people.length === 0) { html += '<p style="color:#999;font-style:italic;">None scheduled</p>'; return; }
+      html += '<table border="1" cellpadding="4" style="border-collapse:collapse;font-size:12px;margin-bottom:14px;"><tr><th>Name</th><th>Shift</th></tr>' +
+        s.people.map(p => '<tr><td>' + p.n + '</td><td>' + p.shift + '</td></tr>').join('') + '</table>';
+    });
+    const w = window.open('', '_blank');
+    if (w) { w.document.write('<html><body style="font-family:Arial;padding:20px;">' + html + '</body></html>'); w.document.close(); setTimeout(() => w.print(), 300); }
+  }
+
+  return h("div", null,
+    h(LocationHeader, { location, onHome, onLogoTap }),
+    h("div", { className: "Sched-wrap" },
+      h("div", { className: "WD-weeknav" },
+        h("button", { className: "Cal-nav-btn", onClick: () => setWeekStart(prevWeekOf(weekStart)) }, "\u2039"),
+        h("div", { className: "WD-weeklabel" }, "Week of " + weekStart),
+        h("button", { className: "Cal-nav-btn", onClick: () => setWeekStart(nextWeekOf(weekStart)) }, "\u203A")
+      ),
+      h("div", { className: "RS-daytabs" },
+        DAY_LABELS.map((d, i) => h("div", { key: d, className: "RS-daytab" + (dayIdx === i ? ' active' : ''), onClick: () => setDayIdx(i) }, d))
+      ),
+      loading ? h("div", { style: { textAlign: "center", padding: 20, color: "var(--gray-600)" } }, "Loading\u2026") :
+      h("div", null,
+        h("div", { className: "RS-count" }, totalStaff + " staff scheduled"),
+        h("div", { className: "WD-print-menu" }, h("div", { className: "WD-print-btn", onClick: printDay }, "Print / PDF")),
+        sections.map(s => h("div", { key: s.title, className: "RS-section" },
+          h("div", { className: "RS-section-hdr" }, s.title),
+          s.people.length === 0
+            ? h("div", { className: "RS-none" }, "None scheduled")
+            : s.people.map(p => h("div", { key: p.n, className: "RS-row" }, h("span", null, p.n), h("span", null, p.shift)))
+        ))
+      ),
+      h("div", { style: { textAlign: "center", marginTop: 16 } },
+        h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
+      )
+    )
+  );
+}
+
 function ScheduleScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
   const [open, setOpen] = useState(null);
   const [openWeek, setOpenWeek] = useState(null);
@@ -1705,6 +1800,9 @@ function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogo
   }
   if (section.key === "schedule") {
     return h(ScheduleScreen, { location, person, onHome, onBackToGrid, onLogoTap });
+  }
+  if (section.key === "runsheets") {
+    return h(RunSheetsScreen, { location, onHome, onBackToGrid, onLogoTap });
   }
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
