@@ -144,7 +144,11 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .DC-item-input{width:60px;padding:5px;border:1px solid var(--gray-200);border-radius:6px;text-align:right;font-size:13px;}
 .DC-total{font-size:20px;font-weight:700;text-align:right;margin:10px 0 4px;}
 .DC-pullline{font-size:13px;font-weight:700;text-align:right;}
-.DC-history-row{border-bottom:1px solid var(--gray-100);padding:8px 0;font-size:12px;}
+.UP-card{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin-bottom:14px;}
+.UP-card-title{font-size:12px;font-weight:700;color:var(--red-dark);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;}
+.UP-dropzone{display:block;width:100%;padding:20px;background:var(--gray-50);border:2px dashed var(--gray-200);border-radius:8px;text-align:center;cursor:pointer;font-size:13px;color:var(--gray-600);}
+.UP-preview{width:100%;border-radius:6px;max-height:200px;object-fit:cover;margin-bottom:10px;}
+.UP-status{font-size:12px;color:var(--gray-600);margin-top:6px;}
 .Priv-wrap{padding-top:80px;min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-left:20px;padding-right:20px;}
 .Priv-section{background:var(--white);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;margin-top:16px;}
 .Priv-label{font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--gray-400);margin-bottom:6px;}
@@ -1987,6 +1991,133 @@ function DrawerCountsScreen({ location, person, onHome, onBackToGrid, onLogoTap 
   );
 }
 
+function getAnthropicKeyPrompt(onGot) {
+  let k = localStorage.getItem('zp_anthropic_key');
+  if (k) { onGot(k); return; }
+  const key = window.prompt('Paste your Anthropic API key (starts with sk-ant-) to enable schedule parsing. Saved on this device only.');
+  if (key && key.trim().startsWith('sk-ant-')) {
+    localStorage.setItem('zp_anthropic_key', key.trim());
+    onGot(key.trim());
+  }
+}
+
+function callVision(apiKey, base64, mediaType, promptText) {
+  return fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({
+      model: 'claude-opus-4-8', max_tokens: 8000,
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+        { type: 'text', text: promptText }
+      ]}]
+    })
+  }).then(r => r.json()).then(data => {
+    if (!data.content || !data.content[0]) throw new Error('No response from AI: ' + JSON.stringify(data));
+    let text = data.content.filter(b => b.type === 'text' && b.text).map(b => b.text).join('').trim();
+    text = text.replace(/```json\n?|```/g, '').trim();
+    return JSON.parse(text);
+  });
+}
+
+const VISION_PROMPTS = {
+  BOH: 'You are extracting a Back of House restaurant schedule from a photo or screenshot.\n\nThe schedule is a grid where rows are employee names and columns are days of the week (Monday through Sunday). Each cell contains either a shift time or is blank/off.\n\nExtract EVERY employee and EVERY day. Do not skip anyone. Do not skip any days.\n\nMany cells have a colored background (green, yellow, etc.). A colored background does NOT mean the cell is empty — read the text inside colored cells exactly like white cells. A cell is null ONLY if it is truly blank. Before you finish, re-check every row against the image and confirm you did not leave any filled cell as null.\n\nReturn ONLY a valid JSON object with this exact structure — no markdown, no explanation, just raw JSON:\n{\n  "MANAGERS": {"EmployeeName": ["MonShift","TueShift","WedShift","ThuShift","FriShift","SatShift","SunShift"]},\n  "PIZZA": {},\n  "KITCHEN": {},\n  "PREP": {},\n  "BUS": {},\n  "DISH": {}\n}\n\nRules:\n- Use null for days off or blank cells\n- Preserve shift times exactly as written (e.g. "4pm", "9am-8pm", "4pm-c", "4pm-cl", "1pm-close", "9am")\n- "c" or "cl" or "close" at the end means closing shift — keep it as written\n- Include ALL employees listed under each section header\n- If a section has no employees visible, use an empty object {}\n- The 7 array values correspond to Mon, Tue, Wed, Thu, Fri, Sat, Sun in order\n- Employee names must be first name only or first+last — strip any phone numbers or digits in parentheses\n- CRITICAL: Only include employees whose name you can physically see in that section of the photo.',
+  FOH: 'You are extracting a Front of House restaurant schedule from a photo or screenshot.\n\nThe schedule is a grid where rows are employee names and columns are days of the week (Monday through Sunday). Each cell contains either a start time, a start-end time range, or is blank/off.\n\nExtract EVERY employee and EVERY day. Do not skip anyone. Do not skip any days.\n\nMany cells have a colored background — read text inside colored cells exactly like white cells. A cell is null ONLY if it is truly blank.\n\nReturn ONLY a valid JSON object with this exact structure — no markdown, no explanation, just raw JSON:\n{\n  "SERVERS": {"EmployeeName": [["startTime","endTimeOrC"],null,...]},\n  "BARTENDERS": {},\n  "CASHIERS": {},\n  "HOSTS": {}\n}\n\nRules:\n- Use null for days off or blank cells\n- Each working day is an array: ["startTime", "endTime"] or ["startTime", "C"] for close or ["startTime", null] if no end shown\n- Preserve times exactly as written\n- Include ALL employees under each section\n- Employee names must be first name only or first+last — strip phone numbers.',
+  Drivers: 'You are extracting a Driver schedule from a photo or screenshot of a spreadsheet grid.\n\nCompleteness is the single most important thing. Colored cell backgrounds are NOT empty — read the text inside them. A cell is null ONLY if it is truly blank.\n\nRead down the left column and note EVERY driver name. For each driver, scan all 7 day columns (Mon-Sun) and record shift text.\n\nReturn ONLY a valid JSON object — no markdown, no explanation:\n{"DriverName": ["MonShift","TueShift","WedShift","ThuShift","FriShift","SatShift","SunShift"]}\n\nRules:\n- Use null ONLY for genuinely empty cells\n- Preserve shift text exactly as written\n- Include EVERY driver listed, even with no shifts (all-null array)\n- Sunday is often cut off — you MUST still include it.'
+};
+
+const MANAGER_ALLOWLIST = ['Selena','Dom','Ely','Alexis A','Brett'];
+const MANAGER_ALIAS_RESOLVE = {'selena':'Selena','dom':'Dom','dominic':'Dom','ely':'Ely','elly':'Ely','alexis a':'Alexis A','alex':'Alexis A','alex a':'Alexis A','alexis acosta':'Alexis A','alex acosta':'Alexis A','brett':'Brett'};
+
+function enforceManagerAllowlist(schedObj) {
+  if (!schedObj.MANAGERS) return { sched: schedObj, rejected: [] };
+  const rejected = [];
+  const clean = {};
+  Object.keys(schedObj.MANAGERS).forEach(name => {
+    const resolved = MANAGER_ALIAS_RESOLVE[name.toLowerCase()];
+    if (resolved && MANAGER_ALLOWLIST.indexOf(resolved) !== -1) {
+      clean[resolved] = schedObj.MANAGERS[name];
+    } else {
+      rejected.push(name);
+    }
+  });
+  schedObj.MANAGERS = clean;
+  return { sched: schedObj, rejected };
+}
+
+function UploadCard({ title, type, weekStart, onSaved }) {
+  const [preview, setPreview] = useState(null);
+  const [fileData, setFileData] = useState(null);
+  const [status, setStatus] = useState("");
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => { setPreview(reader.result); setFileData(reader.result); };
+    reader.readAsDataURL(file);
+  }
+
+  function process() {
+    if (!fileData) { setStatus("Choose a photo first."); return; }
+    getAnthropicKeyPrompt(apiKey => {
+      setStatus("Reading photo\u2026");
+      const base64 = fileData.split(',')[1];
+      const mediaType = fileData.split(';')[0].split(':')[1];
+      callVision(apiKey, base64, mediaType, VISION_PROMPTS[type]).then(result => {
+        let rejectedMsg = "";
+        if (type === 'BOH') {
+          const enforced = enforceManagerAllowlist(result);
+          result = enforced.sched;
+          if (enforced.rejected.length) rejectedMsg = " (Removed from Managers \u2014 not on allowlist: " + enforced.rejected.join(', ') + ")";
+        }
+        const columnMap = { BOH: 'boh_data', FOH: 'foh_data', Drivers: 'driver_data' };
+        const patch = { [columnMap[type]]: JSON.stringify(result) };
+        setStatus("Saving\u2026");
+        return saveWeekRow(weekStart, patch).then(r => {
+          if (!r.ok && r.status !== 201) throw new Error();
+          setStatus("Saved." + rejectedMsg);
+          onSaved();
+        });
+      }).catch(err => setStatus("Couldn't read/save: " + err.message));
+    });
+  }
+
+  return h("div", { className: "UP-card" },
+    h("div", { className: "UP-card-title" }, title),
+    preview && h("img", { className: "UP-preview", src: preview }),
+    h("label", { className: "UP-dropzone" },
+      h("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: handleFile }),
+      "\uD83D\uDCF7 Tap to upload " + type + " photo"
+    ),
+    h("button", { className: "send-btn", style: { marginTop: 10 }, onClick: process }, "\u26A1 Save " + type),
+    h("div", { className: "UP-status" }, status)
+  );
+}
+
+function UploadsScreen({ location, onHome, onBackToGrid, onLogoTap }) {
+  const [weekStart, setWeekStart] = useState(fmtISO(mondayOf(new Date())));
+  const [savedCount, setSavedCount] = useState(0);
+
+  return h("div", null,
+    h(LocationHeader, { location, onHome, onLogoTap }),
+    h("div", { className: "Sched-wrap" },
+      h("div", { className: "WD-section" },
+        h("div", { className: "WD-section-title" }, "Week Starting"),
+        h("input", { type: "date", className: "date-input", value: weekStart, onChange: e => setWeekStart(e.target.value) })
+      ),
+      h(UploadCard, { title: "1 \u2014 Back of House Schedule", type: "BOH", weekStart, onSaved: () => setSavedCount(c => c + 1) }),
+      h(UploadCard, { title: "2 \u2014 Front of House Schedule", type: "FOH", weekStart, onSaved: () => setSavedCount(c => c + 1) }),
+      h(UploadCard, { title: "3 \u2014 Driver Schedule", type: "Drivers", weekStart, onSaved: () => setSavedCount(c => c + 1) }),
+      h("div", { style: { fontSize: 11, color: "var(--gray-400)", textAlign: "center", marginBottom: 10 } },
+        "Note: this reads the photo once per upload. It doesn't yet do the second reconciliation pass or sparse-row repair the original app does for extra accuracy \u2014 check the result before trusting it fully."),
+      h("div", { style: { textAlign: "center" } },
+        h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
+      )
+    )
+  );
+}
+
 function ScheduleScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
   const [open, setOpen] = useState(null);
   const [openWeek, setOpenWeek] = useState(null);
@@ -2057,6 +2188,9 @@ function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogo
   }
   if (section.key === "drawer") {
     return h(DrawerCountsScreen, { location, person, onHome, onBackToGrid, onLogoTap });
+  }
+  if (section.key === "uploads") {
+    return h(UploadsScreen, { location, onHome, onBackToGrid, onLogoTap });
   }
   return h("div", null,
     h(LocationHeader, { location, onHome, onLogoTap }),
