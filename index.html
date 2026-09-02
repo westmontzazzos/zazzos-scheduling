@@ -196,7 +196,7 @@ const LOCATIONS = [
 ];
 
 const FULL_STAFF = {
-  westmont: ['Abby','Alexis','Alexis A','Allie','Armani','Armani Finley','Arturo','Arturo Viveros','Brett','Brianna','Bridget','Brooke','Carlos','Carlos Jr','Carlos Mora','Charlie','Cheeks','Claudia','Courtney','Danielle','Derek','Dom','Dorris','Eddie','Eddie Cruz','Eddy','Elena','Ellianna','Ely','Emilie','Eric','Erika','Ever','Gonzalo','Gonzo','Hannah','Hannah M','Jack Ruane','Jaime','Jaxon','Jesus','Jesus Murillo','Jose B','Julia','Justin','Kamini','Keegan','Kelly','Lea','Leo','Lindsay','Lisa','Luis','Luis Perez','Luis Soto','Marco','Marco Sanchez','Mary','Matt','Mike','Molly','Monico','Monico Esparza','Natalie','Nicholas Urbana','Nick','Nithia Maldonado','Oscar','Oscar Velazquez','Presley','Raul','Selena','Sio McAvoy','Soto','Sylvia','Tia','Victor','Victor Cruz']
+  westmont: ['Abby','Alexis','Alexis A','Allie','Armani','Armani Finley','Arturo','Arturo Viveros','Brett','Brianna','Bridget','Brooke','Carlos','Carlos Jr','Carlos Mora','Charlie','Cheeks','Claudia','Courtney','Danielle','Derek','Dom','Dorris','Eddie','Eddie Cruz','Eddy','Elena','Ellianna','Ely','Emilie','Eric','Erika','Ever','Gonzalo','Gonzo','Hannah','Hannah M','Jack Ruane','Jaime','Jaxon','Jesus','Jesus Murillo','Jose B','Julia','Justin','Kamini','Keegan','Kelly','Lea','Leo','Lindsay','Lisa','Luis','Luis Perez','Luis Soto','Marco','Marco Sanchez','Mary','Matt','Mike','Molly','Monico','Monico Esparza','Natalie','Nicholas Urbana','Nick','Nithia Maldonado','Oscar V.','Presley','Raul','Selena','Sio McAvoy','Soto','Sylvia','Tia','Victor','Victor Cruz']
 };
 
 const ROSTERS = {
@@ -215,6 +215,33 @@ const SECTIONS = [
 
 function sbHeaders() {
   return { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };
+}
+
+// Live-editable name corrections, ported from the Westmont app's roster
+// engine. Renames/aliases let a name be fixed from Manage Roster with no
+// code push -- the underlying key used by ROLE_MAP/RATES/schedule data
+// never changes, only what's displayed on screen.
+// { locationKey: { origName: displayName } } / { locationKey: { aliasLower: origName } }
+let ROSTER_RENAMES = {};
+let NAME_ALIASES = {};
+
+function displayName(locationKey, origName) {
+  const map = ROSTER_RENAMES[locationKey];
+  return (map && map[origName]) || origName;
+}
+
+function loadRosterNaming(locationKey) {
+  return Promise.all([
+    fetch(SUPABASE_URL + '/rest/v1/roster_renames?location=eq.' + locationKey + '&select=original_name,display_name', { headers: sbHeaders() }).then(r => r.json()).catch(() => []),
+    fetch(SUPABASE_URL + '/rest/v1/name_aliases?location=eq.' + locationKey + '&select=alias,canonical_name', { headers: sbHeaders() }).then(r => r.json()).catch(() => [])
+  ]).then(([renames, aliases]) => {
+    const rMap = {};
+    (Array.isArray(renames) ? renames : []).forEach(r => { rMap[r.original_name] = r.display_name; });
+    ROSTER_RENAMES[locationKey] = rMap;
+    const aMap = {};
+    (Array.isArray(aliases) ? aliases : []).forEach(a => { aMap[a.alias.toLowerCase()] = a.canonical_name; });
+    NAME_ALIASES[locationKey] = aMap;
+  });
 }
 
 // Permanent, unerasable audit trail. Every write here is additive only --
@@ -264,7 +291,7 @@ const ROLE_MAP = {
   'Gonzo':['Pizza','Dish','Bus'],'Gonzalo':['Pizza','Dish','Bus'],
   'Leo':['Pizza'],'Luis':['Pizza'],'Luis Perez':['Pizza'],'Luis Soto':['Pizza'],
   'Monico':['Pizza'],'Monico Esparza':['Pizza'],'Soto':['Pizza'],
-  'Oscar':['Pizza'],'Oscar Velazquez':['Pizza'],'Victor':['Pizza'],'Victor Cruz':['Pizza'],
+  'Oscar V.':['Pizza'],'Victor':['Pizza'],'Victor Cruz':['Pizza'],
   'Nick':['Prep','Kitchen'],'Nicholas Urbana':['Prep','Kitchen'],'Sylvia':['Prep'],'Laura Z':['Kitchen','Pizza'],
   'Marco':['Pizza','Dish','Bus'],'Marco Sanchez':['Pizza','Dish','Bus'],
   'Armani':['Dish','Bus'],'Armani Finley':['Dish','Bus'],
@@ -288,11 +315,11 @@ const ROLE_MAP = {
 // ── Ported directly from the live Westmont app for real calendar costs ──
 const SALARIED_EMPLOYEES = {'Brett':1,'Dom':1,'Ely':1,'Selena':1,'Lisa':1,'Alexis A':1};
 const RATES = {
-  'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie Cruz':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
+  'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie Cruz':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar V.':19,
   'Victor':20.50,'Arturo':21,'Jose B':23,'Nick':20,'Armani':16,'Marco':16,
   'Nithia Maldonado':17.50,'Arturo Viveros':21,'Jesus Murillo':21,'Derek':19,
   'Carlos Mora':19.25,'Nicholas Urbana':20,'Luis Perez':20,'Victor Cruz':20.50,
-  'Monico Esparza':20,'Oscar Velazquez':19,'Luis Soto':19,'Gonzo':17,
+  'Monico Esparza':20,'Luis Soto':19,'Gonzo':17,
   'Carlos Jr':17.50,'Leo':17.50,'Ever':17.50,'Sylvia':15,
   'Jack Ruane':16,'Marco Sanchez':16,'Armani Finley':16,'Gonzalo':17,'Sio McAvoy':17,'Mike':15,
   'Eric':15,'Jaxon':15,'Matt':15,'Raul':15,
@@ -1578,7 +1605,7 @@ async function saveWeekRow(weekStart, patch) {
   }
 }
 
-function SectionTable({ title, data, days, editable, onChange, onAddPerson }) {
+function SectionTable({ title, data, days, editable, onChange, onAddPerson, locationKey }) {
   const [newName, setNewName] = useState("");
   const names = Object.keys(data || {});
   return h("div", { className: "WD-section" },
@@ -1589,7 +1616,7 @@ function SectionTable({ title, data, days, editable, onChange, onAddPerson }) {
           h("thead", null, h("tr", null, h("th", null, "Name"), days.map(d => h("th", { key: d }, d)))),
           h("tbody", null,
             names.map(name => h("tr", { key: name },
-              h("td", null, name),
+              h("td", null, locationKey ? displayName(locationKey, name) : name),
               Array.from({ length: 7 }).map((_, di) => {
                 const val = data[name][di] || '';
                 return h("td", { key: di },
@@ -1775,9 +1802,9 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
           h("div", { className: "WD-print-btn", onClick: () => printSection('boh') }, "Print BOH"),
           h("div", { className: "WD-print-btn", onClick: () => printSection('all') }, "Print All")
         ),
-        BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: false })),
-        FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: false })),
-        h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: false }),
+        BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: false, locationKey: location.key })),
+        FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: false, locationKey: location.key })),
+        h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: false, locationKey: location.key }),
         h("div", { className: "Accordion", style: { marginTop: 14 } },
           h("div", { className: "Accordion-head" }, h("div", { className: "Accordion-head-title" }, "MANAGER NOTES")),
           h("div", { className: "Accordion-body" }, h(ManagerNotesPanel, { location, person }))
@@ -1789,11 +1816,11 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
       ),
 
       !loading && tab === 'edit' && h("div", null,
-        BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: true,
+        BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: true, locationKey: location.key,
           onChange: (name, di, val) => editBOHCell(c, name, di, val), onAddPerson: name => addBOHPerson(c, name) })),
-        FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: true,
+        FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: true, locationKey: location.key,
           onChange: (name, di, val) => editFOHCell(c, name, di, val), onAddPerson: name => addFOHPerson(c, name) })),
-        h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: true,
+        h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: true, locationKey: location.key,
           onChange: (name, di, val) => editDrvCell(name, di, val), onAddPerson: addDrvPerson }),
         h("button", { className: "send-btn", onClick: saveAll }, "SAVE SCHEDULE"),
         h("div", { className: "Msg-status" }, saveStatus)
@@ -2342,14 +2369,19 @@ function SectionScreen({ location, person, section, onHome, onBackToGrid, onLogo
   );
 }
 
-function ManageRosterPanel({ location, person }) {
+function ManageRosterPanel({ location, person, onNamingChanged }) {
   const [search, setSearch] = useState("");
   const [overrides, setOverrides] = useState({});
   const [editing, setEditing] = useState(null);
   const [editRate, setEditRate] = useState("");
+  const [renaming, setRenaming] = useState(null);
+  const [newDisplayName, setNewDisplayName] = useState("");
   const [status, setStatus] = useState("");
   const fullStaff = FULL_STAFF[location.key] || [];
-  const matches = search.trim() ? fullStaff.filter(n => n.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 10) : [];
+  const term = search.trim().toLowerCase();
+  const matches = term
+    ? fullStaff.filter(n => n.toLowerCase().includes(term) || displayName(location.key, n).toLowerCase().includes(term)).slice(0, 10)
+    : [];
 
   React.useEffect(() => {
     fetch(SUPABASE_URL + '/rest/v1/roster_overrides?location=eq.' + location.key + '&select=name,rate', { headers: sbHeaders() })
@@ -2376,19 +2408,41 @@ function ManageRosterPanel({ location, person }) {
       .catch(() => setStatus("Couldn't save. Try again."));
   }
 
+  // Renames only ever change what's shown -- the original name (the
+  // ROLE_MAP/RATES/schedule-data key) is untouched, so this never breaks
+  // an existing week's saved schedule.
+  function saveRename(origName) {
+    const val = newDisplayName.trim();
+    if (!val) { setStatus("Enter a display name."); return; }
+    fetch(SUPABASE_URL + '/rest/v1/roster_renames?on_conflict=original_name,location', {
+      method: 'POST',
+      headers: Object.assign({ Prefer: 'resolution=merge-duplicates,return=minimal' }, sbHeaders()),
+      body: JSON.stringify([{ location: location.key, original_name: origName, display_name: val, renamed_by: person, renamed_at: new Date().toISOString() }])
+    }).then(r => { if (!r.ok) throw new Error(); setRenaming(null); setStatus(""); if (onNamingChanged) onNamingChanged(); })
+      .catch(() => setStatus("Couldn't save. Try again."));
+  }
+
   return h("div", null,
     h("input", { type: "text", className: "date-input", placeholder: "Search staff\u2026", value: search, onChange: e => setSearch(e.target.value) }),
     matches.map(name => h("div", { key: name, className: "TO-entry" },
-      h("div", { className: "TO-entry-name" }, name),
+      h("div", { className: "TO-entry-name" }, displayName(location.key, name)),
       editing === name
         ? h("div", { style: { display: "flex", gap: 6, marginTop: 4 } },
             h("input", { className: "date-input", style: { width: 90 }, value: editRate, onChange: e => setEditRate(e.target.value) }),
             h("span", { className: "back-link", style: { marginTop: 0 }, onClick: () => saveRate(name) }, "Save")
           )
+        : renaming === name
+        ? h("div", { style: { display: "flex", gap: 6, marginTop: 4 } },
+            h("input", { className: "date-input", style: { width: 140 }, value: newDisplayName, onChange: e => setNewDisplayName(e.target.value) }),
+            h("span", { className: "back-link", style: { marginTop: 0 }, onClick: () => saveRename(name) }, "Save"),
+            h("span", { className: "back-link", style: { marginTop: 0 }, onClick: () => setRenaming(null) }, "Cancel")
+          )
         : h("div", { className: "TO-entry-meta" },
             "Rate: ", rateFor(name),
             "  ",
-            h("span", { className: "back-link", style: { marginTop: 0, display: "inline" }, onClick: () => { setEditing(name); setEditRate(String(rateFor(name))); } }, "Edit")
+            h("span", { className: "back-link", style: { marginTop: 0, display: "inline" }, onClick: () => { setEditing(name); setEditRate(String(rateFor(name))); } }, "Edit rate"),
+            "  ",
+            h("span", { className: "back-link", style: { marginTop: 0, display: "inline" }, onClick: () => { setRenaming(name); setNewDisplayName(displayName(location.key, name)); } }, "Rename")
           )
     )),
     h("div", { className: "Msg-status" }, status)
@@ -2428,7 +2482,7 @@ function OverrideLogPanel({ location }) {
   );
 }
 
-function PrivateScreen({ location, person, onHome, onBackToGrid }) {
+function PrivateScreen({ location, person, onHome, onBackToGrid, onNamingChanged }) {
   const [pins, setPins] = useState(null);
   const [error, setError] = useState("");
 
@@ -2463,7 +2517,7 @@ function PrivateScreen({ location, person, onHome, onBackToGrid }) {
       ),
       h("div", { className: "Priv-section" },
         h("div", { className: "Priv-label" }, "Manage Roster"),
-        h(ManageRosterPanel, { location, person })
+        h(ManageRosterPanel, { location, person, onNamingChanged })
       ),
       h("div", { className: "Priv-section" },
         h("div", { className: "Priv-label" }, "Override Log \u2014 permanent, unerasable"),
@@ -2478,12 +2532,25 @@ function PrivateScreen({ location, person, onHome, onBackToGrid }) {
 
 function App() {
   const [screen, setScreen] = useState({ view: "lock", location: LOCATIONS[0] });
+  const [namingVersion, setNamingVersion] = useState(0);
   const logoTapCount = useRef(0);
   const logoTapTimer = useRef(null);
 
   React.useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen.view]);
+
+  // Load rename/alias corrections once we're inside a location, and again
+  // whenever Manage Roster changes them (bumpNamingVersion below).
+  React.useEffect(() => {
+    if (screen.location && screen.location.key) {
+      loadRosterNaming(screen.location.key).then(() => setNamingVersion(v => v + 1));
+    }
+  }, [screen.location && screen.location.key]);
+
+  function bumpNamingVersion(locationKey) {
+    loadRosterNaming(locationKey).then(() => setNamingVersion(v => v + 1));
+  }
 
   function handleLogoTap(location, backToView) {
     logoTapCount.current += 1;
@@ -2572,7 +2639,8 @@ function App() {
       location: screen.location,
       person: screen.person,
       onHome: () => setScreen({ view: "location", location: screen.location, person: screen.person }),
-      onBackToGrid: () => setScreen({ view: "location", location: screen.location, person: screen.person })
+      onBackToGrid: () => setScreen({ view: "location", location: screen.location, person: screen.person }),
+      onNamingChanged: () => bumpNamingVersion(screen.location.key)
     });
   }
   return null;
