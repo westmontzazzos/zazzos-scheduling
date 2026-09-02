@@ -217,6 +217,27 @@ function sbHeaders() {
   return { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY };
 }
 
+// Permanent, unerasable audit trail. Every write here is additive only --
+// nothing in this app ever updates or deletes an override_log row.
+function writeOverrideLog(entry) {
+  const row = Object.assign({ logged_at: new Date().toISOString() }, entry);
+  return fetch(SUPABASE_URL + '/rest/v1/override_log', {
+    method: 'POST',
+    headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+    body: JSON.stringify([row])
+  });
+}
+
+// Verifies a 4-digit PIN for `who` at this location against staff_pins.
+// Resolves true/false; never rejects (network failure -> false).
+function verifyPersonalPin(locationKey, who, pin) {
+  return fetch(SUPABASE_URL + '/rest/v1/staff_pins?location=eq.' + encodeURIComponent(locationKey) + '&name=eq.' + encodeURIComponent(who) + '&select=pin', {
+    headers: sbHeaders()
+  }).then(r => r.json())
+    .then(rows => Array.isArray(rows) && rows.length > 0 && rows[0].pin === pin)
+    .catch(() => false);
+}
+
 // Hidden-iframe print — no window.open(), so iOS Safari's pop-up blocker
 // never comes into play. Same technique the live app already uses for
 // Dom's/Manager Notes printing.
@@ -1231,26 +1252,55 @@ function fmtISO(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
-function ScheduleLogPanel({ location }) {
+const OVERRIDE_ACK_REASONS = ["Fixed the schedule", "Acceptable as-is", "Will fix later", "Not applicable"];
+
+function ScheduleLogPanel({ location, person }) {
   const [weeks, setWeeks] = useState(null);
-  const [bypassed, setBypassed] = useState({});
+  const [confirmKey, setConfirmKey] = useState(null);
+  const [who, setWho] = useState(person || (ROSTERS[location.key] || [])[0] || "");
+  const [ackType, setAckType] = useState(OVERRIDE_ACK_REASONS[0]);
+  const [note, setNote] = useState("");
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const thisWeekStart = fmtISO(mondayOf(new Date()));
   const nextWeekDate = mondayOf(new Date()); nextWeekDate.setDate(nextWeekDate.getDate() + 7);
   const nextWeekStart = fmtISO(nextWeekDate);
+  const lastWeekDate = mondayOf(new Date()); lastWeekDate.setDate(lastWeekDate.getDate() - 7);
+  const lastWeekStart = fmtISO(lastWeekDate);
+
+  // Best-effort SYSTEM logging for errors still open once a week has ended.
+  // This only runs when someone happens to open Schedule Log after that week
+  // is over -- there's no server-side cron in this app, so an uncleared error
+  // in a week nobody re-opens Schedule Log for will not get a SYSTEM entry.
+  function logUnclearedIfNeeded(ws, errors, existingLoggedKeys) {
+    const all = errors.BOH.concat(errors.FOH).concat(errors.Drivers);
+    all.forEach(e => {
+      const sysKey = 'system_uncleared|' + ws + '|' + e.di + '|' + e.dept + '|' + e.msg;
+      if (existingLoggedKeys[sysKey]) return;
+      writeOverrideLog({
+        location: location.key, event_type: 'system_uncleared', week_label: ws,
+        day_index: e.di, day_name: e.day || null, dept: e.dept, msg: e.msg,
+        who: 'SYSTEM', ack_type: 'Uncleared at week end', note: sysKey
+      });
+    });
+  }
 
   function load() {
     Promise.all([
-      fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=in.(' + thisWeekStart + ',' + nextWeekStart + ')&select=week_start,boh_data,foh_data,driver_data', { headers: sbHeaders() }).then(r => r.json()).catch(() => []),
-      fetch(SUPABASE_URL + '/rest/v1/schedule_error_bypasses?location=eq.' + location.key + '&select=bypass_key', { headers: sbHeaders() }).then(r => r.json()).catch(() => [])
-    ]).then(([rows, bypassRows]) => {
+      fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=in.(' + lastWeekStart + ',' + thisWeekStart + ',' + nextWeekStart + ')&select=week_start,boh_data,foh_data,driver_data', { headers: sbHeaders() }).then(r => r.json()).catch(() => []),
+      fetch(SUPABASE_URL + '/rest/v1/schedule_error_bypasses?location=eq.' + location.key + '&select=bypass_key', { headers: sbHeaders() }).then(r => r.json()).catch(() => []),
+      fetch(SUPABASE_URL + '/rest/v1/override_log?location=eq.' + location.key + '&event_type=eq.system_uncleared&week_label=eq.' + lastWeekStart + '&select=note', { headers: sbHeaders() }).then(r => r.json()).catch(() => [])
+    ]).then(([rows, bypassRows, sysRows]) => {
       const byWeek = {};
       (Array.isArray(rows) ? rows : []).forEach(r => { byWeek[r.week_start] = r; });
       const bypassMap = {};
       (Array.isArray(bypassRows) ? bypassRows : []).forEach(r => { bypassMap[r.bypass_key] = true; });
-      setBypassed(bypassMap);
+      const existingLoggedKeys = {};
+      (Array.isArray(sysRows) ? sysRows : []).forEach(r => { if (r.note) existingLoggedKeys[r.note] = true; });
 
-      const results = [thisWeekStart, nextWeekStart].map(ws => {
+      const results = [lastWeekStart, thisWeekStart, nextWeekStart].map(ws => {
         const rec = byWeek[ws];
         let bohObj = {}, fohObj = {}, drvObj = {};
         if (rec) {
@@ -1262,36 +1312,104 @@ function ScheduleLogPanel({ location }) {
         try { errors = checkScheduleErrorsForWeek(ws, bohObj, fohObj, drvObj, bypassMap, ROSTERS[location.key]) || errors; } catch (e) {}
         return { weekStart: ws, errors };
       });
-      setWeeks(results);
+
+      // Last week has fully ended (its Sunday is before today) -- flag anything
+      // still uncleared in it as a SYSTEM entry, once.
+      logUnclearedIfNeeded(lastWeekStart, results[0].errors, existingLoggedKeys);
+
+      setWeeks(results.slice(1)); // display only This Week / Next Week, as before
     });
   }
 
   React.useEffect(() => { load(); }, [location.key]);
 
-  function bypassError(e) {
-    const key = e.di + '|' + e.dept + '|' + e.msg;
-    fetch(SUPABASE_URL + '/rest/v1/schedule_error_bypasses', {
-      method: 'POST',
-      headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
-      body: JSON.stringify([{ location: location.key, bypass_key: key }])
-    }).then(() => load());
+  function openConfirm(e) {
+    setConfirmKey(e.di + '|' + e.dept + '|' + e.msg);
+    setWho(person || (ROSTERS[location.key] || [])[0] || "");
+    setAckType(OVERRIDE_ACK_REASONS[0]);
+    setNote("");
+    setPin("");
+    setPinError("");
+  }
+  function cancelConfirm() {
+    setConfirmKey(null); setPin(""); setPinError("");
+  }
+
+  function submitConfirm(e) {
+    if (!who) { setPinError("Choose who is confirming this."); return; }
+    if (pin.length !== 4) { setPinError("Enter your 4-digit PIN."); return; }
+    setSubmitting(true);
+    verifyPersonalPin(location.key, who, pin).then(ok => {
+      if (!ok) { setSubmitting(false); setPinError("Incorrect PIN for " + who + "."); return; }
+      const key = e.di + '|' + e.dept + '|' + e.msg;
+      Promise.all([
+        fetch(SUPABASE_URL + '/rest/v1/schedule_error_bypasses', {
+          method: 'POST',
+          headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
+          body: JSON.stringify([{ location: location.key, bypass_key: key }])
+        }),
+        writeOverrideLog({
+          location: location.key, event_type: 'dismiss', week_label: e.weekStart,
+          day_index: e.di, day_name: e.day || null, dept: e.dept, msg: e.msg,
+          who: who, ack_type: ackType, note: note || null
+        })
+      ]).then(() => { setSubmitting(false); setConfirmKey(null); setPin(""); load(); })
+        .catch(() => { setSubmitting(false); setPinError("Couldn't save. Try again."); });
+    });
   }
 
   if (weeks === null) return h("div", { style: { fontSize: 13, color: "var(--gray-600)", padding: "12px 0" } }, "Loading\u2026");
 
   const labels = { 0: "This Week", 1: "Next Week" };
+  const managers = ROSTERS[location.key] || [];
   return h("div", null,
     weeks.map((w, wi) => {
-      const all = w.errors.BOH.concat(w.errors.FOH).concat(w.errors.Drivers);
+      const all = w.errors.BOH.concat(w.errors.FOH).concat(w.errors.Drivers).map(e => Object.assign({}, e, { weekStart: w.weekStart }));
       return h("div", { key: w.weekStart, style: { marginBottom: 14 } },
         h("div", { className: "Msg-label" }, labels[wi] + " (" + w.weekStart + ")"),
         all.length === 0
           ? h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No errors.")
-          : all.map((e, ei) => h("div", { key: ei, className: "TO-entry" },
-              h("div", { className: "TO-entry-name" }, e.dept + (e.day ? " \u2014 " + e.day : "")),
-              h("div", { className: "TO-entry-meta" }, e.msg),
-              h("span", { className: "back-link", style: { marginTop: 4, display: "inline-block" }, onClick: () => bypassError(e) }, "Accept / Bypass")
-            ))
+          : all.map((e, ei) => {
+              const key = e.di + '|' + e.dept + '|' + e.msg;
+              const isConfirming = confirmKey === key;
+              return h("div", { key: ei, className: "TO-entry" },
+                h("div", { className: "TO-entry-name" }, e.dept + (e.day ? " \u2014 " + e.day : "")),
+                h("div", { className: "TO-entry-meta" }, e.msg),
+                !isConfirming && h("span", { className: "back-link", style: { marginTop: 4, display: "inline-block" }, onClick: () => openConfirm(e) }, "Accept / Bypass"),
+                isConfirming && h("div", { style: { marginTop: 8, padding: 10, border: "1px solid var(--gray-200, #ddd)", borderRadius: 6 } },
+                  h("div", { className: "Priv-label" }, "Who is confirming this?"),
+                  h("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 } },
+                    managers.map(m => h("span", {
+                      key: m,
+                      className: "WD-copy-check",
+                      style: { padding: "4px 10px", borderRadius: 14, fontSize: 12, cursor: "pointer", border: "1px solid var(--gray-300, #ccc)", background: who === m ? "var(--red)" : "transparent", color: who === m ? "#fff" : "inherit" },
+                      onClick: () => setWho(m)
+                    }, m))
+                  ),
+                  h("div", { className: "Priv-label" }, "Reason"),
+                  h("div", { style: { display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 } },
+                    OVERRIDE_ACK_REASONS.map(r => h("span", {
+                      key: r,
+                      style: { padding: "4px 10px", borderRadius: 14, fontSize: 12, cursor: "pointer", border: "1px solid var(--gray-300, #ccc)", background: ackType === r ? "var(--red)" : "transparent", color: ackType === r ? "#fff" : "inherit" },
+                      onClick: () => setAckType(r)
+                    }, r))
+                  ),
+                  h("textarea", { className: "MN-textarea", style: { minHeight: 40 }, placeholder: "Optional note\u2026", value: note, onChange: ev => setNote(ev.target.value) }),
+                  h("div", { className: "Priv-label", style: { marginTop: 8 } }, "Enter " + (who || "your") + "'s PIN to confirm"),
+                  h("input", {
+                    type: "text", className: "pin-input", value: pin, placeholder: "\u2022 \u2022 \u2022 \u2022",
+                    inputMode: "numeric", maxLength: 4, autoComplete: "off",
+                    onChange: ev => setPin(ev.target.value.replace(/[^0-9]/g, "")),
+                    onKeyDown: ev => { if (ev.key === "Enter") submitConfirm(e); }
+                  }),
+                  pinError && h("div", { className: "pin-error" }, pinError),
+                  h("div", { style: { marginTop: 8, display: "flex", gap: 12, alignItems: "center" } },
+                    h("button", { className: "send-btn", disabled: submitting, onClick: () => submitConfirm(e) }, submitting ? "Saving\u2026" : "CONFIRM"),
+                    h("span", { className: "back-link", onClick: cancelConfirm }, "Cancel")
+                  )
+                )
+              );
+            })
       );
     })
   );
@@ -1572,7 +1690,18 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
     setSaveStatus("Saving\u2026");
     saveWeekRow(weekStart, {
       boh_data: JSON.stringify(boh), foh_data: JSON.stringify(foh), driver_data: JSON.stringify(drv)
-    }).then(r => { if (!r.ok && r.status !== 201) throw new Error(); setSaveStatus("Saved."); load(); })
+    }).then(r => {
+      if (!r.ok && r.status !== 201) throw new Error();
+      setSaveStatus("Saved.");
+      // Manual-edit trail: this only records that person saved this week's
+      // Edit Schedule tab, not a per-cell diff of what changed.
+      writeOverrideLog({
+        location: location.key, event_type: 'manual_edit', week_label: weekStart,
+        day_index: null, day_name: null, dept: null, msg: 'Edit Schedule saved',
+        who: person, ack_type: null, note: null
+      });
+      load();
+    })
       .catch(() => setSaveStatus("Couldn't save. Try again."));
   }
 
@@ -1605,12 +1734,20 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
       if (copyChecks.FOH) targetFoh = foh;
       if (copyChecks.Drivers) targetDrv = drv;
       const patch = { boh_data: JSON.stringify(targetBoh), foh_data: JSON.stringify(targetFoh), driver_data: JSON.stringify(targetDrv) };
+      const sections = Object.keys(copyChecks).filter(k => copyChecks[k]);
+      function logCopy() {
+        writeOverrideLog({
+          location: location.key, event_type: 'manual_edit', week_label: target,
+          day_index: null, day_name: null, dept: sections.join('/') || null,
+          msg: 'Copied to next week from ' + weekStart, who: person, ack_type: null, note: null
+        });
+      }
       if (copyChecks.Events) {
         fetchWeekRow(weekStart).then(cur => { if (cur && cur.events_list_data) patch.events_list_data = cur.events_list_data; return saveWeekRow(target, patch); })
-          .then(() => setCopyStatus("Copied to week of " + target + "."))
+          .then(() => { setCopyStatus("Copied to week of " + target + "."); logCopy(); })
           .catch(() => setCopyStatus("Couldn't copy. Try again."));
       } else {
-        saveWeekRow(target, patch).then(() => setCopyStatus("Copied to week of " + target + "."))
+        saveWeekRow(target, patch).then(() => { setCopyStatus("Copied to week of " + target + "."); logCopy(); })
           .catch(() => setCopyStatus("Couldn't copy. Try again."));
       }
     });
@@ -1647,7 +1784,7 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
         ),
         h("div", { className: "Accordion" },
           h("div", { className: "Accordion-head" }, h("div", { className: "Accordion-head-title" }, "SCHEDULE LOG")),
-          h("div", { className: "Accordion-body" }, h(ScheduleLogPanel, { location }))
+          h("div", { className: "Accordion-body" }, h(ScheduleLogPanel, { location, person }))
         )
       ),
 
@@ -2145,7 +2282,7 @@ function ScheduleScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
           h("div", { className: "Accordion-chevron" }, open === "issues" ? "\u25B2" : "\u25BC")
         ),
         open === "issues" && h("div", { className: "Accordion-body" },
-          h(ScheduleLogPanel, { location })
+          h(ScheduleLogPanel, { location, person })
         )
       ),
       h("div", { className: "Accordion" },
@@ -2258,6 +2395,39 @@ function ManageRosterPanel({ location, person }) {
   );
 }
 
+function OverrideLogPanel({ location }) {
+  const [rows, setRows] = useState(null);
+  const [error, setError] = useState("");
+
+  React.useEffect(() => {
+    fetch(SUPABASE_URL + '/rest/v1/override_log?location=eq.' + location.key + '&select=*&order=logged_at.desc&limit=200', { headers: sbHeaders() })
+      .then(r => r.json())
+      .then(data => setRows(Array.isArray(data) ? data : []))
+      .catch(() => setError("Couldn't load the override log."));
+  }, [location.key]);
+
+  const typeLabels = { dismiss: "Dismissed error", manual_edit: "Manual edit", system_uncleared: "SYSTEM \u2014 uncleared at week end" };
+
+  if (error) return h("div", { style: { fontSize: 13, color: "var(--red)" } }, error);
+  if (rows === null) return h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026");
+  if (rows.length === 0) return h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No entries yet.");
+
+  return h("div", { style: { maxHeight: 320, overflowY: "auto" } },
+    rows.map((r, i) => h("div", { key: r.id || i, className: "TO-entry" },
+      h("div", { className: "TO-entry-name" },
+        (typeLabels[r.event_type] || r.event_type) + " \u2014 " + (r.who || "Unknown")
+      ),
+      h("div", { className: "TO-entry-meta" },
+        [r.week_label, r.day_name, r.dept].filter(Boolean).join(" \u00b7 ")
+      ),
+      r.msg && h("div", { className: "TO-entry-meta" }, r.msg),
+      r.ack_type && h("div", { className: "TO-entry-meta" }, "Reason: " + r.ack_type),
+      r.note && !/^system_uncleared\|/.test(r.note || "") && h("div", { className: "TO-entry-meta" }, "Note: " + r.note),
+      h("div", { className: "TO-entry-meta", style: { color: "var(--gray-400)" } }, r.logged_at ? new Date(r.logged_at).toLocaleString() : "")
+    ))
+  );
+}
+
 function PrivateScreen({ location, person, onHome, onBackToGrid }) {
   const [pins, setPins] = useState(null);
   const [error, setError] = useState("");
@@ -2294,6 +2464,10 @@ function PrivateScreen({ location, person, onHome, onBackToGrid }) {
       h("div", { className: "Priv-section" },
         h("div", { className: "Priv-label" }, "Manage Roster"),
         h(ManageRosterPanel, { location, person })
+      ),
+      h("div", { className: "Priv-section" },
+        h("div", { className: "Priv-label" }, "Override Log \u2014 permanent, unerasable"),
+        h(OverrideLogPanel, { location })
       ),
       h("div", { style: { marginTop: 16, textAlign: "center" } },
         h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
