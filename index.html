@@ -329,7 +329,11 @@ const RATES = {
   'Danielle':9,'Mary':9,'Natalie':15,'Presley':15,'Tia':15,'Emilie':15,'Ellianna':15,'Keegan':15,'Julia':9,'Molly':15,'Lea':9
 };
 
-function hitlistHour(t, di) {
+// isEnd=true means `t` is the end of a shift, not the start. An ambiguous
+// hour with no am/pm suffix defaults to AM for a start (a shift starting at
+// "7" is almost always 7AM) but to PM for an end (a shift ending at "7"
+// through "11" with nothing else specified is almost always evening).
+function hitlistHour(t, di, isEnd) {
   if (t === null || t === undefined) return null;
   var s = String(t).trim().toLowerCase();
   if (s === '') return null;
@@ -341,7 +345,7 @@ function hitlistHour(t, di) {
   if (m[2] === undefined) { mn = 0; }
   else if (s.indexOf(':') !== -1) { mn = parseInt(m[2], 10); }
   else { var frac = parseFloat('0.' + m[2]); mn = (Math.abs(frac - 0.3) < 0.001 || Math.abs(frac - 0.5) < 0.001) ? 30 : Math.round(frac * 60); }
-  var ap = m[3] ? m[3] : (h >= 7 && h <= 11 ? 'am' : 'pm');
+  var ap = m[3] ? m[3] : (isEnd ? 'pm' : (h >= 7 && h <= 11 ? 'am' : 'pm'));
   if (ap === 'pm' && h !== 12) h += 12;
   if (ap === 'am' && h === 12) h = 0;
   return h + mn / 60;
@@ -357,7 +361,7 @@ function parseBOHHours(raw, di) {
   if (closeM) { st = hitlistHour(closeM[1].trim(), di); en = closeEnd; }
   else {
     var rangeM = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
-    if (rangeM) { st = hitlistHour(rangeM[1], di); en = hitlistHour(rangeM[2], di); }
+    if (rangeM) { st = hitlistHour(rangeM[1], di); en = hitlistHour(rangeM[2], di, true); }
     else { st = hitlistHour(s, di); en = 20; }
   }
   if (st === null || en === null || en <= st) return null;
@@ -411,7 +415,7 @@ function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
         if (!e || !Array.isArray(e)) continue;
         var st = hitlistHour(e[0], di);
         if (st === null) continue;
-        var en = e[1] === 'C' ? ((di === 4 || di === 5) ? 23.25 : 22.25) : (e[1] ? hitlistHour(e[1], di) : null);
+        var en = e[1] === 'C' ? ((di === 4 || di === 5) ? 23.25 : 22.25) : (e[1] ? hitlistHour(e[1], di, true) : null);
         if (en === null) continue;
         var hrs = en - st;
         if (hrs > 0) daily[di] += hrs * rate;
@@ -499,7 +503,7 @@ function checkScheduleErrorsForWeek(weekStart, bohObj, fohObj, drvObj, bypassedK
           var enH = parseInt(enRaw, 10);
           if(enH < 12) enRaw = enH + 'pm';
         }
-        en = hitlistHour(enRaw, di);
+        en = hitlistHour(enRaw, di, true);
       }
       else   { st = hitlistHour(s, di); en = null; }
     }
@@ -706,7 +710,7 @@ function checkScheduleErrorsForWeek(weekStart, bohObj, fohObj, drvObj, bypassedK
           if(fohEntryIsCloser(entry)) return true;
           var endVal = Array.isArray(entry) ? entry[1] : null;
           if(!endVal) return false;
-          var enH = hitlistHour(endVal, di);
+          var enH = hitlistHour(endVal, di, true);
           return enH !== null && enH >= 16;
         });
         if(!hasCoverageTo4)
@@ -721,7 +725,7 @@ function checkScheduleErrorsForWeek(weekStart, bohObj, fohObj, drvObj, bypassedK
       var endVal = Array.isArray(entry) ? entry[1] : (String(entry).split(/[-–]/)[1]||null);
       var stH = hitlistHour(startVal, di); if(stH===null) return false;
       var hasClose = endVal && String(endVal).trim().toLowerCase().match(/^c[l]?$|^close$/);
-      var enH = hasClose ? 23 : (endVal ? hitlistHour(endVal, di) : 20);
+      var enH = hasClose ? 23 : (endVal ? hitlistHour(endVal, di, true) : 20);
       if(enH===null) enH = 20;
       return stH < 20 && enH > 16; // overlaps 4-8PM window
     }).length;
@@ -758,7 +762,7 @@ function checkScheduleErrorsForWeek(weekStart, bohObj, fohObj, drvObj, bypassedK
         if(!e || !e[0]) return;
         var st = hitlistHour(e[0], di);
         if(st === null) return;
-        var en = e[1] ? hitlistHour(e[1], di) : null;
+        var en = e[1] ? hitlistHour(e[1], di, true) : null;
         var workingThroughWindow = (st >= 15.5) || (en !== null && en >= 15.5);
         if(workingThroughWindow) pmServerCount++;
       });
@@ -1945,17 +1949,17 @@ function parseFOHHours(entry, di, role) {
   if (r === 'servers' || r === 'server') {
     if (isClose) { en = isFriSat ? 22.25 : 21.25; }
     else if (!hasEnd) { en = isAM ? (isFriSat ? 23.25 : 22.25) : (isFriSat ? 20.5 : 19.5); }
-    else { en = hitlistHour(end, di); }
+    else { en = hitlistHour(end, di, true); }
   } else if (r === 'cashiers' || r === 'cashier' || r === 'hosts' || r === 'host') {
     if (isClose) { en = isFriSat ? 21.0 : 19.0; }
     else if (!hasEnd) { en = isFriSat ? 20.0 : 19.0; }
-    else { en = hitlistHour(end, di); }
+    else { en = hitlistHour(end, di, true); }
   } else if (r === 'bartenders' || r === 'bartender') {
     if (!hasEnd) { en = isFriSat ? 23.25 : 22.25; }
-    else { en = hitlistHour(end, di); }
+    else { en = hitlistHour(end, di, true); }
   } else {
     if (isClose || !hasEnd) { en = isFriSat ? 23.25 : 22.25; }
-    else { en = hitlistHour(end, di); }
+    else { en = hitlistHour(end, di, true); }
   }
   if (en === null || en <= st) return null;
   return { st: st, en: en };
