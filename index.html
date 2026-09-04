@@ -187,7 +187,7 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 const h = React.createElement;
 const { useState, useRef } = React;
 
-const APP_VERSION = "2.2";
+const APP_VERSION = "2.3";
 
 const SUPABASE_URL = 'https://bkrgefddyculihfdhjwb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrcmdlZmRkeWN1bGloZmRoandiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzM0ODEsImV4cCI6MjA5NTk0OTQ4MX0.YhIsgS3IkRyTSeVG011EPqhZvX0UbR-tXcCLGoOSMEI';
@@ -1216,14 +1216,15 @@ function LocationGrid({ location, person, onHome, onPickSection, onLogoTap, onCh
   );
 }
 
-function TimeOffPanel({ location }) {
-  const [adding, setAdding] = useState(false);
+function TimeOffPanel({ location, person }) {
+  const [openSection, setOpenSection] = useState(null); // 'review' | 'add' | null
   const [name, setName] = useState(null);
   const [date, setDate] = useState("");
   const [shift, setShift] = useState(null);
   const [status, setStatus] = useState("");
   const [list, setList] = useState(null);
   const [search, setSearch] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
   const fullStaff = FULL_STAFF[location.key] || [];
   const matches = search.trim()
     ? fullStaff.filter(n => n.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 8)
@@ -1231,7 +1232,7 @@ function TimeOffPanel({ location }) {
 
   function loadList() {
     fetch(SUPABASE_URL + '/rest/v1/time_off_requests?location=eq.' + location.key +
-      '&select=name,request_date,shift_type&order=request_date&limit=500', {
+      '&select=id,name,request_date,shift_type&order=request_date&limit=500', {
       headers: sbHeaders()
     })
       .then(r => r.json())
@@ -1260,50 +1261,76 @@ function TimeOffPanel({ location }) {
             throw new Error(r.status + ': ' + (body || '(no response body)'));
           });
         }
-        setStatus(""); setAdding(false); setName(null); setDate(""); setShift(null); loadList();
+        setStatus("Saved."); setName(null); setDate(""); setShift(null); loadList();
       })
       .catch(err => setStatus("Couldn't save \u2014 " + (err && err.message ? err.message : "unknown error")));
+  }
+
+  function deleteRequest(id) {
+    setDeletingId(id);
+    fetch(SUPABASE_URL + '/rest/v1/time_off_requests?id=eq.' + id, {
+      method: 'DELETE',
+      headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders())
+    })
+      .then(r => { if (!r.ok) throw new Error(); setDeletingId(null); loadList(); })
+      .catch(() => setDeletingId(null));
   }
 
   const shiftLabel = { full: "Full Day", morning: "Half Day \u2014 Morning", night: "Half Day \u2014 Night" };
 
   return h("div", null,
-    !adding && h("div", { className: "addnew-link", onClick: () => setAdding(true) }, "+ Add New Time Off Request"),
-    adding && h("div", { className: "TO-form" },
-      h("div", { className: "Msg-label" }, "Who"),
-      name
-        ? h("div", { className: "Chip selected", style: { display: "inline-block" }, onClick: () => { setName(null); setSearch(""); } }, name + " \u2715")
-        : h("div", null,
-            h("input", {
-              type: "text", className: "date-input", placeholder: "Type a name\u2026", value: search,
-              onChange: e => setSearch(e.target.value)
-            }),
-            matches.length > 0 && h("div", { style: { marginTop: 6 } },
-              matches.map(n => h("div", {
-                key: n, className: "TO-entry", style: { cursor: "pointer" },
-                onClick: () => { setName(n); setSearch(""); }
-              }, n))
-            )
-          ),
-      h("div", { className: "Msg-label" }, "Date"),
-      h("input", { type: "date", className: "date-input", value: date, onChange: e => setDate(e.target.value) }),
-      h("div", { className: "Msg-label" }, "Which shift"),
-      h("div", { className: "shift-options" },
-        ["full", "morning", "night"].map(s => h("div", {
-          key: s, className: "shift-opt" + (shift === s ? " selected" : ""), onClick: () => setShift(s)
-        }, shiftLabel[s]))
+    h("div", { className: "Accordion" },
+      h("div", { className: "Accordion-head", onClick: () => setOpenSection(prev => prev === 'review' ? null : 'review') },
+        h("div", { className: "Accordion-head-title" }, "REVIEW TIME OFF REQUESTS"),
+        h("div", { className: "Accordion-chevron" }, openSection === 'review' ? "\u25B2" : "\u25BC")
       ),
-      h("button", { className: "send-btn", onClick: submit }, "SAVE REQUEST"),
-      h("div", { className: "Msg-status" }, status),
-      h("div", { className: "back-link", onClick: () => setAdding(false) }, "\u2190 Cancel")
+      openSection === 'review' && h("div", { className: "Accordion-body" },
+        list === null && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026"),
+        list && list.length === 0 && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No time off requested."),
+        list && list.map(r => h("div", { key: r.id, className: "TO-entry", style: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" } },
+          h("div", null,
+            h("div", { className: "TO-entry-name" }, r.name),
+            h("div", { className: "TO-entry-meta" }, r.request_date, " \u2014 ", shiftLabel[r.shift_type] || r.shift_type)
+          ),
+          h("span", { className: "back-link", style: { marginTop: 2, color: "var(--red)" }, onClick: () => deleteRequest(r.id) },
+            deletingId === r.id ? "Deleting\u2026" : "Delete"
+          )
+        ))
+      )
     ),
-    h("div", { className: "Msg-label" }, "All Time Off Requests"),
-    list === null && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026"),
-    list && list.length === 0 && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No time off requested for the next two weeks."),
-    list && list.map((r, i) => h("div", { key: i, className: "TO-entry" },
-      h("div", { className: "TO-entry-name" }, r.name),
-      h("div", { className: "TO-entry-meta" }, r.request_date, " \u2014 ", shiftLabel[r.shift_type] || r.shift_type)
-    ))
+    h("div", { className: "Accordion" },
+      h("div", { className: "Accordion-head", onClick: () => setOpenSection(prev => prev === 'add' ? null : 'add') },
+        h("div", { className: "Accordion-head-title" }, "ADD A TIME OFF REQUEST"),
+        h("div", { className: "Accordion-chevron" }, openSection === 'add' ? "\u25B2" : "\u25BC")
+      ),
+      openSection === 'add' && h("div", { className: "Accordion-body TO-form" },
+        h("div", { className: "Msg-label" }, "Who"),
+        name
+          ? h("div", { className: "Chip selected", style: { display: "inline-block" }, onClick: () => { setName(null); setSearch(""); } }, name + " \u2715")
+          : h("div", null,
+              h("input", {
+                type: "text", className: "date-input", placeholder: "Type a name\u2026", value: search,
+                onChange: e => setSearch(e.target.value)
+              }),
+              matches.length > 0 && h("div", { style: { marginTop: 6 } },
+                matches.map(n => h("div", {
+                  key: n, className: "TO-entry", style: { cursor: "pointer" },
+                  onClick: () => { setName(n); setSearch(""); }
+                }, n))
+              )
+            ),
+        h("div", { className: "Msg-label" }, "Date"),
+        h("input", { type: "date", className: "date-input", value: date, onChange: e => setDate(e.target.value) }),
+        h("div", { className: "Msg-label" }, "Which shift"),
+        h("div", { className: "shift-options" },
+          ["full", "morning", "night"].map(s => h("div", {
+            key: s, className: "shift-opt" + (shift === s ? " selected" : ""), onClick: () => setShift(s)
+          }, shiftLabel[s]))
+        ),
+        h("button", { className: "send-btn", onClick: submit }, "SAVE REQUEST"),
+        h("div", { className: "Msg-status" }, status)
+      )
+    )
   );
 }
 
@@ -2523,7 +2550,7 @@ function ScheduleScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
           h("div", { className: "Accordion-chevron" }, open === "timeoff" ? "\u25B2" : "\u25BC")
         ),
         open === "timeoff" && h("div", { className: "Accordion-body" },
-          h(TimeOffPanel, { location })
+          h(TimeOffPanel, { location, person })
         )
       ),
       h("div", { style: { textAlign: "center", marginTop: 16 } },
