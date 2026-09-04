@@ -1795,6 +1795,9 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
   const [saveStatus, setSaveStatus] = useState("");
   const [copyChecks, setCopyChecks] = useState({ BOH: true, FOH: true, Drivers: true, Events: true });
   const [copyStatus, setCopyStatus] = useState("");
+  const [openPanel, setOpenPanel] = useState(null);
+  function togglePanel(name) { setOpenPanel(prev => prev === name ? null : name); }
+  const [viewSection, setViewSection] = useState('boh');
 
   function load() {
     setLoading(true);
@@ -1884,18 +1887,28 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
   }
 
   function printSection(which) {
-    let html = '<h1 style="font-family:Arial;color:#c8102e;">' + location.name + ' Schedule \u2014 Week of ' + weekStart + '</h1>';
+    let html = '<h1>' + location.name + ' Schedule \u2014 Week of ' + weekStart + '</h1>';
     function tableHtml(title, data) {
       const names = Object.keys(data || {});
       if (!names.length) return '';
-      let t = '<h3>' + title + '</h3><table border="1" cellpadding="4" style="border-collapse:collapse;font-size:12px;"><tr><th>Name</th>' + DAY_LABELS.map(d => '<th>' + d + '</th>').join('') + '</tr>';
+      let t = '<h3>' + title + '</h3><table><tr><th>Name</th>' + DAY_LABELS.map(d => '<th>' + d + '</th>').join('') + '</tr>';
       names.forEach(n => { t += '<tr><td>' + n + '</td>' + data[n].map(v => '<td>' + (v || '') + '</td>').join('') + '</tr>'; });
-      return t + '</table><br/>';
+      return t + '</table>';
     }
     if (which === 'boh' || which === 'all') BOH_CATS.forEach(c => { html += tableHtml(c, boh[c]); });
     if (which === 'foh' || which === 'all') FOH_CATS.forEach(c => { html += tableHtml(c, Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)]))); });
     if (which === 'drivers' || which === 'all') html += tableHtml('Drivers', drv);
-    printViaIframe('<html><body style="font-family:Arial;padding:20px;">' + html + '</body></html>');
+    const doc = '<!DOCTYPE html><html><head><title>Schedule</title><style>' +
+      '@page{size:landscape;margin:0.35in;}' +
+      '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+      'body{font-family:Arial,sans-serif;font-size:9.5px;padding:0;margin:0;}' +
+      'h1{font-size:14px;color:#c8102e;margin:0 0 8px;}' +
+      'h3{font-size:10.5px;margin:6px 0 3px;background:#f2f2f2;padding:2px 5px;}' +
+      'table{width:100%;border-collapse:collapse;margin-bottom:6px;}' +
+      'th,td{border:1px solid #ccc;padding:1px 4px;text-align:left;}' +
+      'th{background:#f8f8f8;}' +
+      '</style></head><body>' + html + '</body></html>';
+    printViaIframe(doc);
   }
 
   function runCopyToNextWeek() {
@@ -1947,31 +1960,47 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
       loading && h("div", { style: { textAlign: "center", padding: 20, color: "var(--gray-600)" } }, "Loading\u2026"),
 
       !loading && tab === 'view' && h("div", null,
+        h("div", { className: "RS-daytabs", style: { marginBottom: 12 } },
+          [['boh', 'BACK OF HOUSE'], ['foh', 'FRONT OF HOUSE'], ['drivers', 'DRIVERS']].map(([key, label]) => h("div", {
+            key: key, className: "RS-daytab" + (viewSection === key ? ' active' : ''), onClick: () => setViewSection(key)
+          }, label))
+        ),
         h("div", { className: "WD-print-menu" },
           h("div", { className: "WD-print-btn", onClick: () => printSection('drivers') }, "Print Drivers"),
           h("div", { className: "WD-print-btn", onClick: () => printSection('foh') }, "Print FOH"),
           h("div", { className: "WD-print-btn", onClick: () => printSection('boh') }, "Print BOH"),
           h("div", { className: "WD-print-btn", onClick: () => printSection('all') }, "Print All")
         ),
-        BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: false, locationKey: location.key })),
-        FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: false, locationKey: location.key })),
-        h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: false, locationKey: location.key }),
+        viewSection === 'boh' && BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: false, locationKey: location.key })),
+        viewSection === 'foh' && FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: false, locationKey: location.key })),
+        viewSection === 'drivers' && h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: false, locationKey: location.key }),
         h("div", { className: "Accordion", style: { marginTop: 14 } },
-          h("div", { className: "Accordion-head" }, h("div", { className: "Accordion-head-title" }, "MANAGER NOTES")),
-          h("div", { className: "Accordion-body" }, h(ManagerNotesPanel, { location, person }))
+          h("div", { className: "Accordion-head", onClick: () => togglePanel("notes") },
+            h("div", { className: "Accordion-head-title" }, "MANAGER NOTES"),
+            h("div", { className: "Accordion-chevron" }, openPanel === "notes" ? "\u25B2" : "\u25BC")
+          ),
+          openPanel === "notes" && h("div", { className: "Accordion-body" }, h(ManagerNotesPanel, { location, person }))
         ),
         h("div", { className: "Accordion" },
-          h("div", { className: "Accordion-head" }, h("div", { className: "Accordion-head-title" }, "SCHEDULE LOG")),
-          h("div", { className: "Accordion-body" }, h(ScheduleLogPanel, { location, person }))
+          h("div", { className: "Accordion-head", onClick: () => togglePanel("log") },
+            h("div", { className: "Accordion-head-title" }, "SCHEDULE LOG"),
+            h("div", { className: "Accordion-chevron" }, openPanel === "log" ? "\u25B2" : "\u25BC")
+          ),
+          openPanel === "log" && h("div", { className: "Accordion-body" }, h(ScheduleLogPanel, { location, person }))
         )
       ),
 
       !loading && tab === 'edit' && h("div", null,
-        BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: true, locationKey: location.key,
+        h("div", { className: "RS-daytabs", style: { marginBottom: 12 } },
+          [['boh', 'BACK OF HOUSE'], ['foh', 'FRONT OF HOUSE'], ['drivers', 'DRIVERS']].map(([key, label]) => h("div", {
+            key: key, className: "RS-daytab" + (viewSection === key ? ' active' : ''), onClick: () => setViewSection(key)
+          }, label))
+        ),
+        viewSection === 'boh' && BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: true, locationKey: location.key,
           onChange: (name, di, val) => editBOHCell(c, name, di, val), onAddPerson: name => addBOHPerson(c, name) })),
-        FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: true, locationKey: location.key,
+        viewSection === 'foh' && FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: true, locationKey: location.key,
           onChange: (name, di, val) => editFOHCell(c, name, di, val), onAddPerson: name => addFOHPerson(c, name) })),
-        h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: true, locationKey: location.key,
+        viewSection === 'drivers' && h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: true, locationKey: location.key,
           onChange: (name, di, val) => editDrvCell(name, di, val), onAddPerson: addDrvPerson }),
         h("button", { className: "send-btn", onClick: saveAll }, "SAVE SCHEDULE"),
         h("div", { className: "Msg-status" }, saveStatus)
@@ -2042,14 +2071,36 @@ function RunSheetsScreen({ location, onHome, onBackToGrid, onLogoTap }) {
   const totalStaff = sections.reduce((sum, s) => sum + s.people.length, 0);
 
   function printDay() {
-    let html = '<h1 style="font-family:Arial;color:#c8102e;">' + DAY_LABELS[dayIdx] + ' \u2014 Week of ' + weekStart + '</h1>';
-    sections.forEach(s => {
-      html += '<h3>' + s.title + '</h3>';
-      if (s.people.length === 0) { html += '<p style="color:#999;font-style:italic;">None scheduled</p>'; return; }
-      html += '<table border="1" cellpadding="4" style="border-collapse:collapse;font-size:12px;margin-bottom:14px;"><tr><th>Name</th><th>Shift</th></tr>' +
+    const left = ['Managers', 'Pizza', 'Kitchen', 'Prep / Utility', 'Bus / Dish'];
+    const right = ['Host', 'Servers', 'Bartenders', 'Cashiers', 'Drivers'];
+    function sectionHtml(title) {
+      const s = sections.find(x => x.title === title);
+      if (!s) return '';
+      let t = '<h3>' + s.title + '</h3>';
+      if (s.people.length === 0) { t += '<p class="none">None scheduled</p>'; return t; }
+      t += '<table><tr><th>Name</th><th>Shift</th></tr>' +
         s.people.map(p => '<tr><td>' + p.n + '</td><td>' + p.shift + '</td></tr>').join('') + '</table>';
-    });
-    printViaIframe('<html><body style="font-family:Arial;padding:20px;">' + html + '</body></html>');
+      return t;
+    }
+    const html = '<!DOCTYPE html><html><head><title>Run Sheet</title><style>' +
+      '@page{size:landscape;margin:0.35in;}' +
+      '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+      'body{font-family:Arial,sans-serif;font-size:10px;padding:0;margin:0;}' +
+      'h1{font-size:15px;color:#c8102e;margin:0 0 8px;}' +
+      'h3{font-size:11px;margin:8px 0 3px;background:#f2f2f2;padding:2px 5px;}' +
+      '.none{color:#999;font-style:italic;margin:2px 0 6px;font-size:10px;}' +
+      'table{width:100%;border-collapse:collapse;margin-bottom:6px;}' +
+      'th,td{border:1px solid #ccc;padding:1px 5px;text-align:left;}' +
+      'th{background:#f8f8f8;}' +
+      '.RS-print-cols{display:flex;gap:22px;}' +
+      '.RS-print-col{flex:1;}' +
+      '</style></head><body>' +
+      '<h1>' + DAY_LABELS[dayIdx] + ' \u2014 Week of ' + weekStart + '</h1>' +
+      '<div class="RS-print-cols">' +
+      '<div class="RS-print-col">' + left.map(sectionHtml).join('') + '</div>' +
+      '<div class="RS-print-col">' + right.map(sectionHtml).join('') + '</div>' +
+      '</div></body></html>';
+    printViaIframe(html);
   }
 
   return h("div", null,
