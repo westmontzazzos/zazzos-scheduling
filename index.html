@@ -187,7 +187,7 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 const h = React.createElement;
 const { useState, useRef } = React;
 
-const APP_VERSION = "2.1";
+const APP_VERSION = "2.2";
 
 const SUPABASE_URL = 'https://bkrgefddyculihfdhjwb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrcmdlZmRkeWN1bGloZmRoandiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzM0ODEsImV4cCI6MjA5NTk0OTQ4MX0.YhIsgS3IkRyTSeVG011EPqhZvX0UbR-tXcCLGoOSMEI';
@@ -1186,13 +1186,14 @@ function MessagesScreen({ location, person, onHome, onBackToGrid, onLogoTap }) {
   );
 }
 
-function LocationHeader({ location, onHome, onLogoTap }) {
+function LocationHeader({ location, onHome, onLogoTap, onBack, backLabel }) {
   return h("header", { className: "H" },
     h("div", { className: "H-logo", onClick: onLogoTap },
       h("img", { className: "H-logo-icon", src: "/schedules.png", alt: "" }),
       h("span", { className: "H-logo-text" }, location.name)
     ),
-    h("div", { className: "H-right" },
+    h("div", { className: "H-right", style: { display: "flex", gap: 8, alignItems: "center" } },
+      onBack && h("button", { className: "B", onClick: onBack }, backLabel || "\u2190 Back"),
       h("button", { className: "B", onClick: onHome }, "\u2190 Home")
     )
   );
@@ -1229,11 +1230,8 @@ function TimeOffPanel({ location }) {
     : [];
 
   function loadList() {
-    const today = new Date();
-    const start = today.toISOString().slice(0, 10);
-    const end = new Date(today.getTime() + 14 * 86400000).toISOString().slice(0, 10);
     fetch(SUPABASE_URL + '/rest/v1/time_off_requests?location=eq.' + location.key +
-      '&request_date=gte.' + start + '&request_date=lte.' + end + '&select=name,request_date,shift_type&order=request_date', {
+      '&select=name,request_date,shift_type&order=request_date&limit=500', {
       headers: sbHeaders()
     })
       .then(r => r.json())
@@ -1299,7 +1297,7 @@ function TimeOffPanel({ location }) {
       h("div", { className: "Msg-status" }, status),
       h("div", { className: "back-link", onClick: () => setAdding(false) }, "\u2190 Cancel")
     ),
-    h("div", { className: "Msg-label" }, "Next 2 Weeks"),
+    h("div", { className: "Msg-label" }, "All Time Off Requests"),
     list === null && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "Loading\u2026"),
     list && list.length === 0 && h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No time off requested for the next two weeks."),
     list && list.map((r, i) => h("div", { key: i, className: "TO-entry" },
@@ -1945,11 +1943,8 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
   }
 
   return h("div", null,
-    h(LocationHeader, { location, onHome, onLogoTap }),
+    h(LocationHeader, { location, onHome, onLogoTap, onBack: onBackToSchedule, backLabel: "\u2190 Schedule" }),
     h("div", { className: "WD-wrap" },
-      h("div", { style: { marginBottom: 8 } },
-        h("span", { className: "back-link", style: { marginTop: 0 }, onClick: onBackToSchedule }, "\u2190 Back to Schedule")
-      ),
       h("div", { className: "WD-weeknav" },
         h("button", { className: "Cal-nav-btn", onClick: () => onChangeWeek(prevWeekOf(weekStart)) }, "\u2039"),
         h("div", { className: "WD-weeklabel" }, "Week of " + weekStart),
@@ -2017,10 +2012,6 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
         )),
         h("button", { className: "send-btn", onClick: runCopyToNextWeek }, "COPY TO NEXT WEEK"),
         h("div", { className: "Msg-status" }, copyStatus)
-      ),
-
-      h("div", { style: { textAlign: "center", marginTop: 16 } },
-        h("span", { className: "back-link", onClick: onBackToSchedule }, "\u2190 Back to Schedule")
       )
     )
   );
