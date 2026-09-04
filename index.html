@@ -1253,8 +1253,18 @@ function TimeOffPanel({ location }) {
       headers: Object.assign({ Prefer: 'return=minimal' }, sbHeaders()),
       body: JSON.stringify([{ location: location.key, name, request_date: date, shift_type: shift }])
     })
-      .then(r => { if (!r.ok) throw new Error(); setStatus(""); setAdding(false); setName(null); setDate(""); setShift(null); loadList(); })
-      .catch(() => setStatus("Couldn't save. Try again."));
+      .then(r => {
+        if (!r.ok) {
+          return r.text().then(body => {
+            // Surface the real Supabase error instead of a generic message --
+            // this is the only way to see the actual cause instead of
+            // guessing at it from outside.
+            throw new Error(r.status + ': ' + (body || '(no response body)'));
+          });
+        }
+        setStatus(""); setAdding(false); setName(null); setDate(""); setShift(null); loadList();
+      })
+      .catch(err => setStatus("Couldn't save \u2014 " + (err && err.message ? err.message : "unknown error")));
   }
 
   const shiftLabel = { full: "Full Day", morning: "Half Day \u2014 Morning", night: "Half Day \u2014 Night" };
