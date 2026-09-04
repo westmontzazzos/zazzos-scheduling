@@ -100,6 +100,7 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 .date-input{width:100%;padding:10px;border:2px solid var(--gray-200);border-radius:8px;font-size:14px;margin-bottom:12px;}
 .shift-options{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
 .shift-opt{border:2px solid var(--gray-200);border-radius:8px;padding:10px 14px;font-size:13px;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.shift-opt.selected{border-color:var(--red);background:#FBEAE8;color:var(--red-dark);font-weight:700;}
 .MN-textarea{width:100%;min-height:60px;padding:10px;border:2px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin-bottom:10px;}
 .MN-textarea:focus{outline:none;border-color:var(--red);}
 .MN-cat-label{font-size:11px;font-weight:700;color:var(--red-dark);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;}
@@ -384,6 +385,142 @@ function sectionHasContent(sectionData) {
       });
     });
   });
+}
+
+// Effective hourly rate for `name`: a live roster_overrides entry always
+// wins, falling back to the hardcoded RATES table, then a $9 default for
+// anyone with neither (never used for salaried people -- callers check
+// SALARIED_EMPLOYEES separately).
+function effectiveRate(name, overridesMap) {
+  overridesMap = overridesMap || {};
+  return overridesMap[name] !== undefined ? overridesMap[name] : (RATES[name] !== undefined ? RATES[name] : 9);
+}
+
+// Actual paid hours for one day of a BOH-style shift string, matching the
+// live Westmont app's payroll math exactly: shifts over 8 hours get an
+// automatic 0.5hr unpaid lunch deducted. The daily calendar cost preview
+// (computeWeekDailyLaborCost) does NOT apply this deduction -- it's a
+// lighter running estimate, not a payroll figure, so a small gap there is
+// expected and intentional.
+function shiftHoursBOH(raw, di) {
+  var parsed = parseBOHHours(raw, di);
+  if (!parsed) return 0;
+  var h = parsed.en - parsed.st;
+  if (h > 8) h -= 0.5;
+  return Math.max(0, h);
+}
+
+function shiftHoursFOH(entry, di, role) {
+  var parsed = parseFOHHours(entry, di, role);
+  if (!parsed) return 0;
+  var h = parsed.en - parsed.st;
+  if (h > 8) h -= 0.5;
+  return Math.max(0, h);
+}
+
+// Payroll tax rates/constants, ported directly from the live Westmont app
+// so the numbers match what Ely already relies on there.
+var PAYROLL_SS = 0.062, PAYROLL_MED = 0.0145, PAYROLL_FUTA_WEEKLY = 42 / 52, PAYROLL_SUTA_WEEKLY = 431 / 52;
+
+// Builds the full weekly Labor Cost Report: per-person hours/wages/OT/tax
+// for every hourly person who actually has a shift this week, plus totals.
+// Salaried people are listed separately -- this app has no annual salary
+// figures on file for anyone, so their dollar contribution is left
+// unconfigured rather than guessed (see LaborCostReportPanel for the
+// on-screen note about this).
+function computeLaborCostReport(bohObj, fohObj, drvObj, locationKey, overridesMap, salariedSummary) {
+  // salariedSummary comes from a locked-down Supabase RPC call, never a raw
+  // per-person salary map -- individual salary figures never exist in this
+  // app's browser-side JS at all. See LaborCostReportPanel.
+  salariedSummary = salariedSummary || { totalWeeklyCost: 0, unconfiguredNames: [] };
+  var fullStaff = FULL_STAFF[locationKey] || [];
+  var staffSet = {};
+  fullStaff.forEach(function (n) { staffSet[n] = true; });
+
+  var people = {}; // name -> { wh, straightBase, trainingHrs (unused, no training-flag support yet) }
+  var unmatched = {}; // name -> hours, for anyone scheduled but not in FULL_STAFF
+
+  function walkBOH(sectionObj, sectionLabel) {
+    if (!sectionObj) return;
+    Object.keys(sectionObj).forEach(function (name) {
+      if (SALARIED_EMPLOYEES[name]) return;
+      var days = sectionObj[name];
+      if (!Array.isArray(days)) return;
+      var wh = 0;
+      for (var di = 0; di < 7; di++) wh += shiftHoursBOH(days[di], di);
+      if (wh <= 0) return;
+      if (!staffSet[name]) { unmatched[name] = (unmatched[name] || 0) + wh; return; }
+      if (!people[name]) people[name] = { wh: 0, straightBase: 0 };
+      var rate = effectiveRate(name, overridesMap);
+      people[name].wh += wh;
+      people[name].straightBase += wh * rate;
+    });
+  }
+
+  function walkFOH(sectionObj, role) {
+    if (!sectionObj) return;
+    Object.keys(sectionObj).forEach(function (name) {
+      if (SALARIED_EMPLOYEES[name]) return;
+      var days = sectionObj[name];
+      if (!Array.isArray(days)) return;
+      var wh = 0;
+      for (var di = 0; di < 7; di++) wh += shiftHoursFOH(days[di], di, role);
+      if (wh <= 0) return;
+      if (!staffSet[name]) { unmatched[name] = (unmatched[name] || 0) + wh; return; }
+      if (!people[name]) people[name] = { wh: 0, straightBase: 0 };
+      var rate = effectiveRate(name, overridesMap);
+      people[name].wh += wh;
+      people[name].straightBase += wh * rate;
+    });
+  }
+
+  ['MANAGERS', 'PIZZA', 'KITCHEN', 'PREP', 'BUS', 'DISH'].forEach(function (sec) { walkBOH(bohObj && bohObj[sec], sec); });
+  walkFOH(fohObj && fohObj.SERVERS, 'servers');
+  walkFOH(fohObj && fohObj.BARTENDERS, 'bartenders');
+  walkFOH(fohObj && fohObj.CASHIERS, 'cashiers');
+  walkFOH(fohObj && fohObj.HOSTS, 'hosts');
+  walkBOH(drvObj, 'DRIVERS');
+
+  // FLSA weighted-average OT: straight-time pay for all hours already summed
+  // (straightBase), then a 0.5x premium on hours over 40 at the resulting
+  // average rate. With one flat rate per person (no per-role split in this
+  // app yet) this reduces to the simple hours-over-40-at-1.5x case.
+  var rows = Object.keys(people).map(function (name) {
+    var p = people[name];
+    var avgRate = p.wh > 0 ? p.straightBase / p.wh : 0;
+    var regHrs = Math.min(p.wh, 40), otHrs = Math.max(0, p.wh - 40);
+    var otPremium = otHrs * avgRate * 0.5;
+    var wages = p.straightBase + otPremium;
+    var tax = wages * PAYROLL_SS + wages * PAYROLL_MED + PAYROLL_FUTA_WEEKLY + PAYROLL_SUTA_WEEKLY;
+    return {
+      name: name, displayName: displayName(locationKey, name), hours: p.wh, regHrs: regHrs, otHrs: otHrs,
+      avgRate: avgRate, wages: wages, otPremium: otPremium, tax: tax, cost: wages + tax
+    };
+  }).sort(function (a, b) { return b.cost - a.cost; });
+
+  var totals = rows.reduce(function (t, r) {
+    t.wages += r.wages; t.otPremium += r.otPremium; t.tax += r.tax; t.cost += r.cost; return t;
+  }, { wages: 0, otPremium: 0, tax: 0, cost: 0 });
+
+  var unmatchedRows = Object.keys(unmatched).map(function (name) {
+    return { name: name, displayName: displayName(locationKey, name), hours: unmatched[name] };
+  }).sort(function (a, b) { return b.hours - a.hours; });
+
+  // Salaried people: the server (a SECURITY DEFINER Postgres function, see
+  // salaried_pay SQL) already computed one blended weekly cost across
+  // everyone configured, using the same true-cost formula as the live
+  // Westmont app. No individual salary or per-person cost ever reaches this
+  // function, or anywhere else in the app's JS -- only the single total.
+  totals.cost += salariedSummary.totalWeeklyCost || 0;
+  var salariedUnconfigured = (salariedSummary.unconfiguredNames || []).map(function (name) {
+    return { name: name, displayName: displayName(locationKey, name) };
+  });
+
+  return {
+    rows: rows, totals: totals, unmatched: unmatchedRows,
+    salariedWeeklyCost: salariedSummary.totalWeeklyCost || 0,
+    salariedUnconfigured: salariedUnconfigured
+  };
 }
 
 function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
@@ -2486,6 +2623,99 @@ function OverrideLogPanel({ location }) {
   );
 }
 
+function LaborCostReportPanel({ location, person }) {
+  const [weekStart, setWeekStart] = useState(fmtISO(mondayOf(new Date())));
+  const [report, setReport] = useState(null);
+  const [error, setError] = useState("");
+  const [overrides, setOverrides] = useState({});
+
+  React.useEffect(() => {
+    fetch(SUPABASE_URL + '/rest/v1/roster_overrides?location=eq.' + location.key + '&select=name,rate', { headers: sbHeaders() })
+      .then(r => r.json())
+      .then(rows => {
+        const map = {};
+        (Array.isArray(rows) ? rows : []).forEach(r => { map[r.name] = r.rate; });
+        setOverrides(map);
+      }).catch(() => {});
+  }, [location.key]);
+
+  React.useEffect(() => {
+    setReport(null);
+    setError("");
+    fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=eq.' + weekStart + '&select=boh_data,foh_data,driver_data', { headers: sbHeaders() })
+      .then(r => r.json())
+      .then(rows => {
+        const rec = Array.isArray(rows) && rows[0];
+        let boh = {}, foh = {}, drv = {};
+        if (rec) {
+          try { boh = rec.boh_data ? JSON.parse(rec.boh_data) : {}; } catch (e) {}
+          try { foh = rec.foh_data ? JSON.parse(rec.foh_data) : {}; } catch (e) {}
+          try { drv = rec.driver_data ? JSON.parse(rec.driver_data) : {}; } catch (e) {}
+        }
+        // Salaried cost is computed entirely inside the database (a locked-
+        // down function, see salaried_pay SQL) -- this app never has access
+        // to individual salary figures, only the one blended weekly number
+        // it hands back.
+        const expectedNames = Object.keys(SALARIED_EMPLOYEES);
+        fetch(SUPABASE_URL + '/rest/v1/rpc/get_salaried_weekly_cost', {
+          method: 'POST',
+          headers: sbHeaders(),
+          body: JSON.stringify({ loc: location.key, expected_names: expectedNames })
+        }).then(r2 => r2.json()).then(rpcRows => {
+          const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+          const summary = {
+            totalWeeklyCost: (row && row.total_weekly_cost) || 0,
+            unconfiguredNames: (row && row.unconfigured_names) || []
+          };
+          setReport(computeLaborCostReport(boh, foh, drv, location.key, overrides, summary));
+        }).catch(() => {
+          // If the function isn't set up yet, still show the hourly report --
+          // just without any salaried contribution, clearly marked as such.
+          setReport(computeLaborCostReport(boh, foh, drv, location.key, overrides, { totalWeeklyCost: 0, unconfiguredNames: expectedNames }));
+        });
+      })
+      .catch(() => setError("Couldn't load that week's schedule."));
+  }, [weekStart, location.key, overrides]);
+
+  const fmt$ = n => '$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  return h("div", null,
+    h("input", { type: "date", className: "date-input", value: weekStart, onChange: e => setWeekStart(e.target.value) }),
+    error && h("div", { style: { fontSize: 13, color: "var(--red)", marginTop: 8 } }, error),
+    !report && !error && h("div", { style: { fontSize: 13, color: "var(--gray-600)", marginTop: 8 } }, "Loading\u2026"),
+    report && h("div", { style: { marginTop: 10 } },
+      report.rows.length === 0
+        ? h("div", { style: { fontSize: 13, color: "var(--gray-600)" } }, "No hourly staff scheduled that week.")
+        : h("div", { style: { maxHeight: 340, overflowY: "auto" } },
+            report.rows.map(r => h("div", { key: r.name, className: "TO-entry" },
+              h("div", { className: "TO-entry-name" }, r.displayName),
+              h("div", { className: "TO-entry-meta" },
+                r.hours.toFixed(1) + "h", r.otHrs > 0 ? " (" + r.otHrs.toFixed(1) + "h OT)" : "",
+                " \u00b7 ", fmt$(r.wages), " wages \u00b7 ", fmt$(r.tax), " tax \u00b7 ", fmt$(r.cost), " total cost"
+              )
+            ))
+          ),
+      h("div", { className: "Priv-section", style: { marginTop: 12, paddingTop: 10, borderTop: "1px solid var(--gray-200, #ddd)" } },
+        h("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "2px 0" } }, h("span", null, "Hourly wages"), h("strong", null, fmt$(report.totals.wages))),
+        h("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "2px 0" } }, h("span", null, "OT premium included above"), h("strong", null, fmt$(report.totals.otPremium))),
+        h("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "2px 0" } }, h("span", null, "Hourly payroll tax (SS/Medicare/FUTA/SUTA)"), h("strong", null, fmt$(report.totals.tax))),
+        h("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 13, padding: "2px 0" } }, h("span", null, "Salaried staff, blended (no individual figures shown)"), h("strong", null, fmt$(report.salariedWeeklyCost))),
+        h("div", { style: { display: "flex", justifyContent: "space-between", fontSize: 16, padding: "6px 0", fontWeight: 700 } }, h("span", null, "TRUE COST TO BUSINESS"), h("span", null, fmt$(report.totals.cost)))
+      ),
+      report.salariedUnconfigured.length > 0 && h("div", { style: { marginTop: 10, fontSize: 12, color: "var(--gray-500, #888)" } },
+        "Not yet configured in the salary system (excluded from the blended total above): ", report.salariedUnconfigured.map(u => u.displayName).join(", ")
+      ),
+      report.unmatched.length > 0 && h("div", { style: { marginTop: 10, background: "#FFF8E1", border: "1px solid #F0C040", borderRadius: 8, padding: "10px 12px", fontSize: 12.5 } },
+        h("div", { style: { fontWeight: 700, color: "#8a6d00", marginBottom: 4 } }, "\u26A0 Not in the staff roster \u2014 hours below are NOT included in the totals above"),
+        report.unmatched.map(u => h("div", { key: u.name, style: { display: "flex", justifyContent: "space-between", padding: "2px 0" } },
+          h("span", null, u.displayName), h("span", null, u.hours.toFixed(1) + "h")
+        )),
+        h("div", { style: { marginTop: 6, color: "#8a6d00", fontSize: 11 } }, "Add this name to the staff roster with a pay rate to include it.")
+      )
+    )
+  );
+}
+
 function PrivateScreen({ location, person, onHome, onBackToGrid, onNamingChanged }) {
   const [pins, setPins] = useState(null);
   const [error, setError] = useState("");
@@ -2526,6 +2756,10 @@ function PrivateScreen({ location, person, onHome, onBackToGrid, onNamingChanged
       h("div", { className: "Priv-section" },
         h("div", { className: "Priv-label" }, "Override Log \u2014 permanent, unerasable"),
         h(OverrideLogPanel, { location })
+      ),
+      h("div", { className: "Priv-section" },
+        h("div", { className: "Priv-label" }, "Labor Cost Report"),
+        h(LaborCostReportPanel, { location, person })
       ),
       h("div", { style: { marginTop: 16, textAlign: "center" } },
         h("span", { className: "back-link", onClick: onBackToGrid }, "\u2190 Back to " + location.name)
