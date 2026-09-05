@@ -187,7 +187,7 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 const h = React.createElement;
 const { useState, useRef } = React;
 
-const APP_VERSION = "2.3";
+const APP_VERSION = "3.0";
 
 const SUPABASE_URL = 'https://bkrgefddyculihfdhjwb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrcmdlZmRkeWN1bGloZmRoandiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzM0ODEsImV4cCI6MjA5NTk0OTQ4MX0.YhIsgS3IkRyTSeVG011EPqhZvX0UbR-tXcCLGoOSMEI';
@@ -197,7 +197,7 @@ const LOCATIONS = [
 ];
 
 const FULL_STAFF = {
-  westmont: ['Abby','Alexis','Alexis A','Allie','Armani','Armani Finley','Arturo','Arturo Viveros','Brett','Brianna','Bridget','Brooke','Carlos','Carlos Jr','Carlos Mora','Charlie','Cheeks','Claudia','Courtney','Danielle','Derek','Dom','Dorris','Eddie','Eddie Cruz','Eddy','Elena','Ellianna','Ely','Emilie','Eric','Erika','Ever','Gonzalo','Gonzo','Hannah','Hannah M','Jack Ruane','Jaime','Jaxon','Jesus','Jesus Murillo','Jose B','Julia','Justin','Kamini','Keegan','Kelly','Lea','Leo','Lindsay','Lisa','Luis','Luis Perez','Luis Soto','Marco','Marco Sanchez','Mary','Matt','Mike','Molly','Monico','Monico Esparza','Natalie','Nicholas Urbana','Nick','Nithia Maldonado','Oscar V.','Presley','Raul','Selena','Sio McAvoy','Soto','Sylvia','Tia','Victor','Victor Cruz']
+  westmont: ['Abby D.','Alexis V.','Alexis A','Allie','Arturo V.','Brett','Brianna L.','Bridget B.','Brooke B.','Carlos Jr','Carlos M.','Charlie','Cheeks','Claudia G.','Claudia M.','Danielle P.','Dom','Dorris R.','Eddie C.','Ellianna','Ely','Emilie','Erika','Hannah M','Jaime P.','Jesus M.','Julia','Justin','Keegan','Kelly F.','Laura Z','Lea P.','Lindsay','Lisa','Luis P.','Luis S.','Marco S.','Mary P.','Molly','Nicholas U.','Nithia M.','Oscar V.','Presley','Raul','Selena','Sio M.','Sylvia M.','Tia','Victor C.','Gonzalo','Hannah Z.']
 };
 
 const ROSTERS = {
@@ -284,50 +284,103 @@ function printViaIframe(html) {
 
 // ── Ported from the live app: which sections each person is allowed to work ──
 const ROLE_MAP = {
-  'Arturo':['Kitchen','Pizza'],'Arturo Viveros':['Kitchen','Pizza'],
-  'Carlos':['Kitchen','Pizza'],'Carlos Mora':['Kitchen','Pizza'],
-  'Jesus':['Kitchen','Pizza'],'Jesus Murillo':['Kitchen','Pizza'],
-  'Jose B':['Kitchen'],'Derek':['Kitchen'],'Nithia Maldonado':['Kitchen'],'Nithia':['Kitchen'],
-  'Ever':['Kitchen','Pizza'],'Carlos Jr':['Pizza'],'Eddie':['Pizza'],'Eddie Cruz':['Pizza'],'Eddy':['Pizza'],
-  'Gonzo':['Pizza','Dish','Bus'],'Gonzalo':['Pizza','Dish','Bus'],
-  'Leo':['Pizza'],'Luis':['Pizza'],'Luis Perez':['Pizza'],'Luis Soto':['Pizza'],
-  'Monico':['Pizza'],'Monico Esparza':['Pizza'],'Soto':['Pizza'],
-  'Oscar V.':['Pizza'],'Victor':['Pizza'],'Victor Cruz':['Pizza'],
-  'Nick':['Prep','Kitchen'],'Nicholas Urbana':['Prep','Kitchen'],'Sylvia':['Prep'],'Laura Z':['Kitchen','Pizza'],
-  'Marco':['Pizza','Dish','Bus'],'Marco Sanchez':['Pizza','Dish','Bus'],
-  'Armani':['Dish','Bus'],'Armani Finley':['Dish','Bus'],
-  'Jaxon':['Dish','Bus'],'Eric':['Dish','Bus'],'Matt':['Dish'],'Raul':['Dish','Bus'],
-  'Abby':['Servers','Cashiers','Hosts'],'Alexis':['Servers'],'Bridget':['Servers'],
-  'Claudia':['Servers'],'Dorris':['Servers','Cashiers'],
-  'Hannah':['Servers'],'Hannah M':['Servers'],'Hannah M.':['Servers'],'Hannah Z':['Servers','Cashiers'],'Hannah Z.':['Servers','Cashiers'],
-  'Jaime':['Servers','Bartenders'],'Kelly':['Servers','Bartenders'],
-  'Sio':['Servers','Cashiers','Bartenders'],'Sio McAvoy':['Servers','Cashiers','Bartenders'],
-  'Annaka':['Servers'],'Allie':['Servers'],
-  'Courtney':['Servers'],'Kamini':['Servers'],
-  'Justin':['Servers','Bartenders'],'Julia':['Servers'],'Brianna':['Servers'],'Erika':['Servers'],'Elena':['Servers'],
-  'Lindsay':['Bartenders'],'Brooke':['Bartenders'],'Cheeks':['Bartenders'],
-  'Danielle':['Bartenders'],'Mary':['Bartenders'],'Lea':['Bartenders'],'Carrie':['Bartenders'],
-  'Jack':['Cashiers'],'Jack Ruane':['Cashiers'],'Mike':['Cashiers'],'Natalie':['Cashiers','Hosts'],'Presley':['Cashiers','Hosts'],
-  'Tia':['Cashiers','Hosts'],'Emilie':['Cashiers','Hosts'],'Ellianna':['Cashiers','Hosts'],
-  'Keegan':['Cashiers','Hosts'],'Molly':['Cashiers','Hosts'],'Charlie':['Cashiers','Hosts'],
-  'Claudia G':['Servers'],'Claudia G.':['Servers'],'Claudia M':['Servers'],'Claudia M.':['Servers']
+'Abby D.':['Servers','Cashiers','Hosts'],
+  'Alexis V.':['Servers'],
+  'Allie':['Servers'],
+  'Arturo V.':['Kitchen','Pizza'],
+  'Brianna L.':['Servers'],
+  'Bridget B.':['Servers'],
+  'Brooke B.':['Bartenders'],
+  'Carlos Jr':['Pizza'],
+  'Carlos M.':['Kitchen','Pizza'],
+  'Charlie':['Cashiers','Hosts'],
+  'Cheeks':['Bartenders'],
+  'Claudia G.':['Servers'],
+  'Claudia M.':['Servers'],
+  'Danielle P.':['Bartenders'],
+  'Dorris R.':['Servers','Cashiers'],
+  'Eddie C.':['Kitchen','Pizza'],
+  'Ellianna':['Cashiers','Hosts'],
+  'Emilie':['Cashiers','Hosts'],
+  'Erika':['Servers'],
+  'Gonzalo':['Dish','Pizza','Bus'],
+  'Hannah M':['Servers'],
+  'Hannah Z.':['Servers','Cashiers'],
+  'Jaime P.':['Servers','Bartenders'],
+  'Jesus M.':['Kitchen','Pizza'],
+  'Julia':['Servers'],
+  'Justin':['Servers','Bartenders'],
+  'Keegan':['Cashiers','Hosts'],
+  'Kelly F.':['Servers','Bartenders'],
+  'Laura Z':['Pizza','Kitchen'],
+  'Lea P.':['Bartenders'],
+  'Lindsay':['Bartenders'],
+  'Luis P.':['Pizza'],
+  'Luis S.':['Pizza'],
+  'Marco S.':['Dish','Pizza','Bus'],
+  'Mary P.':['Bartenders'],
+  'Molly':['Cashiers','Hosts'],
+  'Nicholas U.':['Prep','Kitchen'],
+  'Nithia M.':['Kitchen'],
+  'Oscar V.':['Pizza'],
+  'Presley':['Cashiers','Hosts'],
+  'Raul':['Dish','Bus'],
+  'Sio M.':['Cashiers','Servers','Bartenders'],
+  'Sylvia M.':['Prep'],
+  'Tia':['Cashiers','Hosts'],
+  'Victor C.':['Pizza'],
+
 };
 
 // ── Ported directly from the live Westmont app for real calendar costs ──
 const SALARIED_EMPLOYEES = {'Brett':1,'Dom':1,'Ely':1,'Selena':1,'Lisa':1,'Alexis A':1};
 const RATES = {
-  'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie Cruz':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar V.':19,
-  'Victor':20.50,'Arturo':21,'Jose B':23,'Nick':20,'Armani':16,'Marco':16,
-  'Nithia Maldonado':17.50,'Arturo Viveros':21,'Jesus Murillo':21,'Derek':19,
-  'Carlos Mora':19.25,'Nicholas Urbana':20,'Luis Perez':20,'Victor Cruz':20.50,
-  'Monico Esparza':20,'Luis Soto':19,'Gonzo':17,
-  'Carlos Jr':17.50,'Leo':17.50,'Ever':17.50,'Sylvia':15,
-  'Jack Ruane':16,'Marco Sanchez':16,'Armani Finley':16,'Gonzalo':17,'Sio McAvoy':17,'Mike':15,
-  'Eric':15,'Jaxon':15,'Matt':15,'Raul':15,
-  'Abby':9,'Alexis':9,'Bridget':9,'Claudia':9,'Dorris':9,'Hannah':9,
-  'Jaime':9,'Kelly':9,'Hannah M':9,'Brianna':9,'Erika':9,'Elena':9,
-  'Allie':9,'Courtney':9,'Kamini':9,'Charlie':15,'Justin':9,'Lindsay':9,'Brooke':9,'Cheeks':9,
-  'Danielle':9,'Mary':9,'Natalie':15,'Presley':15,'Tia':15,'Emilie':15,'Ellianna':15,'Keegan':15,'Julia':9,'Molly':15,'Lea':9
+'Abby D.':15,
+  'Alexis V.':9,
+  'Allie':9,
+  'Arturo V.':21,
+  'Brianna L.':9,
+  'Bridget B.':9,
+  'Brooke B.':9,
+  'Carlos Jr':17.5,
+  'Carlos M.':19.25,
+  'Charlie':15,
+  'Cheeks':9,
+  'Claudia G.':9,
+  'Claudia M.':9,
+  'Danielle P.':9,
+  'Dorris R.':17,
+  'Eddie C.':19,
+  'Ellianna':15,
+  'Emilie':15,
+  'Erika':9,
+  'Gonzalo':17,
+  'Hannah M':9,
+  'Hannah Z.':15,
+  'Jaime P.':9,
+  'Jesus M.':21,
+  'Julia':9,
+  'Justin':9,
+  'Keegan':15,
+  'Kelly F.':9,
+  'Laura Z':19,
+  'Lea P.':9,
+  'Lindsay':9,
+  'Luis P.':20,
+  'Luis S.':19,
+  'Marco S.':16,
+  'Mary P.':9,
+  'Molly':15,
+  'Nicholas U.':20,
+  'Nithia M.':17.5,
+  'Oscar V.':19,
+  'Presley':15,
+  'Raul':15,
+  'Sio M.':17,
+  'Sylvia M.':15,
+  'Tia':15,
+  'Victor C.':20.5
+
 };
 
 // isEnd=true means `t` is the end of a shift, not the start. An ambiguous
@@ -479,7 +532,10 @@ function computeLaborCostReport(bohObj, fohObj, drvObj, locationKey, overridesMa
   walkFOH(fohObj && fohObj.BARTENDERS, 'bartenders');
   walkFOH(fohObj && fohObj.CASHIERS, 'cashiers');
   walkFOH(fohObj && fohObj.HOSTS, 'hosts');
-  walkBOH(drvObj, 'DRIVERS');
+  // Drivers are deliberately excluded from labor cost entirely -- they're
+  // not paid through this hourly system and don't count against labor, so
+  // they're never walked here at all (not counted, and not flagged as
+  // "unmatched" either -- being a driver isn't a roster gap).
 
   // FLSA weighted-average OT: straight-time pay for all hours already summed
   // (straightBase), then a 0.5x premium on hours over 40 at the resulting
@@ -561,7 +617,9 @@ function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
   }
   ['MANAGERS', 'PIZZA', 'KITCHEN', 'PREP', 'BUS', 'DISH'].forEach(function (sec) { addBOHStyle(bohObj && bohObj[sec]); });
   ['SERVERS', 'BARTENDERS', 'CASHIERS', 'HOSTS'].forEach(function (sec) { addFOHStyle(fohObj && fohObj[sec]); });
-  addBOHStyle(drvObj);
+  // Drivers are deliberately excluded -- they're not paid through this
+  // hourly system and don't count against labor cost, on the calendar
+  // preview or anywhere else.
   return daily;
 }
 
@@ -1811,12 +1869,75 @@ function SectionTable({ title, data, days, editable, onChange, onAddPerson, loca
   );
 }
 
+// Drivers get two extras the generic SectionTable doesn't handle, ported
+// directly from the live Westmont app:
+// - Dispatch: a single free-text row per day, not tied to any driver.
+// - Driver Notes: a checkbox per driver (edit mode) that reveals a short
+//   text note for that week only (e.g. "only until 6pm Thu/Fri"); shown as
+//   small red text under their name in view mode.
+function DriversTable({ data, days, editable, onChange, onAddPerson, locationKey, dispatch, onDispatchChange, driverNotes, onToggleNote, onNoteTextChange }) {
+  const [newName, setNewName] = useState("");
+  const names = Object.keys(data || {});
+  return h("div", { className: "WD-section" },
+    h("div", { className: "WD-section-title" }, "DRIVERS"),
+    names.length === 0 && !dispatch.some(Boolean)
+      ? h("div", { style: { fontSize: 12, color: "var(--gray-400)" } }, "Nobody scheduled.")
+      : h("table", { className: "WD-table" },
+          h("thead", null, h("tr", null, h("th", null, "Name"), days.map(d => h("th", { key: d }, d)))),
+          h("tbody", null,
+            names.map(name => {
+              const hasNote = driverNotes[name] !== undefined;
+              return h("tr", { key: name },
+                h("td", null,
+                  editable
+                    ? h("label", { style: { display: "flex", alignItems: "center", gap: 5 } },
+                        h("input", { type: "checkbox", checked: hasNote, onChange: e => onToggleNote(name, e.target.checked) }),
+                        locationKey ? displayName(locationKey, name) : name
+                      )
+                    : h("div", null,
+                        locationKey ? displayName(locationKey, name) : name,
+                        driverNotes[name] && h("div", { style: { fontSize: 10, color: "var(--red)", fontWeight: 600, marginTop: 2 } }, driverNotes[name])
+                      )
+                ),
+                Array.from({ length: 7 }).map((_, di) => {
+                  const val = (data[name] && data[name][di]) || '';
+                  return h("td", { key: di },
+                    editable
+                      ? h("input", { className: "WD-cell-input", value: val, onChange: e => onChange(name, di, e.target.value) })
+                      : (val || '\u2014')
+                  );
+                })
+              );
+            }),
+            h("tr", { key: "__dispatch" },
+              h("td", null, "Dispatch"),
+              Array.from({ length: 7 }).map((_, di) => h("td", { key: di },
+                editable
+                  ? h("input", { className: "WD-cell-input", placeholder: "Name + time", value: dispatch[di] || '', onChange: e => onDispatchChange(di, e.target.value) })
+                  : (dispatch[di] || '\u2014')
+              ))
+            )
+          )
+        ),
+    editable && names.filter(n => driverNotes[n] !== undefined).map(n => h("div", { key: n, style: { marginTop: 8 } },
+      h("div", { className: "Priv-label" }, (locationKey ? displayName(locationKey, n) : n) + "'s note"),
+      h("input", { className: "date-input", placeholder: "e.g. working extra hours this week, only until 6pm Thu/Fri", value: driverNotes[n] || '', onChange: e => onNoteTextChange(n, e.target.value) })
+    )),
+    editable && h("div", { className: "WD-addperson" },
+      h("input", { placeholder: "Add person\u2026", value: newName, onChange: e => setNewName(e.target.value) }),
+      h("button", { onClick: () => { if (newName.trim()) { onAddPerson(newName.trim()); setNewName(""); } } }, "Add")
+    )
+  );
+}
+
 function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, onLogoTap, onBackToSchedule }) {
   const [tab, setTab] = useState('view');
   const [loading, setLoading] = useState(true);
   const [boh, setBoh] = useState({});
   const [foh, setFoh] = useState({});
   const [drv, setDrv] = useState({});
+  const [dispatch, setDispatch] = useState([null, null, null, null, null, null, null]);
+  const [driverNotes, setDriverNotes] = useState({});
   const [saveStatus, setSaveStatus] = useState("");
   const [copyChecks, setCopyChecks] = useState({ BOH: true, FOH: true, Drivers: true, Events: true });
   const [copyStatus, setCopyStatus] = useState("");
@@ -1828,14 +1949,21 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
     setLoading(true);
     fetchWeekRow(weekStart).then(rec => {
       let bohObj = {}, fohObj = {}, drvObj = {};
+      let dispatchArr = [null, null, null, null, null, null, null];
+      let notesObj = {};
       if (rec) {
         try { bohObj = rec.boh_data ? JSON.parse(rec.boh_data) : {}; } catch (e) {}
         try { fohObj = rec.foh_data ? JSON.parse(rec.foh_data) : {}; } catch (e) {}
         try { drvObj = rec.driver_data ? JSON.parse(rec.driver_data) : {}; } catch (e) {}
+        try {
+          const parsed = rec.dispatch_data ? JSON.parse(rec.dispatch_data) : null;
+          if (Array.isArray(parsed)) { for (let i = 0; i < 7; i++) dispatchArr[i] = parsed[i] || null; }
+        } catch (e) {}
+        try { notesObj = rec.driver_notes_data ? JSON.parse(rec.driver_notes_data) : {}; } catch (e) {}
       }
       BOH_CATS.forEach(c => { if (!bohObj[c]) bohObj[c] = {}; });
       FOH_CATS.forEach(c => { if (!fohObj[c]) fohObj[c] = {}; });
-      setBoh(bohObj); setFoh(fohObj); setDrv(drvObj);
+      setBoh(bohObj); setFoh(fohObj); setDrv(drvObj); setDispatch(dispatchArr); setDriverNotes(notesObj);
       setLoading(false);
     });
   }
@@ -1891,11 +2019,26 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
       return next;
     });
   }
+  function editDispatchCell(di, val) {
+    setDispatch(prev => { const next = prev.slice(); next[di] = val || null; return next; });
+  }
+  function toggleDriverNote(name, isChecked) {
+    setDriverNotes(prev => {
+      const next = Object.assign({}, prev);
+      if (isChecked) { if (next[name] === undefined) next[name] = ''; }
+      else { delete next[name]; }
+      return next;
+    });
+  }
+  function editDriverNoteText(name, val) {
+    setDriverNotes(prev => Object.assign({}, prev, { [name]: val }));
+  }
 
   function saveAll() {
     setSaveStatus("Saving\u2026");
     saveWeekRow(weekStart, {
-      boh_data: JSON.stringify(boh), foh_data: JSON.stringify(foh), driver_data: JSON.stringify(drv)
+      boh_data: JSON.stringify(boh), foh_data: JSON.stringify(foh), driver_data: JSON.stringify(drv),
+      dispatch_data: JSON.stringify(dispatch), driver_notes_data: JSON.stringify(driverNotes)
     }).then(r => {
       if (!r.ok && r.status !== 201) throw new Error();
       setSaveStatus("Saved.");
@@ -1922,7 +2065,11 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
     }
     if (which === 'boh' || which === 'all') BOH_CATS.forEach(c => { html += tableHtml(c, boh[c]); });
     if (which === 'foh' || which === 'all') FOH_CATS.forEach(c => { html += tableHtml(c, Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)]))); });
-    if (which === 'drivers' || which === 'all') html += tableHtml('Drivers', drv);
+    if (which === 'drivers' || which === 'all') {
+      const drvWithDispatch = Object.assign({}, drv);
+      if (dispatch.some(Boolean)) drvWithDispatch['Dispatch'] = dispatch;
+      html += tableHtml('Drivers', drvWithDispatch);
+    }
     const doc = '<!DOCTYPE html><html><head><title>Schedule</title><style>' +
       '@page{size:landscape;margin:0.35in;}' +
       '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
@@ -1998,7 +2145,10 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
         ),
         viewSection === 'boh' && BOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: boh[c], days: DAY_LABELS, editable: false, locationKey: location.key })),
         viewSection === 'foh' && FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: false, locationKey: location.key })),
-        viewSection === 'drivers' && h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: false, locationKey: location.key }),
+        viewSection === 'drivers' && h(DriversTable, {
+          data: drv, days: DAY_LABELS, editable: false, locationKey: location.key,
+          dispatch, driverNotes
+        }),
         h("div", { className: "Accordion", style: { marginTop: 14 } },
           h("div", { className: "Accordion-head", onClick: () => togglePanel("notes") },
             h("div", { className: "Accordion-head-title" }, "MANAGER NOTES"),
@@ -2025,8 +2175,12 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
           onChange: (name, di, val) => editBOHCell(c, name, di, val), onAddPerson: name => addBOHPerson(c, name) })),
         viewSection === 'foh' && FOH_CATS.map(c => h(SectionTable, { key: c, title: c, data: Object.fromEntries(Object.entries(foh[c] || {}).map(([k,v]) => [k, v.map(fohEntryToStr)])), days: DAY_LABELS, editable: true, locationKey: location.key,
           onChange: (name, di, val) => editFOHCell(c, name, di, val), onAddPerson: name => addFOHPerson(c, name) })),
-        viewSection === 'drivers' && h(SectionTable, { title: "DRIVERS", data: drv, days: DAY_LABELS, editable: true, locationKey: location.key,
-          onChange: (name, di, val) => editDrvCell(name, di, val), onAddPerson: addDrvPerson }),
+        viewSection === 'drivers' && h(DriversTable, {
+          data: drv, days: DAY_LABELS, editable: true, locationKey: location.key,
+          onChange: (name, di, val) => editDrvCell(name, di, val), onAddPerson: addDrvPerson,
+          dispatch, onDispatchChange: editDispatchCell,
+          driverNotes, onToggleNote: toggleDriverNote, onNoteTextChange: editDriverNoteText
+        }),
         h("button", { className: "send-btn", onClick: saveAll }, "SAVE SCHEDULE"),
         h("div", { className: "Msg-status" }, saveStatus)
       ),
@@ -2051,17 +2205,23 @@ function RunSheetsScreen({ location, onHome, onBackToGrid, onLogoTap }) {
   const [boh, setBoh] = useState({});
   const [foh, setFoh] = useState({});
   const [drv, setDrv] = useState({});
+  const [dispatch, setDispatch] = useState([null, null, null, null, null, null, null]);
 
   React.useEffect(() => {
     setLoading(true);
     fetchWeekRow(weekStart).then(rec => {
       let bohObj = {}, fohObj = {}, drvObj = {};
+      let dispatchArr = [null, null, null, null, null, null, null];
       if (rec) {
         try { bohObj = rec.boh_data ? JSON.parse(rec.boh_data) : {}; } catch (e) {}
         try { fohObj = rec.foh_data ? JSON.parse(rec.foh_data) : {}; } catch (e) {}
         try { drvObj = rec.driver_data ? JSON.parse(rec.driver_data) : {}; } catch (e) {}
+        try {
+          const parsed = rec.dispatch_data ? JSON.parse(rec.dispatch_data) : null;
+          if (Array.isArray(parsed)) { for (let i = 0; i < 7; i++) dispatchArr[i] = parsed[i] || null; }
+        } catch (e) {}
       }
-      setBoh(bohObj); setFoh(fohObj); setDrv(drvObj); setLoading(false);
+      setBoh(bohObj); setFoh(fohObj); setDrv(drvObj); setDispatch(dispatchArr); setLoading(false);
     });
   }, [weekStart]);
 
@@ -2090,6 +2250,11 @@ function RunSheetsScreen({ location, onHome, onBackToGrid, onLogoTap }) {
     { title: 'Drivers', people: drvPeople(dayIdx) }
   ];
   const totalStaff = sections.reduce((sum, s) => sum + s.people.length, 0);
+  // Dispatch is added to the Drivers section for display/print only -- it's
+  // not a person, so it's deliberately excluded from totalStaff above.
+  if (dispatch[dayIdx]) {
+    sections[sections.length - 1].people = sections[sections.length - 1].people.concat([{ n: 'Dispatch', shift: dispatch[dayIdx] }]);
+  }
 
   function printDay() {
     const left = ['Managers', 'Pizza', 'Kitchen', 'Prep / Utility', 'Bus / Dish'];
