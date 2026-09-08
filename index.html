@@ -187,7 +187,7 @@ html,body{background:var(--off-white);color:var(--black);font-family:system-ui,-
 const h = React.createElement;
 const { useState, useRef } = React;
 
-const APP_VERSION = "3.0";
+const APP_VERSION = "3.1";
 
 const SUPABASE_URL = 'https://bkrgefddyculihfdhjwb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrcmdlZmRkeWN1bGloZmRoandiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzM0ODEsImV4cCI6MjA5NTk0OTQ4MX0.YhIsgS3IkRyTSeVG011EPqhZvX0UbR-tXcCLGoOSMEI';
@@ -335,7 +335,7 @@ const ROLE_MAP = {
 // ── Ported directly from the live Westmont app for real calendar costs ──
 const SALARIED_EMPLOYEES = {'Brett':1,'Dom':1,'Ely':1,'Selena':1,'Lisa':1,'Alexis A':1};
 const RATES = {
-'Abby D.':15,
+'Abby D.':{'Servers':9,'Cashiers':15,'Hosts':15},
   'Alexis V.':9,
   'Allie':9,
   'Arturo V.':21,
@@ -349,14 +349,14 @@ const RATES = {
   'Claudia G.':9,
   'Claudia M.':9,
   'Danielle P.':9,
-  'Dorris R.':17,
+  'Dorris R.':{'Servers':9,'Cashiers':17},
   'Eddie C.':19,
   'Ellianna':15,
   'Emilie':15,
   'Erika':9,
   'Gonzalo':17,
   'Hannah M':9,
-  'Hannah Z.':15,
+  'Hannah Z.':{'Servers':9,'Cashiers':15},
   'Jaime P.':9,
   'Jesus M.':21,
   'Julia':9,
@@ -376,7 +376,7 @@ const RATES = {
   'Oscar V.':19,
   'Presley':15,
   'Raul':15,
-  'Sio M.':17,
+  'Sio M.':{'Cashiers':17,'Servers':9,'Bartenders':9},
   'Sylvia M.':15,
   'Tia':15,
   'Victor C.':20.5
@@ -440,13 +440,19 @@ function sectionHasContent(sectionData) {
   });
 }
 
-// Effective hourly rate for `name`: a live roster_overrides entry always
-// wins, falling back to the hardcoded RATES table, then a $9 default for
-// anyone with neither (never used for salaried people -- callers check
-// SALARIED_EMPLOYEES separately).
-function effectiveRate(name, overridesMap) {
+// Effective hourly rate for `name` when working `role` (e.g. 'Servers',
+// 'Cashiers'): a live roster_overrides entry always wins (flat, applies to
+// all roles), then RATES -- which can be a flat number, or for people paid
+// differently by role (RATES[name] is an object), the rate for that
+// specific role. Falls back to $9 for anyone with neither. Never used for
+// salaried people -- callers check SALARIED_EMPLOYEES separately.
+function effectiveRate(name, overridesMap, role) {
   overridesMap = overridesMap || {};
-  return overridesMap[name] !== undefined ? overridesMap[name] : (RATES[name] !== undefined ? RATES[name] : 9);
+  if (overridesMap[name] !== undefined) return overridesMap[name];
+  var r = RATES[name];
+  if (r === undefined) return 9;
+  if (typeof r === 'object') return (role && r[role] !== undefined) ? r[role] : Math.max.apply(null, Object.values(r));
+  return r;
 }
 
 // Actual paid hours for one day of a BOH-style shift string, matching the
@@ -490,23 +496,28 @@ function computeLaborCostReport(bohObj, fohObj, drvObj, locationKey, overridesMa
   var staffSet = {};
   fullStaff.forEach(function (n) { staffSet[n] = true; });
 
-  var people = {}; // name -> { wh, straightBase, trainingHrs (unused, no training-flag support yet) }
+  var segmentsByPerson = {}; // name -> [{day, startH, hours, rate}]
   var unmatched = {}; // name -> hours, for anyone scheduled but not in FULL_STAFF
 
-  function walkBOH(sectionObj, sectionLabel) {
+  function addSegment(name, day, startH, hours, rate) {
+    if (!segmentsByPerson[name]) segmentsByPerson[name] = [];
+    segmentsByPerson[name].push({ day: day, startH: startH, hours: hours, rate: rate });
+  }
+
+  function walkBOH(sectionObj, role) {
     if (!sectionObj) return;
     Object.keys(sectionObj).forEach(function (name) {
       if (SALARIED_EMPLOYEES[name]) return;
       var days = sectionObj[name];
       if (!Array.isArray(days)) return;
-      var wh = 0;
-      for (var di = 0; di < 7; di++) wh += shiftHoursBOH(days[di], di);
-      if (wh <= 0) return;
-      if (!staffSet[name]) { unmatched[name] = (unmatched[name] || 0) + wh; return; }
-      if (!people[name]) people[name] = { wh: 0, straightBase: 0 };
-      var rate = effectiveRate(name, overridesMap);
-      people[name].wh += wh;
-      people[name].straightBase += wh * rate;
+      for (var di = 0; di < 7; di++) {
+        var hrs = shiftHoursBOH(days[di], di);
+        if (hrs <= 0) continue;
+        if (!staffSet[name]) { unmatched[name] = (unmatched[name] || 0) + hrs; continue; }
+        var parsed = parseBOHHours(days[di], di);
+        var rate = effectiveRate(name, overridesMap, role);
+        addSegment(name, di, parsed ? parsed.st : 0, hrs, rate);
+      }
     });
   }
 
@@ -516,40 +527,64 @@ function computeLaborCostReport(bohObj, fohObj, drvObj, locationKey, overridesMa
       if (SALARIED_EMPLOYEES[name]) return;
       var days = sectionObj[name];
       if (!Array.isArray(days)) return;
-      var wh = 0;
-      for (var di = 0; di < 7; di++) wh += shiftHoursFOH(days[di], di, role);
-      if (wh <= 0) return;
-      if (!staffSet[name]) { unmatched[name] = (unmatched[name] || 0) + wh; return; }
-      if (!people[name]) people[name] = { wh: 0, straightBase: 0 };
-      var rate = effectiveRate(name, overridesMap);
-      people[name].wh += wh;
-      people[name].straightBase += wh * rate;
+      for (var di = 0; di < 7; di++) {
+        var hrs = shiftHoursFOH(days[di], di, role);
+        if (hrs <= 0) continue;
+        if (!staffSet[name]) { unmatched[name] = (unmatched[name] || 0) + hrs; continue; }
+        var parsed = parseFOHHours(days[di], di, role);
+        var rate = effectiveRate(name, overridesMap, role);
+        addSegment(name, di, parsed ? parsed.st : 0, hrs, rate);
+      }
     });
   }
 
-  ['MANAGERS', 'PIZZA', 'KITCHEN', 'PREP', 'BUS', 'DISH'].forEach(function (sec) { walkBOH(bohObj && bohObj[sec], sec); });
-  walkFOH(fohObj && fohObj.SERVERS, 'servers');
-  walkFOH(fohObj && fohObj.BARTENDERS, 'bartenders');
-  walkFOH(fohObj && fohObj.CASHIERS, 'cashiers');
-  walkFOH(fohObj && fohObj.HOSTS, 'hosts');
+  // Role labels must match RATES' per-role keys exactly (Cashiers/Servers/
+  // Bartenders/Hosts, capitalized) so a split-rate person's rate resolves
+  // to the right number for whichever section they're actually working.
+  ['MANAGERS', 'PIZZA', 'KITCHEN', 'PREP', 'BUS', 'DISH'].forEach(function (sec) { walkBOH(bohObj && bohObj[sec], sec.charAt(0) + sec.slice(1).toLowerCase()); });
+  walkFOH(fohObj && fohObj.SERVERS, 'Servers');
+  walkFOH(fohObj && fohObj.BARTENDERS, 'Bartenders');
+  walkFOH(fohObj && fohObj.CASHIERS, 'Cashiers');
+  walkFOH(fohObj && fohObj.HOSTS, 'Hosts');
   // Drivers are deliberately excluded from labor cost entirely -- they're
   // not paid through this hourly system and don't count against labor, so
   // they're never walked here at all (not counted, and not flagged as
   // "unmatched" either -- being a driver isn't a roster gap).
 
-  // FLSA weighted-average OT: straight-time pay for all hours already summed
-  // (straightBase), then a 0.5x premium on hours over 40 at the resulting
-  // average rate. With one flat rate per person (no per-role split in this
-  // app yet) this reduces to the simple hours-over-40-at-1.5x case.
-  var rows = Object.keys(people).map(function (name) {
-    var p = people[name];
-    var avgRate = p.wh > 0 ? p.straightBase / p.wh : 0;
-    var regHrs = Math.min(p.wh, 40), otHrs = Math.max(0, p.wh - 40);
-    var otPremium = otHrs * avgRate * 0.5;
-    var wages = p.straightBase + otPremium;
+  // Chronological OT: walk each person's week in order worked (day, then
+  // start time within a day), accumulating hours. Once the running total
+  // crosses 40, everything from that point on is OT at 1.5x THAT segment's
+  // actual rate -- not a blended average across the week. A segment that
+  // straddles the 40-hour mark is split: the portion before 40 is regular,
+  // the portion after is OT. For anyone with a single flat rate all week,
+  // this produces the exact same number as a simple regHrs+otHrs*1.5
+  // calculation -- the distinction only matters for people paid differently
+  // by role (e.g. Sio M.: $17 Cashier/$9 Bartender), where it correctly
+  // charges OT at whichever rate applied to the hours that actually pushed
+  // them over 40, not an average of all their rates.
+  var rows = Object.keys(segmentsByPerson).map(function (name) {
+    var segs = segmentsByPerson[name].slice().sort(function (a, b) {
+      return a.day - b.day || a.startH - b.startH;
+    });
+    var cum = 0, regPay = 0, otPay = 0, otPremium = 0, wh = 0;
+    segs.forEach(function (seg) {
+      var before = cum, after = cum + seg.hours;
+      var regPortion, otPortion;
+      if (after <= 40) { regPortion = seg.hours; otPortion = 0; }
+      else if (before >= 40) { regPortion = 0; otPortion = seg.hours; }
+      else { regPortion = 40 - before; otPortion = seg.hours - regPortion; }
+      regPay += regPortion * seg.rate;
+      otPay += otPortion * seg.rate * 1.5;
+      otPremium += otPortion * seg.rate * 0.5; // the "extra" over straight time
+      cum = after;
+      wh += seg.hours;
+    });
+    var regHrs = Math.min(wh, 40), otHrs = Math.max(0, wh - 40);
+    var wages = regPay + otPay;
+    var avgRate = wh > 0 ? wages / wh : 0; // for display only, not used in the calc above
     var tax = wages * PAYROLL_SS + wages * PAYROLL_MED + PAYROLL_FUTA_WEEKLY + PAYROLL_SUTA_WEEKLY;
     return {
-      name: name, displayName: displayName(locationKey, name), hours: p.wh, regHrs: regHrs, otHrs: otHrs,
+      name: name, displayName: displayName(locationKey, name), hours: wh, regHrs: regHrs, otHrs: otHrs,
       avgRate: avgRate, wages: wages, otPremium: otPremium, tax: tax, cost: wages + tax
     };
   }).sort(function (a, b) { return b.cost - a.cost; });
@@ -581,11 +616,11 @@ function computeLaborCostReport(bohObj, fohObj, drvObj, locationKey, overridesMa
 
 function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
   var daily = [0, 0, 0, 0, 0, 0, 0];
-  function addBOHStyle(sectionObj) {
+  function addBOHStyle(sectionObj, role) {
     if (!sectionObj) return;
     Object.keys(sectionObj).forEach(function (name) {
       if (SALARIED_EMPLOYEES[name]) return;
-      var rate = RATES[name] || 9;
+      var rate = effectiveRate(name, null, role);
       var days = sectionObj[name];
       if (!Array.isArray(days)) return;
       for (var di = 0; di < 7; di++) {
@@ -596,11 +631,11 @@ function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
       }
     });
   }
-  function addFOHStyle(sectionObj) {
+  function addFOHStyle(sectionObj, role) {
     if (!sectionObj) return;
     Object.keys(sectionObj).forEach(function (name) {
       if (SALARIED_EMPLOYEES[name]) return;
-      var rate = RATES[name] || 9;
+      var rate = effectiveRate(name, null, role);
       var days = sectionObj[name];
       if (!Array.isArray(days)) return;
       for (var di = 0; di < 7; di++) {
@@ -615,8 +650,8 @@ function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
       }
     });
   }
-  ['MANAGERS', 'PIZZA', 'KITCHEN', 'PREP', 'BUS', 'DISH'].forEach(function (sec) { addBOHStyle(bohObj && bohObj[sec]); });
-  ['SERVERS', 'BARTENDERS', 'CASHIERS', 'HOSTS'].forEach(function (sec) { addFOHStyle(fohObj && fohObj[sec]); });
+  ['MANAGERS', 'PIZZA', 'KITCHEN', 'PREP', 'BUS', 'DISH'].forEach(function (sec) { addBOHStyle(bohObj && bohObj[sec], sec.charAt(0) + sec.slice(1).toLowerCase()); });
+  ['SERVERS', 'BARTENDERS', 'CASHIERS', 'HOSTS'].forEach(function (sec) { addFOHStyle(fohObj && fohObj[sec], sec.charAt(0) + sec.slice(1).toLowerCase()); });
   // Drivers are deliberately excluded -- they're not paid through this
   // hourly system and don't count against labor cost, on the calendar
   // preview or anywhere else.
@@ -2055,7 +2090,7 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
   }
 
   function printSection(which) {
-    let html = '<h1>' + location.name + ' Schedule \u2014 Week of ' + weekStart + '</h1>';
+    let html = '';
     function tableHtml(title, data) {
       const names = Object.keys(data || {});
       if (!names.length) return '';
@@ -2070,16 +2105,27 @@ function WeekDetailScreen({ location, person, weekStart, onChangeWeek, onHome, o
       if (dispatch.some(Boolean)) drvWithDispatch['Dispatch'] = dispatch;
       html += tableHtml('Drivers', drvWithDispatch);
     }
+    // Two-column flow, same approach as the Run Sheets print: a real full
+    // week's worth of staff (60+ people across every section) is simply too
+    // much vertical content for one column at any readable font size --
+    // measured directly against generated PDF page dimensions, not assumed.
+    // CSS columns auto-balance and, if content still overflows two columns,
+    // correctly flow onto a second printed page rather than breaking a
+    // table awkwardly mid-row the way a single unconstrained column does.
     const doc = '<!DOCTYPE html><html><head><title>Schedule</title><style>' +
-      '@page{size:landscape;margin:0.35in;}' +
-      '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
-      'body{font-family:Arial,sans-serif;font-size:9.5px;padding:0;margin:0;}' +
-      'h1{font-size:14px;color:#c8102e;margin:0 0 8px;}' +
-      'h3{font-size:10.5px;margin:6px 0 3px;background:#f2f2f2;padding:2px 5px;}' +
-      'table{width:100%;border-collapse:collapse;margin-bottom:6px;}' +
-      'th,td{border:1px solid #ccc;padding:1px 4px;text-align:left;}' +
+      '@page{size:landscape;margin:0.3in;}' +
+      '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box;}' +
+      'body{font-family:Arial,sans-serif;font-size:8.5px;padding:0;margin:0;}' +
+      'h1{font-size:13px;color:#c8102e;margin:0 0 6px;}' +
+      'h3{font-size:9.5px;margin:5px 0 2px;background:#f2f2f2;padding:2px 4px;break-after:avoid;break-inside:avoid;}' +
+      'table{width:100%;border-collapse:collapse;margin-bottom:4px;break-inside:avoid;}' +
+      'th,td{border:1px solid #ccc;padding:0px 3px;text-align:left;line-height:1.15;}' +
       'th{background:#f8f8f8;}' +
-      '</style></head><body>' + html + '</body></html>';
+      '.Sched-print-cols{column-count:2;column-gap:18px;}' +
+      '</style></head><body>' +
+      '<h1>' + location.name + ' Schedule \u2014 Week of ' + weekStart + '</h1>' +
+      '<div class="Sched-print-cols">' + html + '</div>' +
+      '</body></html>';
     printViaIframe(doc);
   }
 
@@ -2227,14 +2273,20 @@ function RunSheetsScreen({ location, onHome, onBackToGrid, onLogoTap }) {
 
   function bohPeople(cat, di) {
     const data = boh[cat] || {};
-    return Object.entries(data).filter(([n, days]) => days && days[di]).map(([n, days]) => ({ n, shift: days[di] }));
+    // Truthiness on the raw string isn't enough -- "x" and department-name
+    // placeholders (e.g. "Pizza" meaning "working Pizza today instead") are
+    // real strings that pass a truthy check but mean "not actually working
+    // this shift here." shiftHoursBOH is the same real parser used by
+    // payroll, so it agrees with the rest of the app on what counts as an
+    // actual scheduled shift.
+    return Object.entries(data).filter(([n, days]) => days && shiftHoursBOH(days[di], di) > 0).map(([n, days]) => ({ n, shift: days[di] }));
   }
   function fohPeople(cat, di) {
     const data = foh[cat] || {};
-    return Object.entries(data).filter(([n, days]) => days && days[di]).map(([n, days]) => ({ n, shift: fohEntryToStr(days[di]) }));
+    return Object.entries(data).filter(([n, days]) => days && shiftHoursFOH(days[di], di, cat.toLowerCase()) > 0).map(([n, days]) => ({ n, shift: fohEntryToStr(days[di]) }));
   }
   function drvPeople(di) {
-    return Object.entries(drv).filter(([n, days]) => days && days[di]).map(([n, days]) => ({ n, shift: days[di] }));
+    return Object.entries(drv).filter(([n, days]) => days && shiftHoursBOH(days[di], di) > 0).map(([n, days]) => ({ n, shift: days[di] }));
   }
 
   const sections = [
@@ -2378,18 +2430,20 @@ function HeatMapScreen({ location, onHome, onBackToGrid, onLogoTap }) {
   BOH_CATS_HM.forEach(cat => {
     Object.entries(boh[cat] || {}).forEach(([name, days]) => {
       if (SALARIED_EMPLOYEES[name]) return;
-      const rate = RATES[name] || 9;
+      const rate = effectiveRate(name, null, cat.charAt(0) + cat.slice(1).toLowerCase());
       const sh = parseBOHHours(days && days[dayIdx], dayIdx);
       if (!sh) return;
       getShiftHours(sh.st, sh.en).forEach(h => { if (grid[h]) { grid[h].count++; grid[h].cost += rate; } });
     });
   });
-  const FOH_RATES = { SERVERS: 9, BARTENDERS: 9, CASHIERS: 15, HOSTS: 15 };
-  Object.keys(FOH_RATES).forEach(cat => {
+  const FOH_CATS_HM = ['SERVERS', 'BARTENDERS', 'CASHIERS', 'HOSTS'];
+  FOH_CATS_HM.forEach(cat => {
     Object.entries(foh[cat] || {}).forEach(([name, days]) => {
+      if (SALARIED_EMPLOYEES[name]) return;
+      const rate = effectiveRate(name, null, cat.charAt(0) + cat.slice(1).toLowerCase());
       const sh = parseFOHHours(days && days[dayIdx], dayIdx, cat.toLowerCase());
       if (!sh) return;
-      getShiftHours(sh.st, sh.en).forEach(h => { if (grid[h]) { grid[h].count++; grid[h].cost += FOH_RATES[cat]; } });
+      getShiftHours(sh.st, sh.en).forEach(h => { if (grid[h]) { grid[h].count++; grid[h].cost += rate; } });
     });
   });
 
@@ -2785,6 +2839,24 @@ function ManageRosterPanel({ location, person, onNamingChanged }) {
     return overrides[name] !== undefined ? overrides[name] : (RATES[name] !== undefined ? RATES[name] : (SALARIED_EMPLOYEES[name] ? 'Salaried' : '\u2014'));
   }
 
+  // A roster_overrides entry is always a single flat number, so it can only
+  // ever override a person's rate as one flat number -- if RATES[name] is
+  // itself an object (a split-rate person, e.g. Sio M.: Cashier $17,
+  // Server/Bartender $9), display their real per-role breakdown instead of
+  // crashing on trying to render an object as text. Editing per-role rates
+  // isn't built yet -- Edit rate is hidden for these people rather than
+  // silently overwriting all their roles with one number.
+  function isSplitRate(name) {
+    return overrides[name] === undefined && typeof RATES[name] === 'object';
+  }
+  function formatRate(rate) {
+    if (rate === null || rate === undefined) return '\u2014';
+    if (typeof rate === 'object') {
+      return Object.keys(rate).map(role => role + ' $' + rate[role]).join('  \u00b7  ');
+    }
+    return typeof rate === 'number' ? ('$' + rate + '/hr') : rate;
+  }
+
   function saveRate(name) {
     const val = parseFloat(editRate);
     if (isNaN(val)) { setStatus("Enter a number."); return; }
@@ -2826,9 +2898,9 @@ function ManageRosterPanel({ location, person, onNamingChanged }) {
             h("span", { className: "back-link", style: { marginTop: 0 }, onClick: () => setRenaming(null) }, "Cancel")
           )
         : h("div", { className: "TO-entry-meta" },
-            "Rate: ", rateFor(name),
+            "Rate: ", formatRate(rateFor(name)),
             "  ",
-            h("span", { className: "back-link", style: { marginTop: 0, display: "inline" }, onClick: () => { setEditing(name); setEditRate(String(rateFor(name))); } }, "Edit rate"),
+            !isSplitRate(name) && h("span", { className: "back-link", style: { marginTop: 0, display: "inline" }, onClick: () => { setEditing(name); setEditRate(String(rateFor(name))); } }, "Edit rate"),
             "  ",
             h("span", { className: "back-link", style: { marginTop: 0, display: "inline" }, onClick: () => { setRenaming(name); setNewDisplayName(displayName(location.key, name)); } }, "Rename")
           )
