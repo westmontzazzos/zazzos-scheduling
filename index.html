@@ -6010,10 +6010,12 @@ function renderTimeOffReview() {
 
 var _timeOffEditingId = null;
 var _editShift = null;
+var _editCovered = false;
 function startEditTimeOffRequest(id) {
   _timeOffEditingId = id;
   var r = _timeOffList.find(function(x){ return x.id === id; });
   _editShift = r ? r.shift_type : null;
+  _editCovered = r ? !!r.covered : false;
   renderTimeOffReview();
 }
 function cancelEditTimeOffRequest() {
@@ -6026,6 +6028,9 @@ function editPickShift(s) {
     el.classList.toggle('selected', el.getAttribute('data-shift') === s);
   });
 }
+function editToggleCovered(val) {
+  _editCovered = val;
+}
 function renderTimeOffEditForm(r) {
   var shiftHtml = ['full','morning','night'].map(function(s){
     return '<div class="TO-shift-opt'+(_editShift===s?' selected':'')+'" data-shift="'+s+'" onclick="editPickShift(\''+s+'\')">'+TIME_OFF_SHIFT_LABEL[s]+'</div>';
@@ -6034,7 +6039,8 @@ function renderTimeOffEditForm(r) {
     + '<div class="TO-entry-name" style="margin-bottom:8px;">'+r.name+'</div>'
     + '<input type="date" class="TO-date-input" id="timeoff-edit-date-'+r.id+'" value="'+r.request_date+'">'
     + '<div class="TO-shift-options TO-edit-shift-options">'+shiftHtml+'</div>'
-    + '<div style="display:flex;gap:10px;margin-top:8px;">'
+    + '<label style="display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0 10px;cursor:pointer;"><input type="checkbox" '+(_editCovered?'checked':'')+' onchange="editToggleCovered(this.checked)"> Shift covered</label>'
+    + '<div style="display:flex;gap:10px;">'
     + '<button class="TO-send-btn" style="margin-top:0;" onclick="saveEditTimeOffRequest('+r.id+')">SAVE</button>'
     + '<button class="TO-send-btn" style="margin-top:0;background:var(--gray-400);" onclick="cancelEditTimeOffRequest()">CANCEL</button>'
     + '</div></div>';
@@ -6046,7 +6052,7 @@ function saveEditTimeOffRequest(id) {
   fetch(SUPABASE_URL + '/rest/v1/time_off_requests?id=eq.' + id, {
     method: 'PATCH',
     headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
-    body: JSON.stringify({request_date: newDate, shift_type: _editShift})
+    body: JSON.stringify({request_date: newDate, shift_type: _editShift, covered: _editCovered})
   }).then(function(r){
     if(!r.ok) throw new Error();
     _timeOffEditingId = null;
