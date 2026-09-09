@@ -4783,20 +4783,15 @@ document.addEventListener("DOMContentLoaded",function(){
     </div>
     <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;" onclick="backToScheduleCalendar()">🗓 Calendar</button>
     <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;" onclick="toggleSchedEditMode()">✏️ Edit</button>
+    <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;" onclick="showSchedPrintMenu(this)">🖨 Print</button>
   </div>
   <div class="sub-nav" id="sched-sub-nav">
     <button class="sub-btn active" onclick="switchSched('drivers',this)">Drivers</button>
     <button id="sched-inline-save" onclick="saveSchedInlineEdits()" style="display:none;margin-left:auto;padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.06em;cursor:pointer;">💾 Save Schedule</button>
     <button class="sub-btn" onclick="switchSched('foh',this)">Front of House</button>
     <button class="sub-btn" onclick="switchSched('boh',this)">Back of House</button>
-    <button class="sub-btn" onclick="showSchedPrintMenu(this)">🖨 Print</button>
-    <button class="sub-btn" onclick="showEventsSummary()">🎉 Events</button>
-    <button class="sub-btn" onclick="copyWeekToNext()">📋 Copy to Next Week</button>
-    <button class="sub-btn" onclick="openSaveTemplateModal()">💾 Save as Template</button>
-    <button class="sub-btn" onclick="openLoadTemplateModal()">📥 Load Template</button>
     <button class="sub-btn" onclick="openSendMessageModal()">✉️ Send Message</button>
-    <button class="sub-btn" onclick="showOverrideLog(this)" style="margin-left:auto;">📋 Schedule Log</button>
-    <button class="sub-btn" onclick="showDomsNotes()" style="margin-left:6px;">📝 Dom's Notes</button>
+    <button class="sub-btn" onclick="showDomsNotes()" style="margin-left:auto;">📝 Manager Notes</button>
   </div>
   <div class="sched-wrap" id="schedule-content"></div>
   <!-- Schedule Log Modal -->
@@ -8554,7 +8549,7 @@ async function openCalendarWeek(weekStartStr) {
     var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var d = new Date(weekStartStr + 'T00:00:00');
     var lbl = document.getElementById('sched-week-label');
-    if(lbl) lbl.textContent = 'Week of ' + months[d.getMonth()] + ' ' + d.getDate() + ' (no schedule yet)';
+    if(lbl) lbl.textContent = months[d.getMonth()] + ' ' + d.getDate() + ' (no schedule yet)';
   }
   setScheduleViewMode(false);
   renderSchedule();
@@ -11233,7 +11228,7 @@ function loadFallback() {
   var label = 'Week of ' + months[mon.getMonth()] + ' ' + mon.getDate() + '–' + end.getDate() + ', ' + mon.getFullYear();
   document.getElementById('week-label').textContent = label;
   var schedLabel = document.getElementById('sched-week-label');
-  if(schedLabel) schedLabel.textContent = label;
+  if(schedLabel) schedLabel.textContent = label.replace(/^Week of /, '');
   var hitlistLabel = document.getElementById('hitlist-week-label');
   if(hitlistLabel) hitlistLabel.textContent = label;
   var privateLabel = document.getElementById('private-week-label');
@@ -11492,6 +11487,11 @@ function updateWeekLabels(idx) {
   ['week-label','sched-week-label','hitlist-week-label','private-week-label'].forEach(function(id) {
     var el = document.getElementById(id); if(el) el.textContent = label;
   });
+  // Schedule tab specifically drops the "Week of" prefix -- Run Sheets,
+  // Heat Map, and Private keep it, since only the Schedule header was
+  // asked to just show the date range with the nav arrows already there.
+  var schedLbl = document.getElementById('sched-week-label');
+  if(schedLbl) schedLbl.textContent = label.replace(/^Week of /, '');
   var tabsEl = document.getElementById('day-tabs');
   if(tabsEl) tabsEl.innerHTML = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(day, i) {
     var dd = new Date(d); dd.setDate(d.getDate() + i);
