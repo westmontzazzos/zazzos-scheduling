@@ -782,8 +782,12 @@ body {
 .TCard{background:var(--white);border:2.5px solid #2E7D4F;border-radius:14px;padding:28px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:pointer;transition:transform 0.1s;-webkit-tap-highlight-color:transparent;user-select:none;display:flex;flex-direction:column;align-items:center;gap:6px;}
 .TCard:active{transform:scale(0.97);}
 .TCard-icon{font-size:34px;margin-bottom:4px;}
-.TCard-title{font-family:Georgia,'Playfair Display',serif;font-size:19px;font-weight:700;color:#1a1a1a;}
+.TCard-title{font-family:Georgia,'Playfair Display',serif;font-size:16px;font-weight:700;color:#1a1a1a;white-space:nowrap;}
 .TCard-sub{font-family:Georgia,serif;font-style:italic;font-size:12px;color:var(--red);}
+.Cal-action-btn{background:var(--white);border:2px solid var(--red);border-radius:10px;padding:12px 4px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform 0.1s;}
+.Cal-action-btn:active{transform:scale(0.96);background:#FBEAE8;}
+.Cal-action-icon{font-size:20px;margin-bottom:4px;}
+.Cal-action-label{font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:0.05em;color:var(--red);}
 .Home-back{display:inline-flex;align-items:center;gap:4px;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;color:var(--gray-600);cursor:pointer;padding:8px 0;-webkit-tap-highlight-color:transparent;}
 
 </style>
@@ -4733,7 +4737,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="TCard" onclick="showTab('update',null)"><span class="TCard-icon">📸</span><span class="TCard-title">Schedule Upload</span><span class="TCard-sub">Upload new schedule</span></div>
       <div class="TCard"><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
       <div class="TCard" onclick="showTab('hitlist',null)"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
-      <div class="TCard" onclick="showTab('timeoff',null)"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
+      <div class="TCard" style="grid-column:1 / -1;" onclick="showTab('timeoff',null)"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
     </div>
   </div>
 </div>
@@ -8509,10 +8513,10 @@ async function renderScheduleCalendar() {
     html += '</div>';
   });
 
-  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-200);">'
-    + '<button class="sub-btn" onclick="showEventsSummary()">🎉 Events</button>'
-    + '<button class="sub-btn" onclick="copyWeekToNext()">📋 Copy to Next Week</button>'
-    + '<button class="sub-btn" onclick="showOverrideLog(this)">📋 Schedule Log</button>'
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-200);">'
+    + '<div class="Cal-action-btn" onclick="showEventsSummary()"><div class="Cal-action-icon">🎉</div><div class="Cal-action-label">Events</div></div>'
+    + '<div class="Cal-action-btn" onclick="copyWeekToNext()"><div class="Cal-action-icon">📋</div><div class="Cal-action-label">Copy Week</div></div>'
+    + '<div class="Cal-action-btn" onclick="showOverrideLog(this)"><div class="Cal-action-icon">📝</div><div class="Cal-action-label">Sched Log</div></div>'
     + '</div>';
 
   el.innerHTML = html;
