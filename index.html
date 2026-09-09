@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Schedule">
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Libre+Baskerville:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --red: #E31010;
@@ -4721,9 +4721,9 @@ document.addEventListener("DOMContentLoaded",function(){
 <div id="home-screen" class="main">
   <div style="padding:24px 20px;">
     <div style="text-align:center;margin-bottom:24px;">
-      <div style="font-family:'Playfair Display',serif;font-style:italic;font-weight:700;font-size:52px;color:var(--red);line-height:1;">Zazzo's</div>
+      <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:48px;font-weight:700;color:#C8102E;line-height:1;">Zazzo's</div>
       <div style="font-family:Georgia,'Playfair Display',serif;font-size:28px;color:#222;margin-top:2px;">Westmont</div>
-      <div style="font-size:12px;letter-spacing:0.2em;color:var(--gray-400);margin-top:8px;font-weight:600;">SCHEDULING</div>
+      <div style="margin-top:10px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.2em;text-transform:uppercase;text-align:center;">Scheduling</div>
     </div>
     <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div class="TCard"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -4818,6 +4818,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div class="report-sub">Requests for time off, by person</div>
   </div>
   <div style="padding:0 16px 24px;">
+    <div id="timeoff-calendar" style="background:var(--white);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);padding:14px;margin-bottom:14px;"></div>
     <div class="TO-Accordion">
       <div class="TO-Accordion-head" onclick="toggleTimeOffSection('review')">
         <div class="TO-Accordion-head-title">REVIEW TIME OFF REQUESTS</div>
@@ -5895,8 +5896,10 @@ var _timeOffShift = null;
 var _timeOffCovered = false;
 var _timeOffSearch = '';
 
+var _timeOffCalMonthOffset = 0;
 function initTimeOffTab() {
   loadCustomRosterThenRender(); // ensures FULL_ROSTER_NAMES is populated
+  _timeOffCalMonthOffset = 0;
   loadTimeOffList();
   renderTimeOffAdd();
 }
@@ -5929,7 +5932,68 @@ function loadTimeOffList() {
 
 var TIME_OFF_SHIFT_LABEL = {full:'Full Day', morning:'Half Day — Morning', night:'Half Day — Night'};
 
+// Day-by-day month calendar for Time Off -- different from the Schedule
+// tab's week-row calendar, since time off is tied to specific dates, not
+// whole weeks. Each day with a request is colored green if every request
+// that day is covered, yellow if any of them still needs coverage.
+function changeTimeOffCalMonth(delta) {
+  _timeOffCalMonthOffset += delta;
+  renderTimeOffCalendar();
+}
+function renderTimeOffCalendar() {
+  var el = document.getElementById('timeoff-calendar');
+  if(!el) return;
+  var today = new Date(); today.setHours(0,0,0,0);
+  var targetMonth = new Date(today.getFullYear(), today.getMonth() + _timeOffCalMonthOffset, 1);
+  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  var firstOfMonth = new Date(targetMonth);
+  var firstDow = firstOfMonth.getDay();
+  var daysBackToMonday = firstDow === 0 ? 6 : firstDow - 1;
+  var gridStart = new Date(firstOfMonth); gridStart.setDate(firstOfMonth.getDate() - daysBackToMonday);
+
+  var lastOfMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
+  var lastDow = lastOfMonth.getDay();
+  var daysForwardToSunday = lastDow === 0 ? 0 : 7 - lastDow;
+  var gridEnd = new Date(lastOfMonth); gridEnd.setDate(lastOfMonth.getDate() + daysForwardToSunday);
+
+  // Map each date (YYYY-MM-DD) to its coverage status from what's already loaded
+  var statusByDate = {}; // 'covered' | 'uncovered'
+  (_timeOffList || []).forEach(function(r){
+    var isCovered = !!r.covered;
+    if(statusByDate[r.request_date] === 'uncovered') return; // uncovered already wins, no need to re-check
+    statusByDate[r.request_date] = isCovered ? (statusByDate[r.request_date] === undefined ? 'covered' : statusByDate[r.request_date]) : 'uncovered';
+  });
+
+  var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
+    + '<button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;" onclick="changeTimeOffCalMonth(-1)">‹</button>'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.08em;">'+monthNames[targetMonth.getMonth()]+' '+targetMonth.getFullYear()+'</div>'
+    + '<button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;" onclick="changeTimeOffCalMonth(1)">›</button>'
+    + '</div>';
+  html += '<div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px;color:#888;">'
+    + '<span>🟢 Covered</span><span>🟡 Needs coverage</span>'
+    + '</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;">';
+  dayNames.forEach(function(d){ html += '<div style="text-align:center;font-size:10px;font-weight:700;color:#888;letter-spacing:0.04em;">'+d+'</div>'; });
+  html += '</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
+
+  var cur = new Date(gridStart);
+  while(cur <= gridEnd) {
+    var dateStr = cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0') + '-' + String(cur.getDate()).padStart(2,'0');
+    var inMonth = cur.getMonth() === targetMonth.getMonth();
+    var status = statusByDate[dateStr];
+    var bg = status === 'covered' ? '#2E9E4F' : status === 'uncovered' ? '#E8B84B' : (inMonth ? 'var(--gray-100)' : 'transparent');
+    var textColor = status ? '#fff' : (inMonth ? '#333' : '#ccc');
+    html += '<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:6px;background:'+bg+';color:'+textColor+';font-size:12px;font-weight:'+(status?'700':'400')+';">'+cur.getDate()+'</div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
 function renderTimeOffReview() {
+  renderTimeOffCalendar();
   var el = document.getElementById('timeoff-review-body');
   if(_timeOffList === null) { el.innerHTML = '<div style="font-size:13px;color:var(--gray-600);padding:10px 0;">Loading…</div>'; return; }
   if(!_timeOffList.length) { el.innerHTML = '<div style="font-size:13px;color:var(--gray-600);padding:10px 0;">No time off requested.</div>'; return; }
