@@ -6997,7 +6997,13 @@ function acceptErrorByIdx(idx) {
   acceptError(e.di, e.dept, e.msg);
 }
 function acceptError(di, dept, msg) {
-  var weekKey = (function(){ var el = (document.getElementById('sched-week-label')||{}).textContent||''; if(!el && window.allWeeks && window.allWeeks[window.currentWeekIdx]) { var ws = window.allWeeks[window.currentWeekIdx].week_start; var d = new Date(ws+'T12:00:00'); var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; el = 'Week of '+months[d.getMonth()]+' '+d.getDate()+'-'+(d.getDate()+6)+', '+d.getFullYear(); } return el.replace(/–/g,'-').replace(/—/g,'-'); })();
+  // Stable key based on the actual week_start date -- never tied to
+  // whatever format the header happens to display in. The header text
+  // used to BE the key, which meant changing the display format (e.g.
+  // removing "Week of" or switching to digit dates) silently broke every
+  // previously-saved override, since the saved key no longer matched
+  // what got read back. This can't happen again with a stable key.
+  var weekKey = (window.allWeeks && window.allWeeks[window.currentWeekIdx]) ? window.allWeeks[window.currentWeekIdx].week_start : '';
   var overlay = document.createElement('div');
   overlay.id = 'accept-pin-modal';
   overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:flex-end;justify-content:center;';
@@ -7168,7 +7174,7 @@ function zpConfirmOverride(di, dept, msg) {
 }
 
 async function undoAcceptedError(di, dept, msg) {
-  var weekKey = (function(){ var el = (document.getElementById('sched-week-label')||{}).textContent||''; if(!el && window.allWeeks && window.allWeeks[window.currentWeekIdx]) { var ws = window.allWeeks[window.currentWeekIdx].week_start; var d = new Date(ws+'T12:00:00'); var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; el = 'Week of '+months[d.getMonth()]+' '+d.getDate()+'-'+(d.getDate()+6)+', '+d.getFullYear(); } return el.replace(/–/g,'-').replace(/—/g,'-'); })();
+  var weekKey = (window.allWeeks && window.allWeeks[window.currentWeekIdx]) ? window.allWeeks[window.currentWeekIdx].week_start : '';
   // Remove from memory
   if(window._bypassedErrors) {
     delete window._bypassedErrors[di+'|'+dept+'|'+msg];
@@ -11623,7 +11629,7 @@ function applyWeek(idx) {
   if(currentTab === 'schedule') renderSchedule();
   if(currentTab === 'hitlist')  renderHitList();
   if(currentTab === 'private' && document.getElementById('private-content').style.display !== 'none') renderPrivate();
-  var _wkLblForBypass = (function(){ var el = (document.getElementById('sched-week-label')||{}).textContent||''; if(!el && window.allWeeks && window.allWeeks[window.currentWeekIdx]) { var ws = window.allWeeks[window.currentWeekIdx].week_start; var d = new Date(ws+'T12:00:00'); var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; el = 'Week of '+months[d.getMonth()]+' '+d.getDate()+'-'+(d.getDate()+6)+', '+d.getFullYear(); } return el.replace(/–/g,'-').replace(/—/g,'-'); })();
+  var _wkLblForBypass = week.week_start;
   window._bypassedErrors = {};
   loadScheduleBypasses(_wkLblForBypass).then(function(){
     autoBypassLoggedDays();
@@ -12995,8 +13001,6 @@ async function saveToSupabase(weekStart, bohData, fohData, drvData, eventData) {
   setTimeout(function(){ var ali=document.getElementById('app-lock-input'); if(ali) ali.focus(); }, 200);
   initDayTabs();
   loadAllWeeks();
-  var _initWeekKey = (document.getElementById('week-label')||{}).textContent||'';
-  loadScheduleBypasses(_initWeekKey);
 
   // As an installed iOS PWA, this app can be silently suspended in the
   // background and resumed later showing whatever was in memory at the
