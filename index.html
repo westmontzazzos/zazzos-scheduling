@@ -5948,7 +5948,7 @@ function deleteTimeOffRequest(id, el) {
 
 function timeOffSearchInput(val) {
   _timeOffSearch = val;
-  renderTimeOffAdd();
+  renderTimeOffNameMatches();
 }
 function timeOffPickName(name) {
   _timeOffName = name;
@@ -5969,15 +5969,11 @@ function timeOffPickShift(shift) {
 
 function renderTimeOffAdd() {
   var el = document.getElementById('timeoff-add-body');
-  var allNames = (typeof FULL_ROSTER_NAMES !== 'undefined' ? FULL_ROSTER_NAMES : []).map(function(p){ return p.n; });
-  var matches = _timeOffSearch.trim()
-    ? allNames.filter(function(n){ return n.toLowerCase().includes(_timeOffSearch.trim().toLowerCase()); }).slice(0,8)
-    : [];
 
   var nameHtml = _timeOffName
     ? '<div class="TO-chip" onclick="timeOffClearName()">'+_timeOffName+' ✕</div>'
-    : '<input type="text" class="TO-date-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a name…" value="'+_timeOffSearch.replace(/"/g,'&quot;')+'" oninput="timeOffSearchInput(this.value)">'
-      + (matches.length ? '<div>' + matches.map(function(n){ return '<div class="TO-name-match" onclick="timeOffPickName(\''+n.replace(/'/g,"\\'")+'\')">'+n+'</div>'; }).join('') + '</div>' : '');
+    : '<input type="text" id="timeoff-name-input" class="TO-date-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Type a name…" value="'+_timeOffSearch.replace(/"/g,'&quot;')+'" oninput="timeOffSearchInput(this.value)">'
+      + '<div id="timeoff-name-matches"></div>';
 
   var shiftHtml = ['full','morning','night'].map(function(s){
     return '<div class="TO-shift-opt'+(_timeOffShift===s?' selected':'')+'" onclick="timeOffPickShift(\''+s+'\')">'+TIME_OFF_SHIFT_LABEL[s]+'</div>';
@@ -5988,6 +5984,26 @@ function renderTimeOffAdd() {
     + '<div class="TO-label">Which shift</div><div class="TO-shift-options">'+shiftHtml+'</div>'
     + '<button class="TO-send-btn" onclick="submitTimeOffRequest()">SAVE REQUEST</button>'
     + '<div class="TO-status" id="timeoff-status"></div>';
+
+  renderTimeOffNameMatches(); // separate from the input itself so typing never touches the input element
+}
+
+// Updates ONLY the matches list below the name field -- never the input
+// box itself. Rebuilding the whole form on every keystroke (the original
+// bug here) destroyed and recreated the input element on every character,
+// which killed focus and cursor position each time -- meaning typing a
+// second letter required tapping back into the field first. This is why
+// it looked like the page was "bouncing" and typing didn't work at all.
+function renderTimeOffNameMatches() {
+  var matchesEl = document.getElementById('timeoff-name-matches');
+  if(!matchesEl) return; // name already picked, no search box or matches to show
+  var allNames = (typeof FULL_ROSTER_NAMES !== 'undefined' ? FULL_ROSTER_NAMES : []).map(function(p){ return p.n; });
+  var matches = _timeOffSearch.trim()
+    ? allNames.filter(function(n){ return n.toLowerCase().includes(_timeOffSearch.trim().toLowerCase()); }).slice(0,8)
+    : [];
+  matchesEl.innerHTML = matches.map(function(n){
+    return '<div class="TO-name-match" onclick="timeOffPickName(\''+n.replace(/'/g,"\\'")+'\')">'+n+'</div>';
+  }).join('');
 }
 
 function submitTimeOffRequest() {
