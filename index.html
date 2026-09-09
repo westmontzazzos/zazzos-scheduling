@@ -777,6 +777,10 @@ body {
 .TO-status{font-size:12px;color:var(--gray-600);text-align:center;margin-top:10px;min-height:16px;}
 .TO-delete-link{font-size:12px;color:var(--red);text-decoration:underline;cursor:pointer;margin-top:2px;white-space:nowrap;}
 
+.TCard{background:var(--white);border:2px solid var(--gray-200);border-radius:16px;padding:28px 16px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:0.06em;box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:pointer;transition:transform 0.1s, border-color 0.15s, box-shadow 0.15s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.TCard:active{transform:scale(0.97);border-color:var(--red);box-shadow:0 1px 6px rgba(227,16,16,0.25);}
+.Home-back{display:inline-flex;align-items:center;gap:4px;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;color:var(--gray-600);cursor:pointer;padding:8px 0;-webkit-tap-highlight-color:transparent;}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
@@ -4695,7 +4699,7 @@ document.addEventListener("DOMContentLoaded",function(){
 
 <div id="app-wrap">
 
-<nav class="nav">
+<nav class="nav" style="display:none">
   <div class="nav-logo" style="padding:4px 12px;display:flex;align-items:center;gap:6px;"><img id="za-logo-img" src="" style="height:36px;width:36px;object-fit:contain;border-radius:6px;"><span style="font-size:10px;color:#999;font-weight:700;">v1.7</span></div>
   <div class="nav-tabs">
     <button class="nav-btn active" onclick="showTab('runsheets',this)">Run Sheets</button>
@@ -4707,6 +4711,25 @@ document.addEventListener("DOMContentLoaded",function(){
     <button class="nav-btn" id="update-nav-btn" onclick="showTab('update',this)">⬆ Update</button>
   </div>
 </nav>
+
+<!-- HOME (tile navigation) -->
+<div id="home-header" style="position:sticky;top:0;z-index:200;background:var(--white);border-bottom:1px solid var(--gray-200);padding:10px 16px;display:flex;align-items:center;gap:8px;box-shadow:0 1px 0 var(--gray-200), 0 4px 12px rgba(0,0,0,0.06);">
+  <img id="za-logo-img-home" src="" style="height:32px;width:32px;object-fit:contain;border-radius:6px;">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;">ZAZZO'S WESTMONT</div>
+</div>
+<div id="home-screen" class="main">
+  <div style="padding:20px 16px;">
+    <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="TCard" onclick="alert('Schedule -- not wired yet, waiting on how you want it organized')">Schedule</div>
+      <div class="TCard" onclick="alert('Run Sheets -- not wired yet, waiting on how you want it organized')">Run Sheets</div>
+      <div class="TCard" onclick="showTab('private',null)">Private</div>
+      <div class="TCard" onclick="showTab('update',null)">Schedule Upload</div>
+      <div class="TCard" onclick="alert('Messaging -- not wired yet, waiting on how you want it organized')">Messaging</div>
+      <div class="TCard" onclick="showTab('hitlist',null)">Heat Map</div>
+    </div>
+  </div>
+</div>
+<div id="floating-home-btn" onclick="goHome()" style="display:none;position:fixed;bottom:18px;left:18px;z-index:2000;background:var(--red);color:#fff;border-radius:50%;width:52px;height:52px;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">⌂</div>
 <div id="global-status-bar" style="display:none;padding:6px 14px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:0.06em;color:#fff;"></div>
 <div id="global-user-bar" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:5px 14px;background:#f7f7f7;border-bottom:1px solid #eee;font-size:11px;color:#888;">
   Signed in as <b id="global-user-display" style="color:#333;"></b>
@@ -4714,7 +4737,7 @@ document.addEventListener("DOMContentLoaded",function(){
 </div>
 
 <!-- RUN SHEETS -->
-<div id="tab-runsheets" class="main">
+<div id="tab-runsheets" class="main" style="display:none;">
   <div class="report-header">
     <div class="report-title">RUN SHEETS</div>
     <div class="report-sub">Daily staff run sheets</div>
@@ -5848,7 +5871,7 @@ function getDriversForDay(di) {
   res.sort((a,b) => a.startH - b.startH);
   return res;
 }
-let currentTab = 'runsheets';
+let currentTab = 'home';
 let currentSchedView = 'drivers';
 var _schedShowingCalendar = true;
 var _calMonthOffset = 0;
@@ -5985,8 +6008,22 @@ function submitTimeOffRequest() {
   });
 }
 
+function goHome() {
+  currentTab = 'home';
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = 'none';
+  });
+  document.getElementById('home-screen').style.display = 'block';
+  document.getElementById('home-header').style.display = 'flex';
+  document.getElementById('floating-home-btn').style.display = 'none';
+  window.scrollTo(0,0);
+}
+
 function showTab(tab, btn) {
   currentTab = tab;
+  document.getElementById('home-screen').style.display = 'none';
+  document.getElementById('home-header').style.display = 'none';
+  document.getElementById('floating-home-btn').style.display = 'flex';
   ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
