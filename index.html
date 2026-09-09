@@ -5265,6 +5265,9 @@ document.addEventListener("DOMContentLoaded",function(){
       </div>
     </div>
 
+    <label id="upload-confirm-label" style="display:flex;align-items:center;gap:8px;font-size:13px;margin:14px 0;cursor:pointer;">
+      <input type="checkbox" id="upload-confirm-checkbox"> Please confirm you want to save this schedule
+    </label>
     <button class="btn btn-secondary" style="width:100%;" onclick="processSchedules()">
       ⚡ Save All Three At Once
     </button>
@@ -12618,13 +12621,13 @@ async function processSchedules() {
     alert('Please upload all 3 schedule photos first.'); return;
   }
 
-  // Confirm the week before processing
-  var d = new Date(weekStart + 'T00:00:00');
-  var end = new Date(d); end.setDate(d.getDate() + 6);
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var weekLabel = months[d.getMonth()]+' '+d.getDate()+' – '+months[end.getMonth()]+' '+end.getDate()+', '+end.getFullYear();
-  var confirmed = confirm('Save ALL schedules for week of '+weekLabel+'?\n\nTap OK to confirm.');
-  if(!confirmed) return;
+  // Confirm the week before processing -- a simple checkbox, not a native
+  // popup and not another PIN entry. The Update tab's own lock already
+  // gated getting in here; this step is just "are you sure," nothing more.
+  if(!document.getElementById('upload-confirm-checkbox').checked) {
+    alert('Please check the confirmation box before saving.');
+    return;
+  }
 
   var statusEl = document.getElementById('process-status');
   statusEl.innerHTML = '<div style="padding:16px;background:var(--gray-50);border-radius:8px;font-size:13px;color:var(--gray-600);">⏳ Reading schedules... this may take 30-60 seconds</div>';
