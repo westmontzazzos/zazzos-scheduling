@@ -5969,10 +5969,10 @@ function renderTimeOffCalendar() {
   });
 
   var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
-    + '<button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;" onclick="changeTimeOffCalMonth(-1)">‹</button>'
-    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.08em;">'+monthNames[targetMonth.getMonth()]+' '+targetMonth.getFullYear()+'</div>'
-    + '<button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;" onclick="changeTimeOffCalMonth(1)">›</button>'
+  var html = '<div style="display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin-bottom:10px;">'
+    + '<button class="btn btn-secondary" style="width:44px;height:36px;padding:0;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeTimeOffCalMonth(-1)">‹</button>'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.08em;text-align:center;">'+monthNames[targetMonth.getMonth()]+' '+targetMonth.getFullYear()+'</div>'
+    + '<button class="btn btn-secondary" style="width:44px;height:36px;padding:0;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeTimeOffCalMonth(1)">›</button>'
     + '</div>';
   html += '<div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px;color:#888;">'
     + '<span>🟢 Covered</span><span>🟡 Needs coverage</span>'
