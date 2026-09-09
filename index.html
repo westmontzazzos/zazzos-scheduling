@@ -7139,7 +7139,7 @@ function zpConfirmOverride(di, dept, msg) {
     return;
   }
   window._overrideUnlocked = true; // PIN verified - skip for rest of session
-  var weekKey = (function(){ var el = (document.getElementById('sched-week-label')||{}).textContent||''; if(!el && window.allWeeks && window.allWeeks[window.currentWeekIdx]) { var ws = window.allWeeks[window.currentWeekIdx].week_start; var d = new Date(ws+'T12:00:00'); var days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; el = 'Week of '+months[d.getMonth()]+' '+d.getDate()+'-'+(d.getDate()+6)+', '+d.getFullYear(); } return el.replace(/–/g,'-').replace(/—/g,'-'); })();
+  var weekKey = (window.allWeeks && window.allWeeks[window.currentWeekIdx]) ? window.allWeeks[window.currentWeekIdx].week_start : '';
   var DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   zpCancelOverride();
   if(!window._bypassedErrors) window._bypassedErrors = {};
