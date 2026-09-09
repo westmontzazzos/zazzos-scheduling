@@ -5997,7 +5997,11 @@ function renderTimeOffAdd() {
 function renderTimeOffNameMatches() {
   var matchesEl = document.getElementById('timeoff-name-matches');
   if(!matchesEl) return; // name already picked, no search box or matches to show
-  var allNames = (typeof FULL_ROSTER_NAMES !== 'undefined' ? FULL_ROSTER_NAMES : []).map(function(p){ return p.n; });
+  var removedSet = {};
+  (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).forEach(function(r){ removedSet[r.name] = true; });
+  var wageNames = (typeof FULL_ROSTER_NAMES !== 'undefined' ? FULL_ROSTER_NAMES : []).map(function(p){ return p.n; });
+  var driverNames = (typeof DRIVERS !== 'undefined' ? Object.keys(DRIVERS) : []).filter(function(n){ return !removedSet[n]; });
+  var allNames = wageNames.concat(driverNames).filter(function(n, i, arr){ return arr.indexOf(n) === i; }); // de-duplicate anyone listed both ways
   var matches = _timeOffSearch.trim()
     ? allNames.filter(function(n){ return n.toLowerCase().includes(_timeOffSearch.trim().toLowerCase()); }).slice(0,8)
     : [];
