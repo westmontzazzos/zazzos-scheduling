@@ -4690,7 +4690,7 @@ document.addEventListener("DOMContentLoaded",function(){
 <body>
 
 <!-- FULL-APP LOCK GATE — requires PIN on every load -->
-<div id="app-lock" style="position:fixed;inset:0;z-index:99999;background:#f2f1ee;display:flex;align-items:center;justify-content:center;padding:24px;">
+<div id="app-lock" style="position:fixed;inset:0;z-index:99999;background:#f2f1ee;display:none;align-items:center;justify-content:center;padding:24px;">
   <div class="lock-card">
     <div class="lock-icon">🔒</div>
     <div class="lock-title">Zazzo's Labor</div>
@@ -4731,13 +4731,13 @@ document.addEventListener("DOMContentLoaded",function(){
       <div style="margin-top:10px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.2em;text-transform:uppercase;text-align:center;">Scheduling</div>
     </div>
     <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-      <div class="TCard" onclick="showTab('schedule',null)"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
-      <div class="TCard" onclick="showTab('runsheets',null)"><span class="TCard-icon">📋</span><span class="TCard-title">Run Sheets</span><span class="TCard-sub">Daily staff run sheets</span></div>
-      <div class="TCard" onclick="showTab('private',null)"><span class="TCard-icon">🔒</span><span class="TCard-title">Private</span><span class="TCard-sub">Labor cost reports</span></div>
-      <div class="TCard" onclick="showTab('update',null)"><span class="TCard-icon">📸</span><span class="TCard-title">Schedule Upload</span><span class="TCard-sub">Upload new schedule</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('runsheets',null);})"><span class="TCard-icon">📋</span><span class="TCard-title">Run Sheets</span><span class="TCard-sub">Daily staff run sheets</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('private',null);})"><span class="TCard-icon">🔒</span><span class="TCard-title">Private</span><span class="TCard-sub">Labor cost reports</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('update',null);})"><span class="TCard-icon">📸</span><span class="TCard-title">Schedule Upload</span><span class="TCard-sub">Upload new schedule</span></div>
       <div class="TCard"><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
-      <div class="TCard" onclick="showTab('hitlist',null)"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
-      <div class="TCard" style="grid-column:1 / -1;" onclick="showTab('timeoff',null)"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('hitlist',null);})"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
+      <div class="TCard" style="grid-column:1 / -1;" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
     </div>
   </div>
 </div>
@@ -8776,11 +8776,20 @@ function jumpToRunSheetEditor(di, name) {
 }
 
 // DOM'S NOTES
+var _appUnlocked = false;
+var _pendingTileAction = null;
+function gatedTileClick(actionFn) {
+  if(_appUnlocked) { actionFn(); return; }
+  _pendingTileAction = actionFn;
+  document.getElementById('app-lock').style.display = 'flex';
+  setTimeout(function(){ document.getElementById('app-lock-input').focus(); }, 50);
+}
 function checkAppLock() {
   var pin = document.getElementById('app-lock-input').value;
   if(pin==='2026') {
     var lock = document.getElementById('app-lock');
     if(lock) lock.style.display='none';
+    _appUnlocked = true;
     // Force re-identification if version changed
     var IDENTITY_VERSION = '3';
     if(localStorage.getItem('zp_identity_version') !== IDENTITY_VERSION) {
@@ -8796,6 +8805,8 @@ function checkAppLock() {
       setTimeout(checkDomsNotes, 500);
       setTimeout(checkManagerMessages, 700);
     }
+    // Now actually do whatever tile the user originally tapped
+    if(_pendingTileAction) { var fn = _pendingTileAction; _pendingTileAction = null; fn(); }
   } else {
     document.getElementById('app-lock-error').style.display='block';
     document.getElementById('app-lock-input').value='';
