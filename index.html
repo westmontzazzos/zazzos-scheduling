@@ -11298,12 +11298,24 @@ async function refreshData() {
   } catch(e) {
     console.log('Refresh failed:', e.message);
   } finally {
+    // Reload saved overrides for whatever week is now active -- refreshData
+    // never did this before, which is the actual reason overrides looked
+    // like they reverted specifically on reopening the app: this path
+    // re-rendered the schedule using whatever was in memory, but memory
+    // gets wiped on every real reopen, and nothing here was refilling
+    // window._bypassedErrors before the error check ran.
+    var activeWeek = allWeeks[currentWeekIdx];
+    if(activeWeek) {
+      window._bypassedErrors = {};
+      await loadScheduleBypasses(activeWeek.week_start);
+    }
     // Restore day and re-render active tab
     currentDay = savedDay;
     if(savedTab === 'runsheets')       renderRunSheet(savedDay);
     else if(savedTab === 'schedule')   renderSchedule();
     else if(savedTab === 'hitlist')    renderHitList();
     else if(savedTab === 'private' && document.getElementById('private-content').style.display !== 'none') renderPrivate();
+    if(savedTab === 'schedule') setTimeout(checkScheduleErrors, 300);
     setTimeout(function(){ if(fab) fab.classList.remove('refreshing'); }, 400);
   }
 }
