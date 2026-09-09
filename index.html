@@ -779,9 +779,9 @@ body {
 .TO-delete-link{font-size:12px;color:var(--red);text-decoration:underline;cursor:pointer;margin-top:2px;white-space:nowrap;}
 .TO-edit-link{font-size:12px;color:#2266CC;text-decoration:underline;cursor:pointer;margin-top:2px;white-space:nowrap;}
 
-.TCard{background:var(--white);border:2.5px solid #2E7D4F;border-radius:14px;padding:28px 12px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:pointer;transition:transform 0.1s;-webkit-tap-highlight-color:transparent;user-select:none;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.TCard{background:var(--white);border:2.5px solid #2E7D4F;border-radius:14px;padding:22px 10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:pointer;transition:transform 0.1s;-webkit-tap-highlight-color:transparent;user-select:none;display:flex;flex-direction:column;align-items:center;gap:5px;}
 .TCard:active{transform:scale(0.97);}
-.TCard-icon{font-size:34px;margin-bottom:4px;}
+.TCard-icon{font-size:30px;margin-bottom:3px;}
 .TCard-title{font-family:Georgia,'Playfair Display',serif;font-size:16px;font-weight:700;color:#1a1a1a;white-space:nowrap;}
 .TCard-sub{font-family:Georgia,serif;font-style:italic;font-size:12px;color:var(--red);}
 .Cal-action-btn{background:var(--white);border:2px solid var(--red);border-radius:10px;padding:12px 4px;text-align:center;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform 0.1s;}
@@ -4724,20 +4724,19 @@ document.addEventListener("DOMContentLoaded",function(){
 <!-- HOME (tile navigation) -->
 <div id="home-header" style="display:none;"></div>
 <div id="home-screen" class="main">
-  <div style="padding:24px 20px;">
-    <div style="text-align:center;margin-bottom:24px;">
-      <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:48px;font-weight:700;color:#C8102E;line-height:1;">Zazzo's</div>
-      <div style="font-family:Georgia,'Playfair Display',serif;font-size:28px;color:#222;margin-top:2px;">Westmont</div>
-      <div style="margin-top:10px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.2em;text-transform:uppercase;text-align:center;">Scheduling</div>
+  <div style="padding:14px 20px;">
+    <div style="text-align:center;margin-bottom:14px;">
+      <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;">Zazzo's</div>
+      <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.2em;text-transform:uppercase;text-align:center;">Scheduling</div>
     </div>
-    <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('runsheets',null);})"><span class="TCard-icon">📋</span><span class="TCard-title">Run Sheets</span><span class="TCard-sub">Daily staff run sheets</span></div>
-      <div class="TCard" onclick="gatedTileClick(function(){showTab('private',null);})"><span class="TCard-icon">🔒</span><span class="TCard-title">Private</span><span class="TCard-sub">Labor cost reports</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('update',null);})"><span class="TCard-icon">📸</span><span class="TCard-title">Schedule Upload</span><span class="TCard-sub">Upload new schedule</span></div>
       <div class="TCard"><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('hitlist',null);})"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
-      <div class="TCard" style="grid-column:1 / -1;" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
     </div>
   </div>
 </div>
@@ -5950,7 +5949,6 @@ function renderTimeOffCalendar() {
   if(!el) return;
   var today = new Date(); today.setHours(0,0,0,0);
   var targetMonth = new Date(today.getFullYear(), today.getMonth() + _timeOffCalMonthOffset, 1);
-  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   var firstOfMonth = new Date(targetMonth);
   var firstDow = firstOfMonth.getDay();
@@ -5973,7 +5971,7 @@ function renderTimeOffCalendar() {
   var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   var html = '<div style="display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin-bottom:10px;">'
     + '<button class="btn btn-secondary" style="width:44px;height:36px;padding:0;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeTimeOffCalMonth(-1)">‹</button>'
-    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.08em;text-align:center;">'+monthNames[targetMonth.getMonth()]+' '+targetMonth.getFullYear()+'</div>'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.08em;text-align:center;">'+String(targetMonth.getMonth()+1).padStart(2,'0')+'/'+String(targetMonth.getFullYear()).slice(-2)+'</div>'
     + '<button class="btn btn-secondary" style="width:44px;height:36px;padding:0;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeTimeOffCalMonth(1)">›</button>'
     + '</div>';
   html += '<div style="display:flex;gap:12px;margin-bottom:10px;font-size:11px;color:#888;">'
@@ -6264,6 +6262,17 @@ function submitTimeOffRequest() {
   });
 }
 
+var _westmontTapCount = 0;
+var _westmontTapTimer = null;
+function tapWestmontSecret() {
+  _westmontTapCount++;
+  clearTimeout(_westmontTapTimer);
+  _westmontTapTimer = setTimeout(function(){ _westmontTapCount = 0; }, 1500);
+  if(_westmontTapCount >= 5) {
+    _westmontTapCount = 0;
+    gatedTileClick(function(){ showTab('private', null); });
+  }
+}
 function goHome() {
   currentTab = 'home';
   ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff'].forEach(t => {
@@ -6357,10 +6366,9 @@ function findWeekForDate(dateObj) {
 }
 
 function getWeekDateInfoLocal(week, di) {
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var start = new Date(week.week_start + 'T00:00:00');
   var d = new Date(start); d.setDate(start.getDate() + di);
-  return { dayName: DAYS[di], dateLabel: months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() };
+  return { dayName: DAYS[di], dateLabel: String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getFullYear()).slice(-2) };
 }
 
 // Gathers everything a run sheet needs for day index di WITHIN a specific
@@ -6426,9 +6434,8 @@ function openPrintPickerModal() {
     var d = new Date(today); d.setDate(today.getDate() + i);
     var iso = d.toISOString().slice(0,10);
     var found = findWeekForDate(d);
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var label = dayNames[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate() + (i===0 ? ' (Today)' : '');
+    var label = dayNames[d.getDay()] + ', ' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + (i===0 ? ' (Today)' : '');
     var noData = !found;
     rows += '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px;'+(noData?'opacity:0.45;':'')+'">'
       + '<input type="checkbox" class="print-picker-cb" data-date="'+iso+'" style="width:18px;height:18px;flex-shrink:0;">'
@@ -6457,8 +6464,7 @@ function printSelectedDays() {
     var d = new Date(b.getAttribute('data-date') + 'T00:00:00');
     var found = findWeekForDate(d);
     if(!found) {
-      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      skipped.push(months[d.getMonth()] + ' ' + d.getDate());
+      skipped.push(String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0'));
       return;
     }
     entries.push(buildDayEntryFromWeek(found.week, found.di));
@@ -7483,11 +7489,10 @@ function renderDrawerCountRows(rows, list) {
     if(!byDate[r.count_date]) { byDate[r.count_date] = []; dateOrder.push(r.count_date); }
     byDate[r.count_date].push(r);
   });
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var html = '';
   dateOrder.forEach(function(d){
     var dt = new Date(d + 'T12:00:00');
-    html += '<div style="font-size:12px;font-weight:700;color:#666;margin:10px 0 4px;">'+months[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear()+'</div>';
+    html += '<div style="font-size:12px;font-weight:700;color:#666;margin:10px 0 4px;">'+String(dt.getMonth()+1).padStart(2,'0')+'/'+String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getFullYear()).slice(-2)+'</div>';
     byDate[d].sort(function(a,b){ return a.register.localeCompare(b.register, undefined, {numeric:true}) || new Date(a.counted_at)-new Date(b.counted_at); }).forEach(function(r){
       var TYPE_LABELS = {opener:'Opener', shift_change:'Shift Change', closer:'Closer', spot_check:'Spot Check'};
       var typeLabel = TYPE_LABELS[r.count_type] || 'Opener';
@@ -7579,9 +7584,8 @@ function buildDrawerCountsPDF(dateStr, rows) {
   function text(p,x,y,s,sz,bold,col){col=col||[0,0,0];pages[p]+='BT '+n(col[0])+' '+n(col[1])+' '+n(col[2])+' rg /'+(bold?'F2':'F1')+' '+n(sz)+' Tf '+n(x)+' '+n(Y(y))+' Td ('+esc(s)+') Tj ET\n';}
   function tw(s,sz){return String(s||'').length*sz*0.52;}
   function rtext(p,x,y,s,sz,bold,col){text(p,x-tw(s,sz),y,s,sz,bold,col);}
-  var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var dt = new Date(dateStr + 'T12:00:00');
-  var dateLabel = months[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear();
+  var dateLabel = String(dt.getMonth()+1).padStart(2,'0')+'/'+String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getFullYear()).slice(-2);
   var CN=M+4, CC=M+95, CB=M+230, CT=M+330, CR=PW-M-4;
   function ensurePage(pg){
     while(pages.length<=pg)pages.push('');
@@ -7758,13 +7762,12 @@ async function showUploadHistoryLog() {
     if(!r.ok) throw new Error('fetch failed');
     var rows = await r.json();
     if(!rows.length) { body.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px;">No weeks found.</div>'; return; }
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     function fmtWhen(iso) {
       if(!iso) return null;
       var d = new Date(iso);
       var h = d.getHours(), m = String(d.getMinutes()).padStart(2,'0');
       var ap = h>=12?'PM':'AM'; h = h%12 || 12;
-      return months[d.getMonth()]+' '+d.getDate()+', '+h+':'+m+ap;
+      return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+', '+h+':'+m+ap;
     }
     function sectionLine(label, by, at) {
       var when = fmtWhen(at);
@@ -7774,7 +7777,7 @@ async function showUploadHistoryLog() {
     var html = rows.map(function(w){
       var start = new Date(w.week_start+'T00:00:00');
       var end = new Date(start); end.setDate(start.getDate()+6);
-      var label = months[start.getMonth()]+' '+start.getDate()+' – '+months[end.getMonth()]+' '+end.getDate()+', '+end.getFullYear();
+      var label = String(start.getMonth()+1).padStart(2,'0')+'/'+String(start.getDate()).padStart(2,'0')+' – '+String(end.getMonth()+1).padStart(2,'0')+'/'+String(end.getDate()).padStart(2,'0')+'/'+String(end.getFullYear()).slice(-2);
       return '<div style="border:1px solid #eee;border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
         + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:0.05em;margin-bottom:4px;">'+label+'</div>'
         + sectionLine('Back of House', w.boh_uploaded_by, w.boh_uploaded_at)
@@ -8422,7 +8425,6 @@ async function renderScheduleCalendar() {
 
   var today = new Date(); today.setHours(0,0,0,0);
   var targetMonth = new Date(today.getFullYear(), today.getMonth() + _calMonthOffset, 1);
-  var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   var firstOfMonth = new Date(targetMonth);
   var firstDow = firstOfMonth.getDay();
@@ -8455,7 +8457,7 @@ async function renderScheduleCalendar() {
   var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   var html = '<div style="display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin-bottom:10px;">'
     + '<button class="btn btn-secondary" style="width:44px;height:36px;padding:0;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeCalMonth(-1)">‹</button>'
-    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.08em;text-align:center;">'+monthNames[targetMonth.getMonth()]+' '+targetMonth.getFullYear()+'</div>'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.08em;text-align:center;">'+String(targetMonth.getMonth()+1).padStart(2,'0')+'/'+String(targetMonth.getFullYear()).slice(-2)+'</div>'
     + '<button class="btn btn-secondary" style="width:44px;height:36px;padding:0;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeCalMonth(1)">›</button>'
     + '</div>';
   html += '<div style="display:flex;gap:10px;margin-bottom:12px;font-size:11px;color:#888;flex-wrap:wrap;">'
@@ -8546,10 +8548,9 @@ async function openCalendarWeek(weekStartStr) {
     applyWeek(idx);
   } else {
     parseWeekData({week_start: weekStartStr});
-    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     var d = new Date(weekStartStr + 'T00:00:00');
     var lbl = document.getElementById('sched-week-label');
-    if(lbl) lbl.textContent = months[d.getMonth()] + ' ' + d.getDate() + ' (no schedule yet)';
+    if(lbl) lbl.textContent = String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + ' (no schedule yet)';
   }
   setScheduleViewMode(false);
   renderSchedule();
@@ -11223,9 +11224,8 @@ function loadFallback() {
   var day = today.getDay(); // 0=Sun
   var diff = (day === 0) ? -6 : 1 - day; // days to Monday
   var mon = new Date(today); mon.setDate(today.getDate() + diff);
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var end = new Date(mon); end.setDate(mon.getDate() + 6);
-  var label = 'Week of ' + months[mon.getMonth()] + ' ' + mon.getDate() + '–' + end.getDate() + ', ' + mon.getFullYear();
+  var label = 'Week of ' + String(mon.getMonth()+1).padStart(2,'0')+'/'+String(mon.getDate()).padStart(2,'0') + '–' + String(end.getMonth()+1).padStart(2,'0')+'/'+String(end.getDate()).padStart(2,'0') + '/' + String(mon.getFullYear()).slice(-2);
   document.getElementById('week-label').textContent = label;
   var schedLabel = document.getElementById('sched-week-label');
   if(schedLabel) schedLabel.textContent = label.replace(/^Week of /, '');
@@ -11238,13 +11238,13 @@ function loadFallback() {
   for(var i = 0; i < 7; i++) {
     var dd = new Date(mon); dd.setDate(mon.getDate() + i);
     DAYS[i] = fullDays[i];
-    FULL_DATES[i] = months[dd.getMonth()] + ' ' + dd.getDate() + ', ' + dd.getFullYear();
+    FULL_DATES[i] = String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0')+'/'+String(dd.getFullYear()).slice(-2);
   }
   // Rebuild day tabs
   var tabsEl = document.getElementById('day-tabs');
   if(tabsEl) tabsEl.innerHTML = fullDays.map(function(d, i) {
     var dd2 = new Date(mon); dd2.setDate(mon.getDate() + i);
-    return '<button class="day-tab'+(i===0?' active':'')+'" onclick="selectDay('+i+')">'+d+' '+months[dd2.getMonth()]+' '+dd2.getDate()+'</button>';
+    return '<button class="day-tab'+(i===0?' active':'')+'" onclick="selectDay('+i+')">'+d+' '+String(dd2.getMonth()+1).padStart(2,'0')+'/'+String(dd2.getDate()).padStart(2,'0')+'</button>';
   }).join('');
   currentDay = 0;
   renderRunSheet(0);
@@ -11482,8 +11482,7 @@ function updateWeekLabels(idx) {
   if(!week) return;
   var d = new Date(week.week_start + 'T00:00:00');
   var end = new Date(d); end.setDate(d.getDate() + 6);
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var label = 'Week of ' + months[d.getMonth()] + ' ' + d.getDate() + '–' + end.getDate() + ', ' + d.getFullYear();
+  var label = 'Week of ' + String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0') + '–' + String(end.getMonth()+1).padStart(2,'0')+'/'+String(end.getDate()).padStart(2,'0') + '/' + String(d.getFullYear()).slice(-2);
   ['week-label','sched-week-label','hitlist-week-label','private-week-label'].forEach(function(id) {
     var el = document.getElementById(id); if(el) el.textContent = label;
   });
@@ -11495,13 +11494,13 @@ function updateWeekLabels(idx) {
   var tabsEl = document.getElementById('day-tabs');
   if(tabsEl) tabsEl.innerHTML = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(day, i) {
     var dd = new Date(d); dd.setDate(d.getDate() + i);
-    return '<button class="day-tab'+(i===0?' active':'')+'" onclick="selectDay('+i+')">'+day+' '+months[dd.getMonth()]+' '+dd.getDate()+'</button>';
+    return '<button class="day-tab'+(i===0?' active':'')+'" onclick="selectDay('+i+')">'+day+' '+String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0')+'</button>';
   }).join('');
   var fullDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   for(var i = 0; i < 7; i++) {
     var dd = new Date(d); dd.setDate(d.getDate() + i);
     DAYS[i] = fullDays[i];
-    FULL_DATES[i] = months[dd.getMonth()] + ' ' + dd.getDate() + ', ' + dd.getFullYear();
+    FULL_DATES[i] = String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0')+'/'+String(dd.getFullYear()).slice(-2);
   }
   document.querySelectorAll('[onclick="changeWeek(-1)"]').forEach(b => b.style.opacity = idx <= 0 ? '0.3' : '1');
   document.querySelectorAll('[onclick="changeWeek(1)"]').forEach(b => b.style.opacity = idx >= allWeeks.length-1 ? '0.3' : '1');
@@ -11574,7 +11573,7 @@ async function logUnclearedErrors() {
     var FOH_DEPTS = ['Servers','Bartenders','Cashiers','Hosts'];
     var BOH_DEPTS = ['Kitchen','Pizza','Prep','Bus','Dish','Managers'];
 
-    var dateStr = DAYS_FULL[di] + ', ' + months[dayDate.getMonth()] + ' ' + dayDate.getDate() + ', ' + dayDate.getFullYear();
+    var dateStr = DAYS_FULL[di] + ', ' + String(dayDate.getMonth()+1).padStart(2,'0') + '/' + String(dayDate.getDate()).padStart(2,'0') + '/' + String(dayDate.getFullYear()).slice(-2);
     var weekKey = ((document.getElementById('sched-week-label')||{}).textContent||'').replace(/–/g,'-').replace(/—/g,'-');
 
     // Log each uncleared error
@@ -12433,8 +12432,7 @@ async function processSingle(type) {
   // Confirm the week before processing
   var d = new Date(weekStart + 'T00:00:00');
   var end = new Date(d); end.setDate(d.getDate() + 6);
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var weekLabel = months[d.getMonth()]+' '+d.getDate()+' – '+months[end.getMonth()]+' '+end.getDate()+', '+end.getFullYear();
+  var weekLabel = String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' – '+String(end.getMonth()+1).padStart(2,'0')+'/'+String(end.getDate()).padStart(2,'0')+'/'+String(end.getFullYear()).slice(-2);
   var typeLabel = type==='boh'?'Back of House':type==='foh'?'Front of House':'Drivers';
   var confirmed = confirm('Save '+typeLabel+' schedule for week of '+weekLabel+'?\n\nTap OK to confirm.');
   if(!confirmed) return;
@@ -12564,8 +12562,7 @@ async function clearWeekRecord() {
 
   var d = new Date(weekStart + 'T00:00:00');
   var end = new Date(d); end.setDate(d.getDate() + 6);
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var weekLabel = months[d.getMonth()]+' '+d.getDate()+' – '+months[end.getMonth()]+' '+end.getDate()+', '+end.getFullYear();
+  var weekLabel = String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+' – '+String(end.getMonth()+1).padStart(2,'0')+'/'+String(end.getDate()).padStart(2,'0')+'/'+String(end.getFullYear()).slice(-2);
   var confirmed = confirm('This will permanently delete ALL schedule data for ' + weekLabel + '.\n\nAre you sure?');
   if(!confirmed) return;
 
@@ -13132,8 +13129,7 @@ async function copyWeekToNext() {
   var curStart = new Date(current.week_start + 'T00:00:00');
   var nextStart = new Date(curStart); nextStart.setDate(curStart.getDate() + 7);
   _copyWeekNextStr = nextStart.getFullYear() + '-' + String(nextStart.getMonth()+1).padStart(2,'0') + '-' + String(nextStart.getDate()).padStart(2,'0');
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  _copyWeekNextLabel = months[nextStart.getMonth()] + ' ' + nextStart.getDate() + ', ' + nextStart.getFullYear();
+  _copyWeekNextLabel = String(nextStart.getMonth()+1).padStart(2,'0') + '/' + String(nextStart.getDate()).padStart(2,'0') + '/' + String(nextStart.getFullYear()).slice(-2);
 
   _copyWeekExisting = null;
   try {
@@ -13305,12 +13301,11 @@ function showOverrideLog(btn) {
   if(udEl) udEl.textContent = getCurrentUser();
   var body = document.getElementById('override-log-body');
   body.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px;">Loading...</div>';
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var REQUIRED_ACK_MANAGERS = ['Ely','Selena'];
 
   function fmtDt(iso) {
     var dt = iso ? new Date(iso) : null;
-    return dt ? months[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear()+' '+dt.getHours()+':'+String(dt.getMinutes()).padStart(2,'0') : '';
+    return dt ? String(dt.getMonth()+1).padStart(2,'0')+'/'+String(dt.getDate()).padStart(2,'0')+'/'+String(dt.getFullYear()).slice(-2)+' '+dt.getHours()+':'+String(dt.getMinutes()).padStart(2,'0') : '';
   }
   function eventLabel(r) {
     return r.ack_type === 'reply' ? '💬 "' + (r.reply_text || '') + '"' :
@@ -13372,7 +13367,7 @@ function showOverrideLog(btn) {
       return {
         logged_at: r.acknowledged_at,
         who: r.acknowledged_by,
-        dept: "Dom's Notes",
+        dept: "Manager Notes",
         msg: r.action === 'published' ? 'Note published' : r.action === 'printed' ? 'Note printed' : r.action === 'reply' ? 'Reply' : 'Note acknowledged',
         ack_type: r.action || 'acknowledged',
         day_name: '', week_label: '', note: '',
@@ -13410,7 +13405,7 @@ function showOverrideLog(btn) {
     var standalone = [];
     allRows.forEach(function(r){
       var key = null;
-      if(r.dept === "Dom's Notes") {
+      if(r.dept === "Manager Notes") {
         key = 'doms:' + (r.note_id != null ? r.note_id : 'unknown-' + r.logged_at);
       } else if(r.dept === 'Message') {
         key = 'msg:' + r.msg_thread_id;
@@ -13587,7 +13582,7 @@ function handleLockIconTap() {
 <!-- Dom's Notes compose popup -->
 <div id="doms-notes-panel" style="display:none;position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:10001;background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.22);width:92%;max-width:460px;overflow:hidden;">
   <div id="doms-notes-header" style="background:var(--red);padding:14px 16px;cursor:grab;display:flex;align-items:center;justify-content:space-between;user-select:none;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;color:#fff;">Dom's Notes</div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;color:#fff;">Manager Notes</div>
     <button onclick="document.getElementById('doms-notes-panel').style.display='none';" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:18px;width:30px;height:30px;border-radius:50%;cursor:pointer;line-height:1;">✕</button>
   </div>
   <div style="padding:16px;max-height:80vh;overflow-y:auto;">
@@ -13776,7 +13771,7 @@ function handleLockIconTap() {
 <div id="doms-ack-modal" style="display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;width:92%;max-width:440px;overflow:hidden;">
     <div style="background:var(--red);padding:14px 16px;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;color:#fff;">Dom's Notes</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;color:#fff;">Manager Notes</div>
       <div id="doms-ack-date" style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;"></div>
       <div style="margin-top:6px;">
         <span style="font-size:11px;color:rgba(255,255,255,0.75);">Acknowledging as <b id="doms-ack-user-display" style="color:#fff;"></b></span>
@@ -13839,9 +13834,8 @@ function makeDraggable(el, handle) {
 
 function showDomsNotes() {
   var panel = document.getElementById('doms-notes-panel');
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var now = new Date();
-  document.getElementById('doms-notes-date').textContent = months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+  document.getElementById('doms-notes-date').textContent = String(now.getMonth()+1).padStart(2,'0') + '/' + String(now.getDate()).padStart(2,'0') + '/' + String(now.getFullYear()).slice(-2);
   panel.style.display = 'block';
   makeDraggable(document.getElementById('doms-notes-panel'), document.getElementById('doms-notes-header'));
   // Load existing note after panel is shown
@@ -13910,14 +13904,13 @@ function printDomsNotes() {
   var foh = document.getElementById('doms-note-foh').value.trim();
   var boh = document.getElementById('doms-note-boh').value.trim();
   var now = new Date();
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var dateStr = months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+  var dateStr = String(now.getMonth()+1).padStart(2,'0') + '/' + String(now.getDate()).padStart(2,'0') + '/' + String(now.getFullYear()).slice(-2);
   var body = '';
   if(drivers) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Drivers</h3><p style="white-space:pre-wrap;margin:0 0 20px;">'+drivers+'</p>';
   if(foh) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Front of House</h3><p style="white-space:pre-wrap;margin:0 0 20px;">'+foh+'</p>';
   if(boh) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Back of House</h3><p style="white-space:pre-wrap;margin:0 0 20px;">'+boh+'</p>';
-  var html = '<!DOCTYPE html><html><head><title>Dom\'s Notes</title><style>body{font-family:Arial,sans-serif;padding:28px;font-size:13px;}h1{font-size:18px;color:#c8102e;margin:0 0 4px;}@media print{button{display:none;}}</style></head><body>'
-    + '<h1>Dom\'s Notes</h1><p style="color:#888;font-size:11px;margin:0 0 20px;">'+dateStr+'</p>'
+  var html = '<!DOCTYPE html><html><head><title>Manager Notes</title><style>body{font-family:Arial,sans-serif;padding:28px;font-size:13px;}h1{font-size:18px;color:#c8102e;margin:0 0 4px;}@media print{button{display:none;}}</style></head><body>'
+    + '<h1>Manager Notes</h1><p style="color:#888;font-size:11px;margin:0 0 20px;">'+dateStr+'</p>'
     + body + '<\/body><\/html>';
   var iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;';
@@ -13956,9 +13949,8 @@ function showDomsAckModal(note) {
   if(!modal) return;
   var udEl = document.getElementById('doms-ack-user-display');
   if(udEl) udEl.textContent = user;
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var d = new Date(note.created_at);
-  document.getElementById('doms-ack-date').textContent = months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear() + ' - By: ' + (note.created_by || 'Dom');
+  document.getElementById('doms-ack-date').textContent = String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getFullYear()).slice(-2) + ' - By: ' + (note.created_by || 'Dom');
   var body = '';
   if(note.drivers) body += '<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:#888;margin-bottom:4px;">DRIVERS</div><div style="font-size:13px;white-space:pre-wrap;">'+note.drivers+'</div></div>';
   if(note.foh) body += '<div style="margin-bottom:14px;"><div style="font-size:11px;font-weight:700;letter-spacing:0.06em;color:#888;margin-bottom:4px;">FRONT OF HOUSE</div><div style="font-size:13px;white-space:pre-wrap;">'+note.foh+'</div></div>';
@@ -13995,14 +13987,13 @@ function printDomsNoteFromAck(note, user) {
     headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
     body: JSON.stringify([{note_id: note.id, acknowledged_by: user, acknowledged_at: now.toISOString(), action: 'printed'}])
   }).catch(function(){});
-  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var d = new Date(note.created_at);
-  var dateStr = months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear();
+  var dateStr = String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getFullYear()).slice(-2);
   var body = '';
   if(note.drivers) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Drivers</h3><p style="white-space:pre-wrap;margin:0 0 20px;">'+note.drivers+'</p>';
   if(note.foh) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Front of House</h3><p style="white-space:pre-wrap;margin:0 0 20px;">'+note.foh+'</p>';
   if(note.boh) body += '<h3 style="color:#c8102e;margin:0 0 6px;">Back of House</h3><p style="white-space:pre-wrap;margin:0 0 20px;">'+note.boh+'</p>';
-  var html = '<!DOCTYPE html><html><head><title>Dom\'s Notes</title><style>body{font-family:Arial,sans-serif;padding:28px;font-size:13px;}h1{font-size:18px;color:#c8102e;}<\/style><\/head><body>'
+  var html = '<!DOCTYPE html><html><head><title>Manager Notes</title><style>body{font-family:Arial,sans-serif;padding:28px;font-size:13px;}h1{font-size:18px;color:#c8102e;}<\/style><\/head><body>'
     + '<h1>Dom\'s Notes</h1><p style="color:#888;font-size:11px;margin:0 0 20px;">'+dateStr+'</p>'
     + body + '<\/body><\/html>';
   var iframe = document.createElement('iframe');
