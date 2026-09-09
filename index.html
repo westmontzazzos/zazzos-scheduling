@@ -39,6 +39,7 @@ body {
   color: var(--gray-800);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 /* ── SCROLL WRAPPER ── */
@@ -777,8 +778,8 @@ body {
 .TO-status{font-size:12px;color:var(--gray-600);text-align:center;margin-top:10px;min-height:16px;}
 .TO-delete-link{font-size:12px;color:var(--red);text-decoration:underline;cursor:pointer;margin-top:2px;white-space:nowrap;}
 
-.TCard{background:var(--white);border:2px solid var(--gray-200);border-radius:16px;padding:28px 16px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:0.06em;box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:pointer;transition:transform 0.1s, border-color 0.15s, box-shadow 0.15s;-webkit-tap-highlight-color:transparent;user-select:none;}
-.TCard:active{transform:scale(0.97);border-color:var(--red);box-shadow:0 1px 6px rgba(227,16,16,0.25);}
+.TCard{background:linear-gradient(135deg, var(--red-dark) 0%, var(--red) 100%);color:var(--white);border-radius:var(--radius);padding:32px 16px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.08em;box-shadow:var(--shadow-md);cursor:pointer;transition:transform 0.1s;-webkit-tap-highlight-color:transparent;user-select:none;}
+.TCard:active{transform:scale(0.97);}
 .Home-back{display:inline-flex;align-items:center;gap:4px;font-family:DM Sans,sans-serif;font-size:13px;font-weight:600;color:var(--gray-600);cursor:pointer;padding:8px 0;-webkit-tap-highlight-color:transparent;}
 
 </style>
@@ -4713,19 +4714,21 @@ document.addEventListener("DOMContentLoaded",function(){
 </nav>
 
 <!-- HOME (tile navigation) -->
-<div id="home-header" style="position:sticky;top:0;z-index:200;background:var(--white);border-bottom:1px solid var(--gray-200);padding:10px 16px;display:flex;align-items:center;gap:8px;box-shadow:0 1px 0 var(--gray-200), 0 4px 12px rgba(0,0,0,0.06);">
-  <img id="za-logo-img-home" src="" style="height:32px;width:32px;object-fit:contain;border-radius:6px;">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;">ZAZZO'S WESTMONT</div>
-</div>
+<div id="home-header" style="display:none;"></div>
 <div id="home-screen" class="main">
-  <div style="padding:20px 16px;">
-    <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+  <div style="padding:16px;">
+    <div class="report-header">
+      <div class="report-title">ZAZZO'S WESTMONT</div>
+      <div class="report-sub">Choose a section</div>
+    </div>
+    <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;">
       <div class="TCard" onclick="alert('Schedule -- not wired yet, waiting on how you want it organized')">Schedule</div>
       <div class="TCard" onclick="alert('Run Sheets -- not wired yet, waiting on how you want it organized')">Run Sheets</div>
       <div class="TCard" onclick="showTab('private',null)">Private</div>
       <div class="TCard" onclick="showTab('update',null)">Schedule Upload</div>
       <div class="TCard" onclick="alert('Messaging -- not wired yet, waiting on how you want it organized')">Messaging</div>
       <div class="TCard" onclick="showTab('hitlist',null)">Heat Map</div>
+      <div class="TCard" onclick="showTab('timeoff',null)">Time Off</div>
     </div>
   </div>
 </div>
