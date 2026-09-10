@@ -45,7 +45,7 @@ body {
 /* ── SCROLL WRAPPER ── */
 #app-wrap {
   height: 100vh;
-  overflow-y: scroll;
+  overflow-y: hidden;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -4774,15 +4774,13 @@ document.addEventListener("DOMContentLoaded",function(){
     <div class="report-title" id="sched-edit-trigger" onclick="handleSchedTitleTap()" style="cursor:default;">SCHEDULE</div>
     <div class="report-sub">Weekly staff schedule</div>
   </div>
-  <div id="sched-week-nav-row" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-    <div style="display:flex;align-items:center;gap:8px;">
-      <button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;" onclick="changeWeek(1)">‹</button>
-      <div id="sched-week-label" style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.08em;color:var(--black);white-space:nowrap;">Loading...</div>
-      <button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;" onclick="changeWeek(-1)">›</button>
-    </div>
-    <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;" onclick="backToScheduleCalendar()">🗓 Calendar</button>
-    <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;" onclick="toggleSchedEditMode()">✏️ Edit</button>
-    <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;" onclick="showSchedPrintMenu(this)">🖨 Print</button>
+  <div id="sched-week-nav-row" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;">
+    <button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeWeek(1)">‹</button>
+    <div id="sched-week-label" style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.08em;color:var(--black);white-space:nowrap;flex-shrink:0;">Loading...</div>
+    <button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeWeek(-1)">›</button>
+    <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="backToScheduleCalendar()">🗓 Calendar</button>
+    <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="toggleSchedEditMode()">✏️ Edit</button>
+    <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="showSchedPrintMenu(this)">🖨 Print</button>
   </div>
   <div class="sub-nav" id="sched-sub-nav">
     <button class="sub-btn active" onclick="switchSched('drivers',this)">Drivers</button>
@@ -6281,6 +6279,12 @@ function goHome() {
   document.getElementById('home-screen').style.display = 'block';
   document.getElementById('home-header').style.display = 'flex';
   document.getElementById('floating-home-btn').style.display = 'none';
+  // Home fits the screen exactly by design -- overflow-y:scroll on app-wrap
+  // still lets iOS treat it as a touch-scrollable region and bounce/move
+  // even with nothing to actually scroll. Lock it here specifically, and
+  // restore normal scrolling the moment any real tab (which may genuinely
+  // need to scroll) gets opened via showTab.
+  document.getElementById('app-wrap').style.overflowY = 'hidden';
   window.scrollTo(0,0);
 }
 
@@ -6289,6 +6293,7 @@ function showTab(tab, btn) {
   document.getElementById('home-screen').style.display = 'none';
   document.getElementById('home-header').style.display = 'none';
   document.getElementById('floating-home-btn').style.display = 'flex';
+  document.getElementById('app-wrap').style.overflowY = 'scroll';
   ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
@@ -6435,7 +6440,7 @@ function openPrintPickerModal() {
     var iso = d.toISOString().slice(0,10);
     var found = findWeekForDate(d);
     var dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    var label = dayNames[d.getDay()] + ', ' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + (i===0 ? ' (Today)' : '');
+    var label = dayNames[d.getDay()] + ', ' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getFullYear()).slice(-2) + (i===0 ? ' (Today)' : '');
     var noData = !found;
     rows += '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px;'+(noData?'opacity:0.45;':'')+'">'
       + '<input type="checkbox" class="print-picker-cb" data-date="'+iso+'" style="width:18px;height:18px;flex-shrink:0;">'
@@ -6464,7 +6469,7 @@ function printSelectedDays() {
     var d = new Date(b.getAttribute('data-date') + 'T00:00:00');
     var found = findWeekForDate(d);
     if(!found) {
-      skipped.push(String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0'));
+      skipped.push(String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getFullYear()).slice(-2));
       return;
     }
     entries.push(buildDayEntryFromWeek(found.week, found.di));
@@ -7255,8 +7260,8 @@ function printWageRoster() {
     if(!headed[pg]){headed[pg]=true;
       rect(pg,0,0,PW,28,[0.89,0.063,0.063]);
       text(pg,M,20,"ZAZZO'S -- WAGE ROSTER",14,true,[1,1,1]);
-      var now=new Date(),mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      rtext(pg,PW-M,19,'Printed '+mo[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear()+' -- CONFIDENTIAL',7.5,false,[1,0.85,0.85]);
+      var now=new Date();
+      rtext(pg,PW-M,19,'Printed '+String(now.getMonth()+1).padStart(2,'0')+'/'+String(now.getDate()).padStart(2,'0')+'/'+String(now.getFullYear()).slice(-2)+' -- CONFIDENTIAL',7.5,false,[1,0.85,0.85]);
       rect(pg,M,36,PW-2*M,13,[0.94,0.93,0.91]);
       text(pg,CN,46,'EMPLOYEE',7,true,[0.5,0.5,0.5]);text(pg,CT,46,'TYPE',7,true,[0.5,0.5,0.5]);
       rtext(pg,CR+40,46,'RATE',7,true,[0.5,0.5,0.5]);rtext(pg,CA,46,'ANNUAL',7,true,[0.5,0.5,0.5]);
@@ -7773,7 +7778,7 @@ async function showUploadHistoryLog() {
       var d = new Date(iso);
       var h = d.getHours(), m = String(d.getMinutes()).padStart(2,'0');
       var ap = h>=12?'PM':'AM'; h = h%12 || 12;
-      return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+', '+h+':'+m+ap;
+      return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getFullYear()).slice(-2)+', '+h+':'+m+ap;
     }
     function sectionLine(label, by, at) {
       var when = fmtWhen(at);
@@ -8556,7 +8561,7 @@ async function openCalendarWeek(weekStartStr) {
     parseWeekData({week_start: weekStartStr});
     var d = new Date(weekStartStr + 'T00:00:00');
     var lbl = document.getElementById('sched-week-label');
-    if(lbl) lbl.textContent = String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + ' (no schedule yet)';
+    if(lbl) lbl.textContent = String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getFullYear()).slice(-2) + ' (no schedule yet)';
   }
   setScheduleViewMode(false);
   renderSchedule();
@@ -8637,13 +8642,12 @@ function renderSchedule() {
   const el = document.getElementById('schedule-content');
   // Build day-column headers from the currently loaded week (not hardcoded)
   const schedDayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const schedMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   let dh;
   if(allWeeks && allWeeks[currentWeekIdx] && allWeeks[currentWeekIdx].week_start) {
     const wkStart = new Date(allWeeks[currentWeekIdx].week_start + 'T00:00:00');
     dh = schedDayNames.map((dn,i) => {
       const dd = new Date(wkStart); dd.setDate(wkStart.getDate() + i);
-      return dn + ' ' + schedMonths[dd.getMonth()] + ' ' + dd.getDate();
+      return dn + ' ' + String(dd.getMonth()+1).padStart(2,'0') + '/' + String(dd.getDate()).padStart(2,'0') + '/' + String(dd.getFullYear()).slice(-2);
     });
   } else {
     // Fallback when no week has loaded yet
@@ -11250,7 +11254,7 @@ function loadFallback() {
   var tabsEl = document.getElementById('day-tabs');
   if(tabsEl) tabsEl.innerHTML = fullDays.map(function(d, i) {
     var dd2 = new Date(mon); dd2.setDate(mon.getDate() + i);
-    return '<button class="day-tab'+(i===0?' active':'')+'" onclick="selectDay('+i+')">'+d+' '+String(dd2.getMonth()+1).padStart(2,'0')+'/'+String(dd2.getDate()).padStart(2,'0')+'</button>';
+    return '<button class="day-tab'+(i===0?' active':'')+'" onclick="selectDay('+i+')">'+d+' '+String(dd2.getMonth()+1).padStart(2,'0')+'/'+String(dd2.getDate()).padStart(2,'0')+'/'+String(dd2.getFullYear()).slice(-2)+'</button>';
   }).join('');
   currentDay = 0;
   renderRunSheet(0);
@@ -11512,7 +11516,7 @@ function updateWeekLabels(idx) {
   var tabsEl = document.getElementById('day-tabs');
   if(tabsEl) tabsEl.innerHTML = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(day, i) {
     var dd = new Date(d); dd.setDate(d.getDate() + i);
-    return '<button class="day-tab'+(i===0?' active':'')+'" onclick="selectDay('+i+')">'+day+' '+String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0')+'</button>';
+    return '<button class="day-tab'+(i===0?' active':'')+'" onclick="selectDay('+i+')">'+day+' '+String(dd.getMonth()+1).padStart(2,'0')+'/'+String(dd.getDate()).padStart(2,'0')+'/'+String(dd.getFullYear()).slice(-2)+'</button>';
   }).join('');
   var fullDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   for(var i = 0; i < 7; i++) {
@@ -13171,9 +13175,8 @@ async function runCopyWeekToNext() {
   var sectionsText = checked.map(function(s){ return SECTION_LABELS[s] || s; }).join(', ');
 
   var current = allWeeks && allWeeks[currentWeekIdx] ? allWeeks[currentWeekIdx] : null;
-  var srcMonths = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   var srcStart = current ? new Date(current.week_start + 'T00:00:00') : null;
-  var srcLabel = srcStart ? srcMonths[srcStart.getMonth()] + ' ' + srcStart.getDate() + ', ' + srcStart.getFullYear() : 'unknown week';
+  var srcLabel = srcStart ? String(srcStart.getMonth()+1).padStart(2,'0')+'/'+String(srcStart.getDate()).padStart(2,'0')+'/'+String(srcStart.getFullYear()).slice(-2) : 'unknown week';
 
   var payload = {};
   if(checked.indexOf('boh') !== -1) payload.boh_data = JSON.stringify({MANAGERS:MANAGERS,PIZZA:PIZZA,KITCHEN:KITCHEN,PREP:PREP,BUS:BUS,DISH:DISH});
