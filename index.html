@@ -14162,8 +14162,8 @@ function printSchedSection(range) {
   var daysToShow = range === 'day' ? [currentDay] : [0,1,2,3,4,5,6];
 
   var header = '<tr><th>Name</th>' + daysToShow.map(function(di){
-    var ev = WEEK_EVENTS[di] ? '<br><span style="color:#c8102e;font-size:10px;">'+WEEK_EVENTS[di]+'</span>' : '';
-    return '<th>'+DAYS_FULL[di]+'<br><span style="font-weight:400;font-size:10px;">'+FULL_DATES[di]+'</span>'+ev+'</th>';
+    var ev = WEEK_EVENTS[di] ? '<br><span style="color:#c8102e;font-size:11px;">'+WEEK_EVENTS[di]+'</span>' : '';
+    return '<th>'+DAYS_FULL[di]+'<br><span style="font-weight:400;font-size:11px;">'+FULL_DATES[di]+'</span>'+ev+'</th>';
   }).join('') + '</tr>';
 
   // Get data based on view
@@ -14235,11 +14235,11 @@ function printSchedSection(range) {
   }
 
   var html = '<!DOCTYPE html><html><head><title>'+title+' Schedule</title>'
-    + '<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@media print{@page{size:landscape;margin:6mm;}button{display:none;}}body{font-family:Arial,sans-serif;font-size:9px;padding:8px;}h1{font-size:13px;color:#c8102e;margin:0 0 1px;}table{width:100%;border-collapse:collapse;margin-top:6px;}th,td{border:1px solid #ddd;padding:2px 4px;text-align:left;}th{background:#f5f5f5;}</style>'
+    + '<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@media print{@page{size:landscape;margin:6mm;}button{display:none;}}body{font-family:Arial,sans-serif;font-size:12px;padding:8px;}h1{font-size:17px;color:#c8102e;margin:0 0 1px;}table{width:100%;border-collapse:collapse;margin-top:6px;}th,td{border:1px solid #ddd;padding:3px 5px;text-align:left;}th{background:#f5f5f5;}</style>'
     + '</head><body>'
     + '<div id="print-page1">'
     + '<h1>'+title+'</h1>'
-    + '<div style="color:#888;font-size:10px;margin-bottom:4px;">'+weekLabel+'</div>'
+    + '<div style="color:#888;font-size:12px;margin-bottom:4px;">'+weekLabel+'</div>'
     + '<table><thead>'+header+'</thead><tbody>'+rows+'</tbody></table>'
     + '</div>'
     + page2
