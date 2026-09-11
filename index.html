@@ -46,8 +46,6 @@ body {
 #app-wrap {
   height: 100vh;
   height: 100dvh;
-  display: flex;
-  flex-direction: column;
   overflow-y: hidden;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -4726,7 +4724,7 @@ document.addEventListener("DOMContentLoaded",function(){
 
 <!-- HOME (tile navigation) -->
 <div id="home-header" style="display:none;"></div>
-<div id="home-screen" class="main" style="flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;padding-top:env(safe-area-inset-top, 0px);padding-bottom:0;">
+<div id="home-screen" class="main" style="display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;padding-top:env(safe-area-inset-top, 0px);padding-bottom:0;overflow:hidden;">
   <div style="padding:0 20px;">
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;">Zazzo's</div>
@@ -6274,12 +6272,29 @@ function tapWestmontSecret() {
     gatedTileClick(function(){ showTab('private', null); });
   }
 }
+function sizeHomeScreen() {
+  // home-screen needs to fill whatever's left in app-wrap after any other
+  // visible chrome (currently just global-user-bar) -- computed here
+  // instead of via a flex parent, since making app-wrap itself flex broke
+  // width-constraining for every other tab (every tab rendered at 900px
+  // wide on a 390px screen). This keeps the fix fully isolated to home.
+  var appWrap = document.getElementById('app-wrap');
+  var homeScreen = document.getElementById('home-screen');
+  var userBar = document.getElementById('global-user-bar');
+  var usedHeight = 0;
+  if(userBar && getComputedStyle(userBar).display !== 'none') usedHeight += userBar.getBoundingClientRect().height;
+  var statusBar = document.getElementById('global-status-bar');
+  if(statusBar && getComputedStyle(statusBar).display !== 'none') usedHeight += statusBar.getBoundingClientRect().height;
+  homeScreen.style.height = (appWrap.getBoundingClientRect().height - usedHeight) + 'px';
+}
+
 function goHome() {
   currentTab = 'home';
   ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff'].forEach(t => {
     document.getElementById('tab-'+t).style.display = 'none';
   });
-  document.getElementById('home-screen').style.display = 'block';
+  document.getElementById('home-screen').style.display = 'flex';
+  sizeHomeScreen();
   document.getElementById('home-header').style.display = 'flex';
   document.getElementById('floating-home-btn').style.display = 'none';
   // Home fits the screen exactly by design -- overflow-y:scroll on app-wrap
@@ -13020,6 +13035,7 @@ async function saveToSupabase(weekStart, bohData, fohData, drvData, eventData) {
   setTimeout(function(){ var ali=document.getElementById('app-lock-input'); if(ali) ali.focus(); }, 200);
   initDayTabs();
   loadAllWeeks();
+  sizeHomeScreen();
 
   // As an installed iOS PWA, this app can be silently suspended in the
   // background and resumed later showing whatever was in memory at the
