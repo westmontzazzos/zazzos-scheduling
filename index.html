@@ -45,6 +45,9 @@ body {
 /* ── SCROLL WRAPPER ── */
 #app-wrap {
   height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
   overflow-y: hidden;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -4723,8 +4726,8 @@ document.addEventListener("DOMContentLoaded",function(){
 
 <!-- HOME (tile navigation) -->
 <div id="home-header" style="display:none;"></div>
-<div id="home-screen" class="main">
-  <div style="padding:14px 20px;">
+<div id="home-screen" class="main" style="flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;padding-top:env(safe-area-inset-top, 0px);padding-bottom:0;">
+  <div style="padding:0 20px;">
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;">Zazzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
@@ -13031,7 +13034,6 @@ async function saveToSupabase(weekStart, bohData, fohData, drvData, eventData) {
     }
   });
 </script>
-<div style="position:fixed;bottom:18px;right:80px;z-index:2000;font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--red);font-weight:700;">3</div>
 <button id="refresh-fab" onclick="refreshData()" aria-label="Refresh" title="Refresh">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M21 12a9 9 0 1 1-2.64-6.36"/>
