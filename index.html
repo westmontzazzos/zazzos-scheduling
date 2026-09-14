@@ -4735,7 +4735,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('runsheets',null);})"><span class="TCard-icon">📋</span><span class="TCard-title">Run Sheets</span><span class="TCard-sub">Daily staff run sheets</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('update',null);})"><span class="TCard-icon">📸</span><span class="TCard-title">Schedule Upload</span><span class="TCard-sub">Upload new schedule</span></div>
-      <div class="TCard"><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('messaging',null);})"><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('hitlist',null);})"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
     </div>
@@ -4830,6 +4830,36 @@ document.addEventListener("DOMContentLoaded",function(){
         <div class="TO-Accordion-chevron" id="timeoff-add-chevron">▼</div>
       </div>
       <div class="TO-Accordion-body TO-form" id="timeoff-add-body" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MESSAGING -->
+<div id="tab-messaging" class="main" style="display:none">
+  <div class="report-header">
+    <div class="report-title">MESSAGING</div>
+    <div class="report-sub">Read and send manager messages</div>
+  </div>
+  <div style="padding:0 16px 24px;">
+    <button class="TO-send-btn" onclick="openSendMessageModal()" style="margin-bottom:14px;">✉️ SEND A MESSAGE</button>
+    <div id="messaging-thread-list"></div>
+  </div>
+</div>
+
+<!-- Full thread view (public or unlocked private) -->
+<div id="messaging-thread-modal" style="display:none;position:fixed;inset:0;z-index:10003;background:rgba(0,0,0,0.65);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;box-sizing:border-box;">
+    <div style="background:var(--red);padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div id="messaging-thread-private-tag" style="font-size:10px;color:rgba(255,255,255,0.8);letter-spacing:0.06em;margin-bottom:2px;"></div>
+        <div id="messaging-thread-subject" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.06em;color:#fff;"></div>
+      </div>
+      <div onclick="document.getElementById('messaging-thread-modal').style.display='none';" style="color:#fff;font-size:20px;cursor:pointer;padding:0 4px;">✕</div>
+    </div>
+    <div id="messaging-thread-body" style="padding:16px;"></div>
+    <div style="padding:0 16px 16px;">
+      <textarea id="messaging-thread-reply" placeholder="Reply..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box;min-height:60px;resize:vertical;margin-bottom:8px;"></textarea>
+      <button class="btn btn-primary" style="width:100%;" onclick="sendMessagingThreadReply()">Send Reply</button>
     </div>
   </div>
 </div>
@@ -5295,6 +5325,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div class="editor-actions" style="position:sticky;top:0;z-index:5;background:var(--white);display:flex;gap:10px;padding:2px 0 12px;margin-bottom:8px;border-bottom:1px solid var(--gray-100);">
       <button class="btn btn-secondary" style="flex:1" onclick="closeEditor()">Cancel</button>
       <button class="btn btn-primary" style="flex:1" onclick="saveEdits()">💾 Save Changes</button>
+      <button class="btn btn-secondary" style="flex:0 0 auto;padding:10px 12px;" onclick="openSendMessageModal()" title="Send Message">✉️</button>
     </div>
     <div id="editor-body"></div>
   </div>
@@ -6290,7 +6321,7 @@ function sizeHomeScreen() {
 
 function goHome() {
   currentTab = 'home';
-  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff'].forEach(t => {
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging'].forEach(t => {
     document.getElementById('tab-'+t).style.display = 'none';
   });
   document.getElementById('home-screen').style.display = 'flex';
@@ -6312,13 +6343,14 @@ function showTab(tab, btn) {
   document.getElementById('home-header').style.display = 'none';
   document.getElementById('floating-home-btn').style.display = 'flex';
   document.getElementById('app-wrap').style.overflowY = 'scroll';
-  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff'].forEach(t => {
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   window.scrollTo(0,0);
   if(tab==='timeoff') initTimeOffTab();
+  if(tab==='messaging') initMessagingTab();
   if(tab==='runsheets') renderRunSheet(currentDay);
   if(tab==='schedule') { if(_schedShowingCalendar) renderScheduleCalendar(); else renderSchedule(); }
   if(tab==='hitlist') renderHitList();
@@ -7244,6 +7276,15 @@ function renderAcceptedErrors() {
   el.innerHTML = html;
 }
 
+async function loadTimeOffForErrorCheck() {
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/time_off_requests?location=eq.westmont&select=name,request_date,shift_type', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    window._timeOffForErrorCheck = r.ok ? await r.json() : [];
+  } catch(e) { window._timeOffForErrorCheck = window._timeOffForErrorCheck || []; }
+}
+
 async function loadScheduleBypasses(weekLabel) {
   try {
     var r = await fetch(SUPABASE_URL + '/rest/v1/schedule_bypasses?week_label=eq.' + encodeURIComponent(weekLabel) + '&select=*', {
@@ -7982,6 +8023,7 @@ function openSendMessageModal() {
   }).join('');
   document.getElementById('send-message-subject').value = '';
   document.getElementById('send-message-body').value = '';
+  document.getElementById('send-message-private-cb').checked = false;
   document.getElementById('send-message-modal').style.display = 'flex';
 }
 
@@ -8004,6 +8046,7 @@ function selectMsgRecipient(btn) {
 async function sendManagerMessage() {
   var subject = document.getElementById('send-message-subject').value.trim();
   var body = document.getElementById('send-message-body').value.trim();
+  var isPrivate = document.getElementById('send-message-private-cb').checked;
   if(!_selectedMsgRecipients.length) { alert('Pick who this is going to.'); return; }
   if(!subject) { alert('Give this message a subject.'); return; }
   if(!body) { alert('Write a message.'); return; }
@@ -8018,6 +8061,7 @@ async function sendManagerMessage() {
       body: body,
       action: 'sent',
       status: 'open',
+      is_private: isPrivate,
       created_at: new Date().toISOString()
     };
   });
@@ -8035,10 +8079,129 @@ async function sendManagerMessage() {
     _selectedMsgRecipients = [];
     document.getElementById('send-message-modal').style.display = 'none';
     alert('Message sent to ' + recipientLabels + '.');
+    if(currentTab === 'messaging') initMessagingTab();
   } catch(e) {
     alert('Send failed — nothing was recorded. Check your connection and try again: ' + e.message);
   }
 }
+
+// ===== MESSAGING TAB: thread list + full thread view =====
+// A thread is any group of manager_messages rows sharing a thread_id (or,
+// for the very first message in a thread, sharing that message's own id,
+// since thread_id starts out null and only gets set on replies). Private
+// threads always require the PIN to open, every time -- same pattern as
+// the Schedule Log, not a one-time session unlock.
+var _allMessagingThreads = [];
+var _openMessagingThreadKey = null;
+
+async function initMessagingTab() {
+  var list = document.getElementById('messaging-thread-list');
+  list.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px;">Loading messages...</div>';
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/manager_messages?order=created_at.asc&select=*', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(!resp.ok) throw new Error('load failed (' + resp.status + ')');
+    var rows = await resp.json();
+    var threadsMap = {};
+    rows.forEach(function(r){
+      var key = r.thread_id != null ? r.thread_id : r.id;
+      if(!threadsMap[key]) threadsMap[key] = [];
+      threadsMap[key].push(r);
+    });
+    _allMessagingThreads = Object.keys(threadsMap).map(function(key){
+      var msgs = threadsMap[key].sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
+      var root = msgs[0];
+      var latest = msgs[msgs.length-1];
+      return { key: key, subject: root.subject || '(no subject)', isPrivate: !!root.is_private, participants: [root.from_user, root.to_user], lastAt: latest.created_at, lastBody: latest.body, messages: msgs };
+    }).sort(function(a,b){ return new Date(b.lastAt) - new Date(a.lastAt); });
+    renderMessagingThreadList();
+  } catch(e) {
+    list.innerHTML = '<div style="color:#c8102e;font-size:13px;text-align:center;padding:20px;">Could not load messages.</div>';
+  }
+}
+
+function renderMessagingThreadList() {
+  var list = document.getElementById('messaging-thread-list');
+  if(!_allMessagingThreads.length) {
+    list.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px;">No messages yet.</div>';
+    return;
+  }
+  list.innerHTML = _allMessagingThreads.map(function(t, i){
+    var preview = (t.lastBody || '').substring(0, 60);
+    var d = new Date(t.lastAt);
+    var timeStr = String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getFullYear()).slice(-2);
+    var lockIcon = t.isPrivate ? '🔒 ' : '';
+    return '<div onclick="openMessagingThreadByIndex('+i+')" style="border:1px solid #eee;border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;">'
+      + '<div style="font-size:14px;font-weight:700;color:#222;">'+lockIcon+t.subject+'</div>'
+      + '<div style="font-size:11px;color:#aaa;">'+timeStr+'</div>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#888;margin-top:2px;">'+t.participants.join(' & ')+'</div>'
+      + (t.isPrivate ? '' : '<div style="font-size:12.5px;color:#555;margin-top:4px;">'+preview+(t.lastBody && t.lastBody.length>60?'...':'')+'</div>')
+      + '</div>';
+  }).join('');
+}
+
+async function openMessagingThreadByIndex(i) {
+  var thread = _allMessagingThreads[i];
+  if(!thread) return;
+  if(thread.isPrivate) {
+    var pin = await askPin('Enter PIN to open this private thread');
+    if(pin === null) return;
+    if(String(pin).trim() !== '9608') { alert('Incorrect PIN.'); return; }
+  }
+  _openMessagingThreadKey = thread.key;
+  document.getElementById('messaging-thread-subject').textContent = thread.subject;
+  document.getElementById('messaging-thread-private-tag').textContent = thread.isPrivate ? '🔒 PRIVATE THREAD' : 'Public thread';
+  var body = document.getElementById('messaging-thread-body');
+  body.innerHTML = thread.messages.map(function(m){
+    var d = new Date(m.created_at);
+    var timeStr = String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getFullYear()).slice(-2)+' '+((d.getHours()%12)||12)+':'+String(d.getMinutes()).padStart(2,'0')+(d.getHours()>=12?'PM':'AM');
+    var actionLabel = m.action === 'marked_fixed' ? ' marked this fixed' : m.action === 'confirmed_closed' ? ' confirmed resolved' : m.action === 'reopened' ? ' reopened this' : '';
+    return '<div style="margin-bottom:14px;">'
+      + '<div style="font-size:12px;font-weight:700;color:#222;">'+m.from_user+(actionLabel?'<span style="font-weight:400;color:#888;"> —'+actionLabel+'</span>':'')+'</div>'
+      + '<div style="font-size:11px;color:#aaa;margin-bottom:4px;">'+timeStr+'</div>'
+      + (m.body ? '<div style="font-size:14px;color:#333;white-space:pre-wrap;">'+m.body+'</div>' : '')
+      + '</div>';
+  }).join('');
+  document.getElementById('messaging-thread-reply').value = '';
+  document.getElementById('messaging-thread-modal').style.display = 'flex';
+}
+
+async function sendMessagingThreadReply() {
+  var text = document.getElementById('messaging-thread-reply').value.trim();
+  if(!text) { alert('Write a reply first.'); return; }
+  var thread = _allMessagingThreads.find(function(t){ return t.key === _openMessagingThreadKey; });
+  if(!thread) return;
+  var root = thread.messages[0];
+  var latest = thread.messages[thread.messages.length-1];
+  var toUser = latest.from_user === getCurrentUser() ? latest.to_user : latest.from_user;
+  var payload = {
+    thread_id: root.thread_id != null ? root.thread_id : root.id,
+    subject: null,
+    from_user: getCurrentUser(),
+    to_user: toUser,
+    body: text,
+    action: 'reply',
+    status: 'open',
+    is_private: thread.isPrivate,
+    created_at: new Date().toISOString()
+  };
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/manager_messages', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify([payload])
+    });
+    if(!resp.ok) throw new Error('reply failed (' + resp.status + ')');
+    document.getElementById('messaging-thread-modal').style.display = 'none';
+    initMessagingTab();
+  } catch(e) {
+    alert('Reply failed — nothing was recorded. Check your connection and try again: ' + e.message);
+  }
+}
+
 
 // Checks whether there's a thread currently awaiting action from the
 // person logged in on this device — either as the recipient of an open
@@ -11329,7 +11492,7 @@ async function refreshData() {
     var activeWeek = allWeeks[currentWeekIdx];
     if(activeWeek) {
       window._bypassedErrors = {};
-      await loadScheduleBypasses(activeWeek.week_start);
+      await Promise.all([loadScheduleBypasses(activeWeek.week_start), loadTimeOffForErrorCheck()]);
     }
     // Restore day and re-render active tab
     currentDay = savedDay;
@@ -11665,7 +11828,7 @@ function applyWeek(idx) {
   if(currentTab === 'private' && document.getElementById('private-content').style.display !== 'none') renderPrivate();
   var _wkLblForBypass = week.week_start;
   window._bypassedErrors = {};
-  loadScheduleBypasses(_wkLblForBypass).then(function(){
+  Promise.all([loadScheduleBypasses(_wkLblForBypass), loadTimeOffForErrorCheck()]).then(function(){
     autoBypassLoggedDays();
     setTimeout(checkScheduleErrors, 300);
     setTimeout(checkEarlyBOHStarts, 350);
@@ -12280,6 +12443,47 @@ function checkScheduleErrors() {
       }
     });
   });
+
+  // Anyone scheduled to work on a day they have an approved time off
+  // request for is a real scheduling conflict -- checked the same way as
+  // every other rule here, using the exact calendar date for each day of
+  // the currently-loaded week (not just day-of-week, since the same
+  // person/day-of-week combination is a different actual date every week).
+  if(allWeeks && allWeeks[currentWeekIdx] && allWeeks[currentWeekIdx].week_start && window._timeOffForErrorCheck) {
+    var wkStartForTO = new Date(allWeeks[currentWeekIdx].week_start + 'T00:00:00');
+    var dateForDay = [];
+    for(var tdi=0; tdi<7; tdi++) {
+      var dd = new Date(wkStartForTO); dd.setDate(wkStartForTO.getDate() + tdi);
+      dateForDay.push(dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'));
+    }
+    var toBySectionCheck = [
+      {obj:MANAGERS,lbl:'Managers'},{obj:PIZZA,lbl:'Pizza'},{obj:KITCHEN,lbl:'Kitchen'},{obj:PREP,lbl:'Prep'},
+      {obj:BUS,lbl:'Bus'},{obj:DISH,lbl:'Dish'},{obj:SERVERS,lbl:'Servers'},{obj:BARTENDERS,lbl:'Bartenders'},
+      {obj:CASHIERS,lbl:'Cashiers'},{obj:HOSTS,lbl:'Hosts'},{obj:DRIVERS,lbl:'Drivers'}
+    ];
+    window._timeOffForErrorCheck.forEach(function(req){
+      var reqDayIdx = dateForDay.indexOf(req.request_date);
+      if(reqDayIdx === -1) return; // this request isn't in the currently-loaded week at all
+      toBySectionCheck.forEach(function(sec){
+        Object.keys(sec.obj).forEach(function(personName){
+          if(personName !== req.name) return;
+          var shift = sec.obj[personName][reqDayIdx];
+          var hasShift = sec.lbl === 'Servers' || sec.lbl === 'Bartenders' || sec.lbl === 'Cashiers' || sec.lbl === 'Hosts'
+            ? (shift && Array.isArray(shift) && shift[0])
+            : (shift && String(shift).trim().toLowerCase() !== 'x');
+          if(!hasShift) return;
+          var shiftLabel = req.shift_type === 'full' ? 'Full Day' : req.shift_type === 'morning' ? 'Half Day — Morning' : 'Half Day — Night';
+          var errObj = {di:reqDayIdx, day:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][reqDayIdx], name:personName, dept:sec.lbl,
+            msg:personName+' is scheduled but has an approved Time Off request ('+shiftLabel+')'};
+          var isDriverErr = sec.lbl === 'Drivers';
+          var isBOHErr = ['Managers','Pizza','Kitchen','Prep','Bus','Dish'].indexOf(sec.lbl) !== -1;
+          if(isDriverErr) errors.Drivers.push(errObj);
+          else if(isBOHErr) errors.BOH.push(errObj);
+          else errors.FOH.push(errObj);
+        });
+      });
+    });
+  }
 
     // Filter out bypassed errors
   if(window._bypassedErrors) {
@@ -13704,6 +13908,9 @@ function handleLockIconTap() {
       <input id="send-message-subject" type="text" placeholder="e.g. Tuesday schedule issue" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:14px;">
       <div style="font-size:11px;font-weight:700;color:#888;margin-bottom:6px;">MESSAGE</div>
       <textarea id="send-message-body" placeholder="What's up?" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box;min-height:80px;resize:vertical;"></textarea>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-top:12px;cursor:pointer;">
+        <input type="checkbox" id="send-message-private-cb"> Private message (requires PIN to view this thread)
+      </label>
     </div>
     <div style="padding:0 16px 16px;display:flex;gap:8px;">
       <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('send-message-modal').style.display='none';">Cancel</button>
