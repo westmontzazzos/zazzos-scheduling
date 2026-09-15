@@ -4739,7 +4739,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="TCard" onclick="gatedTileClick(function(){showTab('hitlist',null);})"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('drawer',null);})"><span class="TCard-icon">💰</span><span class="TCard-title">Drawer Count</span><span class="TCard-sub">Register counts by shift</span></div>
-      <div class="TCard" onclick="gatedTileClick(function(){showEventsSummary();})"><span class="TCard-icon">🎉</span><span class="TCard-title">Events</span><span class="TCard-sub">This week's events</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('events',null);})"><span class="TCard-icon">🎉</span><span class="TCard-title">Events</span><span class="TCard-sub">This week's events</span></div>
     </div>
   </div>
 </div>
@@ -4836,7 +4836,32 @@ document.addEventListener("DOMContentLoaded",function(){
   </div>
 </div>
 
+<!-- EVENTS -->
+<div id="tab-events" class="main" style="display:none">
+  <div class="report-header">
+    <div class="report-title">EVENTS</div>
+    <div class="report-sub">Tap a day to edit it, double-tap Monday for the full week</div>
+  </div>
+  <div style="padding:0 16px 24px;">
+    <div id="events-calendar" style="background:var(--white);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);padding:14px;"></div>
+  </div>
+</div>
+
+<!-- Single-day event editor -->
+<div id="single-day-events-modal" style="display:none;position:fixed;inset:0;z-index:10003;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:16px;width:90%;max-width:400px;max-height:80vh;overflow-y:auto;box-sizing:border-box;padding:20px;">
+    <div id="single-day-events-title" style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.06em;margin-bottom:14px;"></div>
+    <div id="single-day-events-rows"></div>
+    <a href="#" onclick="addSingleDayEventRow();return false;" style="display:inline-block;margin-top:6px;font-size:12px;color:var(--red);text-decoration:none;font-weight:600;">+ Add another event</a>
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('single-day-events-modal').style.display='none';">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveSingleDayEvents()">💾 Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- MESSAGING -->
+
 <div id="tab-messaging" class="main" style="display:none">
   <div class="report-header">
     <div class="report-title">MESSAGING</div>
@@ -6323,7 +6348,7 @@ function sizeHomeScreen() {
 
 function goHome() {
   currentTab = 'home';
-  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging'].forEach(t => {
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging','events'].forEach(t => {
     document.getElementById('tab-'+t).style.display = 'none';
   });
   document.getElementById('home-screen').style.display = 'flex';
@@ -6345,7 +6370,7 @@ function showTab(tab, btn) {
   document.getElementById('home-header').style.display = 'none';
   document.getElementById('floating-home-btn').style.display = 'flex';
   document.getElementById('app-wrap').style.overflowY = 'scroll';
-  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging'].forEach(t => {
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging','events'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -6353,6 +6378,7 @@ function showTab(tab, btn) {
   window.scrollTo(0,0);
   if(tab==='timeoff') initTimeOffTab();
   if(tab==='messaging') initMessagingTab();
+  if(tab==='events') initEventsTab();
   if(tab==='runsheets') renderRunSheet(currentDay);
   if(tab==='schedule') { if(_schedShowingCalendar) renderScheduleCalendar(); else renderSchedule(); }
   if(tab==='hitlist') renderHitList();
@@ -13489,6 +13515,205 @@ async function runCopyWeekToNext() {
     if(idx >= 0) { currentWeekIdx = idx; applyWeek(idx); if(currentTab === 'schedule') renderSchedule(); }
   } catch(e) {
     alert('Copy failed — nothing was recorded. Check your connection and try again: ' + e.message);
+  }
+}
+
+// ===== EVENTS TAB: day-grid calendar =====
+// Weeks always run Monday through Sunday here, matching every other
+// calendar in the app (Schedule, Time Off) -- never mixed up.
+var _eventsCalMonthOffset = 0;
+var _eventsClickTimer = null;
+var _eventsEditingDayInfo = null; // {weekStart, dayIndex, dateStr}
+
+function changeEventsCalMonth(delta) {
+  _eventsCalMonthOffset += delta;
+  renderEventsCalendar();
+}
+
+async function initEventsTab() {
+  _eventsCalMonthOffset = 0;
+  await renderEventsCalendar();
+}
+
+async function renderEventsCalendar() {
+  var el = document.getElementById('events-calendar');
+  if(!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;font-size:13px;">Loading calendar...</div>';
+
+  var today = new Date(); today.setHours(0,0,0,0);
+  var targetMonth = new Date(today.getFullYear(), today.getMonth() + _eventsCalMonthOffset, 1);
+
+  var firstOfMonth = new Date(targetMonth);
+  var firstDow = firstOfMonth.getDay();
+  var daysBackToMonday = firstDow === 0 ? 6 : firstDow - 1;
+  var gridStart = new Date(firstOfMonth); gridStart.setDate(firstOfMonth.getDate() - daysBackToMonday);
+
+  var lastOfMonth = new Date(targetMonth.getFullYear(), targetMonth.getMonth() + 1, 0);
+  var lastDow = lastOfMonth.getDay();
+  var daysForwardToSunday = lastDow === 0 ? 0 : 7 - lastDow;
+  var gridEnd = new Date(lastOfMonth); gridEnd.setDate(lastOfMonth.getDate() + daysForwardToSunday);
+
+  // Collect the Monday of every week touched by this grid, so we can fetch
+  // all the events data for the whole visible range in one request.
+  var weekStarts = [];
+  var wcur = new Date(gridStart);
+  while(wcur <= gridEnd) {
+    weekStarts.push(wcur.getFullYear() + '-' + String(wcur.getMonth()+1).padStart(2,'0') + '-' + String(wcur.getDate()).padStart(2,'0'));
+    wcur.setDate(wcur.getDate() + 7);
+  }
+
+  var eventsByDate = {}; // dateStr -> array of events that day
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=gte.' + weekStarts[0] + '&week_start=lte.' + weekStarts[weekStarts.length-1] + '&select=week_start,events_list_data', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(resp.ok) {
+      var rows = await resp.json();
+      rows.forEach(function(row){
+        var evArr = row.events_list_data ? JSON.parse(row.events_list_data) : [[],[],[],[],[],[],[]];
+        var wkStart = new Date(row.week_start + 'T00:00:00');
+        for(var i=0;i<7;i++) {
+          var dd = new Date(wkStart); dd.setDate(wkStart.getDate()+i);
+          var dateKey = dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0');
+          var dayEvents = (Array.isArray(evArr[i]) ? evArr[i] : []).filter(function(e){ return e && (e.name || e.time || e.servers); });
+          if(dayEvents.length) eventsByDate[dateKey] = dayEvents;
+        }
+      });
+    }
+  } catch(e) { /* leave eventsByDate empty -- calendar still renders, just with no highlights */ }
+
+  var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var html = '<div style="display:grid;grid-template-columns:44px 1fr 44px;align-items:center;margin-bottom:10px;">'
+    + '<button class="btn btn-secondary" style="width:44px;height:36px;padding:0;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeEventsCalMonth(-1)">‹</button>'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.08em;text-align:center;">'+String(targetMonth.getMonth()+1).padStart(2,'0')+'/'+String(targetMonth.getFullYear()).slice(-2)+'</div>'
+    + '<button class="btn btn-secondary" style="width:44px;height:36px;padding:0;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeEventsCalMonth(1)">›</button>'
+    + '</div>';
+  html += '<div style="font-size:11px;color:#888;margin-bottom:10px;">🎉 = has an event · tap a day to edit it · double-tap Monday for the whole week</div>';
+  html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:4px;">';
+  dayNames.forEach(function(d){ html += '<div style="text-align:center;font-size:10px;font-weight:700;color:#888;letter-spacing:0.04em;">'+d+'</div>'; });
+  html += '</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">';
+
+  var cur = new Date(gridStart);
+  while(cur <= gridEnd) {
+    var dateStr = cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0') + '-' + String(cur.getDate()).padStart(2,'0');
+    var inMonth = cur.getMonth() === targetMonth.getMonth();
+    var hasEvent = !!eventsByDate[dateStr];
+    var isMonday = cur.getDay() === 1;
+    var bg = hasEvent ? '#FBEAE8' : (inMonth ? 'var(--gray-100)' : 'transparent');
+    var border = hasEvent ? '2px solid var(--red)' : '2px solid transparent';
+    var textColor = inMonth ? '#333' : '#ccc';
+    var dot = hasEvent ? '<div style="font-size:9px;line-height:1;">🎉</div>' : '';
+    html += '<div onclick="handleEventsDayClick(\''+dateStr+'\', '+isMonday+')" style="aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;background:'+bg+';border:'+border+';color:'+textColor+';font-size:12px;font-weight:'+(hasEvent?'700':'400')+';cursor:pointer;">'+cur.getDate()+dot+'</div>';
+    cur.setDate(cur.getDate() + 1);
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// Single click opens just that day; double-click on a Monday opens the
+// whole week instead. A double-click always fires a single click first as
+// part of the browser's normal event sequence, so the single-click action
+// is delayed briefly -- if a second click lands within that window on the
+// same Monday, the single-day action is cancelled and the week opens
+// instead. Any other day always just opens that one day, immediately.
+function handleEventsDayClick(dateStr, isMonday) {
+  if(!isMonday) { openSingleDayEvents(dateStr); return; }
+  if(_eventsClickTimer) {
+    clearTimeout(_eventsClickTimer);
+    _eventsClickTimer = null;
+    openWeekEventsFromMonday(dateStr);
+  } else {
+    _eventsClickTimer = setTimeout(function(){
+      _eventsClickTimer = null;
+      openSingleDayEvents(dateStr);
+    }, 280);
+  }
+}
+
+async function openWeekEventsFromMonday(mondayStr) {
+  await openCalendarWeek(mondayStr);
+  showEventsSummary();
+}
+
+async function openSingleDayEvents(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  var dow = d.getDay();
+  var daysBackToMonday = dow === 0 ? 6 : dow - 1;
+  var monday = new Date(d); monday.setDate(d.getDate() - daysBackToMonday);
+  var mondayStr = monday.getFullYear()+'-'+String(monday.getMonth()+1).padStart(2,'0')+'-'+String(monday.getDate()).padStart(2,'0');
+  var dayIndex = daysBackToMonday; // 0=Mon ... 6=Sun, matches EVENTS_LIST indexing
+
+  await openCalendarWeek(mondayStr);
+
+  _eventsEditingDayInfo = { weekStart: mondayStr, dayIndex: dayIndex, dateStr: dateStr };
+  var dayNamesFull = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var titleDateStr = String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getFullYear()).slice(-2);
+  document.getElementById('single-day-events-title').textContent = dayNamesFull[dayIndex] + ' ' + titleDateStr;
+  renderSingleDayEventRows();
+  document.getElementById('single-day-events-modal').style.display = 'flex';
+}
+
+function renderSingleDayEventRows() {
+  var container = document.getElementById('single-day-events-rows');
+  var di = _eventsEditingDayInfo.dayIndex;
+  var dayEvents = EVENTS_LIST[di] && EVENTS_LIST[di].length ? EVENTS_LIST[di] : [{name:'',time:'',servers:''}];
+  container.innerHTML = dayEvents.map(function(ev, evi){
+    var removeLink = (dayEvents.length>1 || ev.name || ev.time || ev.servers)
+      ? '<a href="#" onclick="removeSingleDayEventRow('+evi+');return false;" style="color:#c8102e;font-size:12px;text-decoration:none;font-weight:600;">Remove</a>'
+      : '';
+    return '<div style="border:1px solid #eee;border-radius:8px;padding:10px;margin-bottom:10px;box-sizing:border-box;">'
+      + '<input type="text" class="single-day-event-input" data-evi="'+evi+'" data-field="name" value="'+(ev.name||'')+'" placeholder="Event name" style="width:100%;border:1px solid #ddd;border-radius:6px;padding:7px 8px;font-size:13px;box-sizing:border-box;margin-bottom:6px;">'
+      + '<div style="display:flex;gap:6px;margin-bottom:6px;">'
+      + '<input type="text" class="single-day-event-input" data-evi="'+evi+'" data-field="time" value="'+(ev.time||'')+'" placeholder="Time" style="flex:1;min-width:0;border:1px solid #ddd;border-radius:6px;padding:7px 8px;font-size:13px;box-sizing:border-box;">'
+      + '<input type="text" class="single-day-event-input" data-evi="'+evi+'" data-field="servers" value="'+(ev.servers||'')+'" placeholder="Servers" style="flex:1;min-width:0;border:1px solid #ddd;border-radius:6px;padding:7px 8px;font-size:13px;box-sizing:border-box;">'
+      + '</div>'
+      + removeLink
+      + '</div>';
+  }).join('');
+}
+
+function collectSingleDayEventInputs() {
+  var di = _eventsEditingDayInfo.dayIndex;
+  var byIdx = {};
+  document.querySelectorAll('.single-day-event-input').forEach(function(inp){
+    var evi = parseInt(inp.dataset.evi), field = inp.dataset.field;
+    if(!byIdx[evi]) byIdx[evi] = {name:'', time:'', servers:''};
+    byIdx[evi][field] = inp.value.trim();
+  });
+  var arr = Object.keys(byIdx).sort(function(a,b){return a-b;}).map(function(k){ return byIdx[k]; });
+  EVENTS_LIST[di] = arr.filter(function(ev){ return ev.name || ev.time || ev.servers; });
+}
+
+function addSingleDayEventRow() {
+  collectSingleDayEventInputs();
+  var di = _eventsEditingDayInfo.dayIndex;
+  if(!EVENTS_LIST[di]) EVENTS_LIST[di] = [];
+  EVENTS_LIST[di].push({name:'', time:'', servers:''});
+  renderSingleDayEventRows();
+}
+
+function removeSingleDayEventRow(evi) {
+  collectSingleDayEventInputs();
+  var di = _eventsEditingDayInfo.dayIndex;
+  if(EVENTS_LIST[di]) EVENTS_LIST[di].splice(evi, 1);
+  renderSingleDayEventRows();
+}
+
+async function saveSingleDayEvents() {
+  collectSingleDayEventInputs();
+  var week = allWeeks[currentWeekIdx];
+  if(!week) { alert('Could not determine which week this day belongs to.'); return; }
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=eq.' + week.week_start, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify({events_list_data: JSON.stringify(EVENTS_LIST)})
+    });
+    if(!resp.ok) throw new Error('save failed (' + resp.status + ')');
+    document.getElementById('single-day-events-modal').style.display = 'none';
+    renderEventsCalendar();
+  } catch(e) {
+    alert('Could not save -- check your connection and try again: ' + e.message);
   }
 }
 
