@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Zazzo's — v1.7</title>
+<title>Zazzo's — v2.0</title>
 <link rel="apple-touch-icon" id="za-touch-icon-apple">
 <link rel="icon" type="image/png" id="za-touch-icon-favicon">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4729,7 +4729,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;">Zazzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.2em;text-transform:uppercase;text-align:center;">Scheduling</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.0</div>
     </div>
     <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -4745,7 +4745,7 @@ document.addEventListener("DOMContentLoaded",function(){
 </div>
 <div id="floating-home-btn" onclick="goHome()" style="display:none;position:fixed;bottom:18px;left:18px;z-index:2000;background:var(--red);color:#fff;border-radius:50%;width:52px;height:52px;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">⌂</div>
 <div id="global-status-bar" style="display:none;padding:6px 14px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:0.06em;color:#fff;"></div>
-<div id="global-user-bar" style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:5px 14px;background:#f7f7f7;border-bottom:1px solid #eee;font-size:11px;color:#888;">
+<div id="global-user-bar" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:5px 14px;background:#f7f7f7;border-bottom:1px solid #eee;font-size:11px;color:#888;">
   Signed in as <b id="global-user-display" style="color:#333;"></b>
   <a href="#" onclick="switchUser();return false;" style="color:#c8102e;text-decoration:underline;font-weight:600;">Switch User</a>
 </div>
