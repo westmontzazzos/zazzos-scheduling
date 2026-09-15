@@ -7184,6 +7184,18 @@ function zpCancelOverride() {
   var m = document.getElementById('accept-pin-modal');
   if(m) document.body.removeChild(m);
 }
+// Stable identity for a schedule error, used as the bypass key everywhere.
+// The old key was day+dept+the exact message text -- but many messages
+// have live counts baked in ("Only 2 cashiers...", "3 AM drivers..."), so
+// the SAME underlying rule violation produced a DIFFERENT key the moment
+// the schedule changed even slightly, silently invalidating an override
+// that was never actually resolved. Stripping digits before building the
+// key means "2 cashiers" and "3 cashiers" are correctly treated as the
+// same rule, so an accepted override survives a schedule re-upload.
+function bypassKey(di, dept, msg) {
+  return di + '|' + dept + '|' + String(msg).replace(/\d+/g, '#');
+}
+
 function zpConfirmOverride(di, dept, msg) {
   if(!window._zpOverrideWho) { alert('Please select who is overriding.'); return; }
   if(!window._zpOverrideAck) { alert('Please select an acknowledgment.'); return; }
@@ -7198,7 +7210,7 @@ function zpConfirmOverride(di, dept, msg) {
   var DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   zpCancelOverride();
   if(!window._bypassedErrors) window._bypassedErrors = {};
-  window._bypassedErrors[di+'|'+dept+'|'+msg] = true;
+  window._bypassedErrors[bypassKey(di, dept, msg)] = true;
 
   var now = new Date();
   var logEntry = {
@@ -7232,7 +7244,7 @@ async function undoAcceptedError(di, dept, msg) {
   var weekKey = (window.allWeeks && window.allWeeks[window.currentWeekIdx]) ? window.allWeeks[window.currentWeekIdx].week_start : '';
   // Remove from memory
   if(window._bypassedErrors) {
-    delete window._bypassedErrors[di+'|'+dept+'|'+msg];
+    delete window._bypassedErrors[bypassKey(di, dept, msg)];
   }
   // Delete from Supabase
   var url = SUPABASE_URL + '/rest/v1/schedule_bypasses?week_label=eq.' + encodeURIComponent(weekKey)
@@ -7295,7 +7307,7 @@ async function loadScheduleBypasses(weekLabel) {
     if(!rows||!rows.length) return;
     if(!window._bypassedErrors) window._bypassedErrors = {};
     rows.forEach(function(row){
-      var key = row.day_index+'|'+row.dept+'|'+row.msg;
+      var key = bypassKey(row.day_index, row.dept, row.msg);
       window._bypassedErrors[key] = true;
     });
   } catch(e) { /* silent */ }
@@ -11173,7 +11185,7 @@ async function saveEdits() {
     var cur = window._currentErrors || {BOH:[], FOH:[], Drivers:[]};
     ['BOH','FOH','Drivers'].forEach(function(sec){
       (cur[sec]||[]).forEach(function(e){
-        if(e.di === editorDay && bp[e.di+'|'+e.dept+'|'+e.msg]) {
+        if(e.di === editorDay && bp[bypassKey(e.di, e.dept, e.msg)]) {
           _preEditFlagged.push({di:e.di, dept:e.dept, msg:e.msg});
         }
       });
@@ -11320,7 +11332,7 @@ function checkForResolvedErrors(preEditFlagged) {
     var stillPresent = {};
     ['BOH','FOH','Drivers'].forEach(function(sec){
       (cur[sec]||[]).forEach(function(e){
-        stillPresent[e.di+'|'+e.dept+'|'+e.msg] = true;
+        stillPresent[bypassKey(e.di, e.dept, e.msg)] = true;
       });
     });
     var DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -11763,7 +11775,7 @@ async function logUnclearedErrors() {
     // Filter out any that were bypassed/overridden
     var bypassed = window._bypassedErrors || {};
     var uncleared = dayErrors.filter(function(e){
-      return !bypassed[e.di+'|'+e.dept+'|'+e.msg];
+      return !bypassed[bypassKey(e.di, e.dept, e.msg)];
     });
 
     if(uncleared.length === 0) {
@@ -11805,7 +11817,7 @@ async function logUnclearedErrors() {
       // Auto-bypass these errors so they never show in the popup again
       if(!window._bypassedErrors) window._bypassedErrors = {};
       uncleared.forEach(function(e){
-        window._bypassedErrors[e.di+'|'+e.dept+'|'+e.msg] = true;
+        window._bypassedErrors[bypassKey(e.di, e.dept, e.msg)] = true;
       });
       localStorage.setItem(loggedKey, '1');
       checkScheduleErrors();
@@ -11878,7 +11890,7 @@ function checkForResolvedErrorsAfterUpload() {
   var cur = window._currentErrors || {BOH:[], FOH:[], Drivers:[]};
   var stillPresent = {};
   ['BOH','FOH','Drivers'].forEach(function(sec){
-    (cur[sec]||[]).forEach(function(e){ stillPresent[e.di+'|'+e.dept+'|'+e.msg] = true; });
+    (cur[sec]||[]).forEach(function(e){ stillPresent[bypassKey(e.di, e.dept, e.msg)] = true; });
   });
   var DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   var weekLabel = ((document.getElementById('sched-week-label')||{}).textContent||'').replace(/–/g,'-').replace(/—/g,'-');
@@ -12487,7 +12499,7 @@ function checkScheduleErrors() {
 
     // Filter out bypassed errors
   if(window._bypassedErrors) {
-    function notBypassed(e){ return !window._bypassedErrors[e.di+'|'+e.dept+'|'+e.msg] && !window._bypassedErrors['__day_cleared_'+e.di]; }
+    function notBypassed(e){ return !window._bypassedErrors[bypassKey(e.di, e.dept, e.msg)] && !window._bypassedErrors['__day_cleared_'+e.di]; }
     errors.BOH = errors.BOH.filter(notBypassed);
     errors.FOH = errors.FOH.filter(notBypassed);
     errors.Drivers = errors.Drivers.filter(notBypassed);
@@ -12612,7 +12624,7 @@ function printScheduleErrors() {
     bodyHtml += '<div style="margin-bottom:20px;">';
     bodyHtml += '<div style="font-size:14px;font-weight:700;background:#222;color:#fff;padding:6px 10px;border-radius:4px;margin-bottom:8px;">'+DAYS_FULL[di]+(FULL_DATES[di]?' — '+FULL_DATES[di]:'')+'</div>';
     byDay[di].forEach(function(e){
-      var overrideNote = (window._bypassedErrors && window._bypassedErrors[e.di+'|'+e.dept+'|'+e.msg]) ? ' <span style="color:#888;font-size:10px;">[OVERRIDDEN]</span>' : '';
+      var overrideNote = (window._bypassedErrors && window._bypassedErrors[bypassKey(e.di, e.dept, e.msg)]) ? ' <span style="color:#888;font-size:10px;">[OVERRIDDEN]</span>' : '';
       bodyHtml += '<div style="border:1px solid #f5c0c8;border-radius:6px;padding:8px 10px;margin-bottom:6px;background:#fff8f8;">';
       bodyHtml += '<span style="color:#c8102e;font-weight:700;font-size:12px;">'+e.dept+'</span>';
       bodyHtml += '<span style="color:#666;font-size:11px;"> — '+e.msg+'</span>'+overrideNote;
@@ -14555,7 +14567,7 @@ function checkOutstandingErrors() {
   var allErrs = (errs.BOH||[]).concat(errs.FOH||[]).concat(errs.Drivers||[]);
   // Filter out bypassed
   var bypassed = window._bypassedErrors || {};
-  var unresolved = allErrs.filter(function(e){ return !bypassed[e.di+'|'+e.dept+'|'+e.msg] && !bypassed['__day_cleared_'+e.di]; });
+  var unresolved = allErrs.filter(function(e){ return !bypassed[bypassKey(e.di, e.dept, e.msg)] && !bypassed['__day_cleared_'+e.di]; });
   if(!unresolved.length) return;
   
   var body = document.getElementById('outstanding-errors-body');
