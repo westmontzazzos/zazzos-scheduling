@@ -5521,8 +5521,8 @@ const DRIVERS = {
   'Casandra D': [null,null,null,null,null,null,null],
   'Greg': [null,null,null,null,null,null,null],
   'Hector': [null,null,null,null,null,null,null],
-  'Jeff Zeggebeen': [null,null,null,null,null,null,null],
-  'Jeff Pietras': [null,null,null,null,null,null,null],
+  'Jeff Z': [null,null,null,null,null,null,null],
+  'Jeff P': [null,null,null,null,null,null,null],
   'Joliet Mike': [null,null,null,null,null,null,null],
   'Julie': [null,null,null,null,null,null,null],
   'Justin D': [null,null,null,null,null,null,null],
@@ -5605,13 +5605,13 @@ function getShiftDisplay(sectionLabel, entry) {
   return String(entry);
 }
 // Aliases: short names that may appear on physical schedules → canonical key in DRIVERS
-const DRIVER_ALIASES = { 'jeff z': 'Jeff Zeggebeen', 'jeff zeggeben': 'Jeff Zeggebeen' };
+const DRIVER_ALIASES = { 'jeff z': 'Jeff Z', 'jeff zeggeben': 'Jeff Z', 'jeff zeggebeen': 'Jeff Z', 'jeff p': 'Jeff P', 'jeff pietras': 'Jeff P' };
 // Single universal name-correction table, applied to EVERY section every time
 // schedule data loads (not just on upload). Add entries here going forward —
 // this is the one place that needs updating, not scattered per-upload logic.
 const NAME_ALIASES = {
   'alex': 'Alexis A', 'alex a': 'Alexis A',
-  'nithia': 'Nithia Maldonado', 'nithia maldonado': 'Nithia Maldonado', 'lithia': 'Nithia Maldonado',
+  'nithia': 'Nithia', 'nithia maldonado': 'Nithia', 'lithia': 'Nithia',
   'nick': 'Nick', 'nicholas': 'Nick', 'nicholas urbana': 'Nick',
   'sio': 'Sio', 'sio mcavoy': 'Sio',
   'laura': 'Laura Z', 'laura z': 'Laura Z',
@@ -5654,7 +5654,7 @@ const KITCHEN = {
   'Ever': [null,null,null,null,null,null,null],
   'Jesus': [null,null,null,null,null,null,null],
   'Jose B': [null,null,null,null,null,null,null],
-  'Nithia Maldonado': [null,null,null,null,null,null,null],
+  'Nithia': [null,null,null,null,null,null,null],
   'Laura Z': [null,null,null,null,null,null,null],
 };
 const PREP = {
@@ -5758,7 +5758,7 @@ function getBOHSection(sectionData, di) {
   Object.entries(sectionData).forEach(([name,days])=>{
     const raw=days[di];
     const parsed=parseBOH(raw,di);
-    if(parsed) result.push({n:name, a:parsed.a, p:parsed.p});
+    if(parsed) result.push({n:shortName(name), a:parsed.a, p:parsed.p});
   });
   result.sort((a,b)=>{
     const toM=s=>{const m=s.match(/(\d+)(?::(\d+))?(AM|PM)/i);if(!m)return 9999;let h=parseInt(m[1]),mn=parseInt(m[2]||0);if(m[3].toUpperCase()==='PM'&&h!==12)h+=12;return h*60+mn;};
@@ -5889,7 +5889,7 @@ function getFOHSection(sectionData, di) {
     const start=e[0], end=e[1];
     const am=fmtFOH(start,di,false,false);
     const pm=end==='C'?'C':(end?fmtFOH(end,di,false,true):'');
-    if(am) result.push({n:name,a:am,p:pm});
+    if(am) result.push({n:shortName(name),a:am,p:pm});
   });
   result.sort((a,b)=>{
     const toM=s=>{const m=s.match(/(\d+)(?::(\d+))?(AM|PM)/i);if(!m)return 9999;let h=parseInt(m[1]),mn=parseInt(m[2]||0);if(m[3].toUpperCase()==='PM'&&h!==12)h+=12;return h*60+mn;};
@@ -8908,7 +8908,7 @@ function renderSchedule() {
     html+='</tr>';
     schedSort(Object.entries(DRIVERS),'drv')
       .forEach(([name,days])=>{
-        html+=`<tr><td>${name}</td>`;
+        html+=`<tr><td>${shortName(name)}</td>`;
         days.forEach((raw,di)=>{
           if(window._schedEditMode){
             var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="DRIVERS" data-name="${name}" data-di="${di}" value="${getShiftDisplay('DRIVERS', raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;">`;
@@ -8932,7 +8932,7 @@ function renderSchedule() {
       html+=`<tr class="sched-sec-hdr"><td colspan="8">${l}</td></tr>`;
       schedSort(Object.entries(d),'foh').forEach(([name,days])=>{
         fohAllNames.push(name);
-        html+=`<tr><td>${name}</td>`;
+        html+=`<tr><td>${shortName(name)}</td>`;
         days.forEach((e,di)=>{
           if(window._schedEditMode){
             var rawVal = getShiftDisplay(l, e);
@@ -8955,7 +8955,7 @@ function renderSchedule() {
       html+=`<tr class="sched-sec-hdr"><td colspan="8">${l}</td></tr>`;
       schedSort(Object.entries(d),'boh').forEach(([name,days])=>{
         bohAllNames.push(name);
-        html+=`<tr><td>${name}</td>`;
+        html+=`<tr><td>${shortName(name)}</td>`;
         days.forEach((raw,di)=>{
           if(window._schedEditMode){
             var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="${l}" data-name="${name}" data-di="${di}" value="${getShiftDisplay(l, raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;">`;
@@ -10394,6 +10394,43 @@ const DEFAULT_ROSTER = {
   'Lea': [{role:'Bartender',rate:9.0,keys:['Lea']}]
 };
 
+// Never display a full last name anywhere in the app -- first name only,
+// except where two currently-active people genuinely share the same first
+// name, in which case a last initial is added for disambiguation. This is
+// computed from the actual roster (not hardcoded per-name) so it stays
+// correct as people are added or removed. Anyone already stored as
+// "First X" (a single-letter last initial, like "Mike G" or "Hannah Z")
+// passes through unchanged -- they're already in the correct final form.
+var _shortNameCollisionSet = null;
+function _buildShortNameCollisionSet() {
+  var firstNameCounts = {};
+  var allSections = [KITCHEN, PIZZA, PREP, BUS, DISH, MANAGERS, SERVERS, BARTENDERS, CASHIERS, HOSTS, DRIVERS];
+  allSections.forEach(function(sec){
+    Object.keys(sec).forEach(function(n) {
+      var fn = n.split(' ')[0];
+      firstNameCounts[fn] = (firstNameCounts[fn] || 0) + 1;
+    });
+  });
+  _shortNameCollisionSet = firstNameCounts;
+}
+function shortName(fullName) {
+  if(!fullName) return fullName;
+  // A few names are "Qualifier First" rather than "First Last" (e.g. a
+  // location distinguishing which person, not a surname) -- these pass
+  // through completely unchanged since splitting on the space would
+  // incorrectly treat the qualifier as a droppable last name.
+  var QUALIFIER_FIRST_EXCEPTIONS = ['Joliet Mike'];
+  if(QUALIFIER_FIRST_EXCEPTIONS.indexOf(fullName) !== -1) return fullName;
+  var parts = fullName.split(' ');
+  if(parts.length === 1) return fullName; // already just a first name
+  var last = parts[1];
+  if(last.length <= 2) return fullName; // already "First X" -- correct form already
+  if(!_shortNameCollisionSet) _buildShortNameCollisionSet();
+  var fn = parts[0];
+  if(_shortNameCollisionSet[fn] > 1) return fn + ' ' + last[0]; // genuine collision -- keep an initial
+  return fn; // unique first name -- drop the last name entirely
+}
+
 
 const RATES = {
   'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie Cruz':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
@@ -11687,8 +11724,10 @@ function parseWeekData(week) {
     Object.keys(PIZZA).forEach(k => delete PIZZA[k]);       if(boh.PIZZA)    Object.assign(PIZZA, boh.PIZZA);
     Object.keys(KITCHEN).forEach(k => delete KITCHEN[k]);   if(boh.KITCHEN)  Object.assign(KITCHEN, boh.KITCHEN);
     // Nick is allowed in Kitchen and Prep - no deletion
-    // Normalize Nithia → Nithia Maldonado after Supabase load
-    if(KITCHEN['Nithia'] && !KITCHEN['Nithia Maldonado']) { KITCHEN['Nithia Maldonado'] = KITCHEN['Nithia']; delete KITCHEN['Nithia']; }
+    // Enforce the short display form -- flip the OLD direction (this used
+    // to convert 'Nithia' back to 'Nithia Maldonado', silently undoing the
+    // no-full-last-names fix every time schedule data loaded from Supabase).
+    if(KITCHEN['Nithia Maldonado'] && !KITCHEN['Nithia']) { KITCHEN['Nithia'] = KITCHEN['Nithia Maldonado']; delete KITCHEN['Nithia Maldonado']; }
     Object.keys(PREP).forEach(k => delete PREP[k]);         if(boh.PREP)     Object.assign(PREP, boh.PREP);
     Object.keys(BUS).forEach(k => delete BUS[k]);           if(boh.BUS)      Object.assign(BUS, boh.BUS);
     Object.keys(DISH).forEach(k => delete DISH[k]);         if(boh.DISH)     Object.assign(DISH, boh.DISH);
@@ -13107,7 +13146,7 @@ async function readScheduleImage(dataUrl, type) {
           }
         });
         // Normalize short names to full names
-        var kitchenAliases = {'nithia': 'Nithia Maldonado', 'lithia': 'Nithia Maldonado', 'nicholas': 'Nick', 'nicholas urbana': 'Nick', 'laura': 'Laura Z'};
+        var kitchenAliases = {'nithia': 'Nithia', 'lithia': 'Nithia', 'nicholas': 'Nick', 'nicholas urbana': 'Nick', 'laura': 'Laura Z'};
         Object.keys(sched.KITCHEN).forEach(function(name){
           var alias = kitchenAliases[name.toLowerCase()];
           if(alias && alias !== name) {
@@ -14641,7 +14680,7 @@ function printSchedSection(range) {
     var secName = sec[0], secData = sec[1];
     var secRows = '';
     Object.entries(secData).forEach(function(e){
-      var name = e[0], days = e[1];
+      var name = shortName(e[0]), days = e[1];
       var hasShift = daysToShow.some(function(di){ return days[di] && days[di] !== 'x' && days[di] !== 'X'; });
       if(!hasShift) return;
       secRows += '<tr><td>'+name+'</td>' + daysToShow.map(function(di){
