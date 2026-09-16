@@ -7952,10 +7952,15 @@ function scheduleCellKeyNav(e) {
   }
 }
 
-async function saveSchedInlineEdits() {
-  // Collect all input values and write back to section objects
-  var inputs = document.querySelectorAll('.sched-inline-input');
-  inputs.forEach(function(inp) {
+// Writes whatever's currently sitting in the edit-mode inputs into the
+// in-memory section objects, WITHOUT touching Supabase. This has to run
+// before ANY re-render while editing -- renderSchedule() gets called from
+// many places (switching Drivers/FOH/BOH, changing weeks, background
+// refreshes), and every one of them was silently discarding unsaved
+// keystrokes by rebuilding the table straight from the untouched data.
+function syncInlineEditsToMemory() {
+  if(!window._schedEditMode) return;
+  document.querySelectorAll('.sched-inline-input').forEach(function(inp) {
     var section = inp.dataset.section;
     var name = inp.dataset.name;
     var di = parseInt(inp.dataset.di);
@@ -7964,18 +7969,23 @@ async function saveSchedInlineEdits() {
       return;
     }
     var secObj = {MANAGERS:MANAGERS,DRIVERS:DRIVERS,PIZZA:PIZZA,KITCHEN:KITCHEN,PREP:PREP,BUS:BUS,DISH:DISH,SERVERS:SERVERS,BARTENDERS:BARTENDERS,CASHIERS:CASHIERS,HOSTS:HOSTS}[section];
-    setShiftValue(section, secObj, name, di, inp.value);
+    if(secObj) setShiftValue(section, secObj, name, di, inp.value);
   });
   document.querySelectorAll('.sched-event-input').forEach(function(inp){
     var di = parseInt(inp.dataset.di);
     var val = inp.value.trim();
     if(!val) { EVENTS_LIST[di] = []; return; }
     if(EVENTS_LIST[di] && EVENTS_LIST[di].length === 1) {
-      EVENTS_LIST[di][0].name = val; // preserve any time/servers already set
+      EVENTS_LIST[di][0].name = val;
     } else {
       EVENTS_LIST[di] = [{name: val, time: '', servers: ''}];
     }
   });
+}
+
+async function saveSchedInlineEdits() {
+  // Collect all input values and write back to section objects
+  syncInlineEditsToMemory();
   syncWeekEventsFromList();
   // Save to Supabase — PATCH the existing row by id, same reliable path Run
   // Sheets' saveEdits() already uses successfully. The previous DELETE+POST
@@ -8859,6 +8869,7 @@ function buildNotesFooterRows(section, namesInView) {
 }
 
 function renderSchedule() {
+  syncInlineEditsToMemory(); // must run before rebuilding the table below, or any unsaved keystroke gets silently discarded
   if(typeof setScheduleViewMode === 'function') setScheduleViewMode(false);
   const el = document.getElementById('schedule-content');
   // Build day-column headers from the currently loaded week (not hardcoded)
