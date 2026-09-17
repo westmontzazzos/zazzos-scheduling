@@ -4924,7 +4924,21 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="padding:0 16px 8px;">
       <button onclick="gatedShowOverrideLog(this)" class="btn btn-secondary" style="width:100%;">📋 Schedule Log</button>
     </div>
+    <div style="padding:0 16px 8px;">
+      <button onclick="gatedShowFullMessageLog()" class="btn btn-secondary" style="width:100%;">💬 Full Message Log</button>
+    </div>
     <div id="private-data"></div>
+  </div>
+</div>
+
+<!-- FULL MESSAGE LOG (Private tab, owners only) -->
+<div id="full-message-log-modal" style="display:none;position:fixed;inset:0;z-index:10004;background:rgba(0,0,0,0.65);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;box-sizing:border-box;">
+    <div style="background:var(--red);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.06em;color:#fff;">Full Message Log</div>
+      <div onclick="document.getElementById('full-message-log-modal').style.display='none';" style="color:#fff;font-size:20px;cursor:pointer;padding:0 4px;">✕</div>
+    </div>
+    <div id="full-message-log-body" style="padding:14px 16px;"></div>
   </div>
 </div>
 
@@ -8156,6 +8170,7 @@ async function initMessagingTab() {
     });
     if(!resp.ok) throw new Error('load failed (' + resp.status + ')');
     var rows = await resp.json();
+    var currentUser = getCurrentUser();
     var threadsMap = {};
     rows.forEach(function(r){
       var key = r.thread_id != null ? r.thread_id : r.id;
@@ -8166,8 +8181,21 @@ async function initMessagingTab() {
       var msgs = threadsMap[key].sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
       var root = msgs[0];
       var latest = msgs[msgs.length-1];
-      return { key: key, subject: root.subject || '(no subject)', isPrivate: !!root.is_private, participants: [root.from_user, root.to_user], lastAt: latest.created_at, lastBody: latest.body, messages: msgs };
-    }).sort(function(a,b){ return new Date(b.lastAt) - new Date(a.lastAt); });
+      // Participants from EVERY message in the thread, not just the root --
+      // a reply can come from whichever side answers, so checking only the
+      // first message could miss someone who's genuinely part of it.
+      var allParticipants = [];
+      msgs.forEach(function(m){
+        if(allParticipants.indexOf(m.from_user) === -1) allParticipants.push(m.from_user);
+        if(allParticipants.indexOf(m.to_user) === -1) allParticipants.push(m.to_user);
+      });
+      return { key: key, subject: root.subject || '(no subject)', isPrivate: !!root.is_private, participants: [root.from_user, root.to_user], allParticipants: allParticipants, lastAt: latest.created_at, lastBody: latest.body, messages: msgs };
+    })
+    // The Messaging tab is personal -- you only ever see threads you're
+    // actually part of. Seeing everyone's messages is reserved for the
+    // full log in the Private tab, which is PIN-gated to owners.
+    .filter(function(t){ return t.allParticipants.indexOf(currentUser) !== -1; })
+    .sort(function(a,b){ return new Date(b.lastAt) - new Date(a.lastAt); });
     renderMessagingThreadList();
   } catch(e) {
     list.innerHTML = '<div style="color:#c8102e;font-size:13px;text-align:center;padding:20px;">Could not load messages.</div>';
@@ -8254,6 +8282,67 @@ async function sendMessagingThreadReply() {
     alert('Reply failed — nothing was recorded. Check your connection and try again: ' + e.message);
   }
 }
+
+// Full audit view of every message, unfiltered by recipient -- owners only,
+// PIN-gated at 9608 (same as Schedule Log). Unlike the personal Messaging
+// tab, this shows everything: who it was to/from, every reply, whether it
+// was marked fixed or confirmed resolved, and exactly when.
+async function gatedShowFullMessageLog() {
+  var pin = await askPin('Enter PIN to open the Full Message Log');
+  if(pin === null) return;
+  if(String(pin).trim() !== '9608') { alert('Incorrect PIN.'); return; }
+
+  var body = document.getElementById('full-message-log-body');
+  body.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px;">Loading...</div>';
+  document.getElementById('full-message-log-modal').style.display = 'flex';
+
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/manager_messages?order=created_at.asc&select=*', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(!resp.ok) throw new Error('load failed (' + resp.status + ')');
+    var rows = await resp.json();
+    if(!rows.length) { body.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px;">No messages yet.</div>'; return; }
+
+    var threadsMap = {};
+    rows.forEach(function(r){
+      var key = r.thread_id != null ? r.thread_id : r.id;
+      if(!threadsMap[key]) threadsMap[key] = [];
+      threadsMap[key].push(r);
+    });
+    var threads = Object.keys(threadsMap).map(function(key){
+      var msgs = threadsMap[key].sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
+      return { key: key, root: msgs[0], messages: msgs, lastAt: msgs[msgs.length-1].created_at };
+    }).sort(function(a,b){ return new Date(b.lastAt) - new Date(a.lastAt); });
+
+    var fmtDt = function(iso){
+      var d = new Date(iso);
+      var h = d.getHours(), m = String(d.getMinutes()).padStart(2,'0');
+      var ap = h>=12?'PM':'AM'; h = h%12 || 12;
+      return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getFullYear()).slice(-2)+' '+h+':'+m+ap;
+    };
+    var ACTION_LABELS = {sent:'Sent', reply:'Reply', marked_fixed:'Marked Fixed', confirmed_closed:'Confirmed Resolved', reopened:'Reopened'};
+
+    body.innerHTML = threads.map(function(t){
+      var lockTag = t.root.is_private ? '<span style="color:var(--red);font-size:10px;font-weight:700;margin-left:6px;">🔒 PRIVATE</span>' : '';
+      var msgsHtml = t.messages.map(function(m){
+        var actionLabel = ACTION_LABELS[m.action] || m.action || 'Sent';
+        return '<div style="padding:8px 0;border-top:1px solid #f0f0f0;">'
+          + '<div style="font-size:12px;font-weight:700;color:#222;">'+m.from_user+' → '+m.to_user+' <span style="font-weight:400;color:#888;">('+actionLabel+')</span></div>'
+          + '<div style="font-size:11px;color:#aaa;">'+fmtDt(m.created_at)+'</div>'
+          + (m.body ? '<div style="font-size:13px;color:#333;white-space:pre-wrap;margin-top:2px;">'+m.body+'</div>' : '')
+          + '</div>';
+      }).join('');
+      return '<div style="border:1px solid #eee;border-radius:10px;padding:10px 12px;margin-bottom:12px;">'
+        + '<div style="font-size:14px;font-weight:700;">'+(t.root.subject||'(no subject)')+lockTag+'</div>'
+        + msgsHtml
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    body.innerHTML = '<div style="color:#c8102e;font-size:13px;text-align:center;padding:20px;">Could not load the message log.</div>';
+  }
+}
+
 
 
 // Checks whether there's a thread currently awaiting action from the
