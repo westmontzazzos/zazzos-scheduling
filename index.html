@@ -4921,6 +4921,9 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="padding:0 16px 8px;">
       <button onclick="openManageRosterModal()" class="btn btn-secondary" style="width:100%;">👥 Manage Roster -- Add / Remove / Edit Staff</button>
     </div>
+    <div style="padding:0 16px 8px;">
+      <button onclick="gatedShowOverrideLog(this)" class="btn btn-secondary" style="width:100%;">📋 Schedule Log</button>
+    </div>
     <div id="private-data"></div>
   </div>
 </div>
@@ -13822,6 +13825,15 @@ async function saveEventsSummary() {
   } catch(e) {
     alert('Save failed — nothing was recorded. Check your connection and try again: ' + e.message);
   }
+}
+
+// PIN-gate the Schedule Log -- it's for owners only, requires 9608 every
+// time it's opened, same pattern as Manager Notes and private messages.
+async function gatedShowOverrideLog(btn) {
+  var pin = await askPin('Enter PIN to open Schedule Log');
+  if(pin === null) return;
+  if(String(pin).trim() !== '9608') { alert('Incorrect PIN.'); return; }
+  showOverrideLog(btn);
 }
 
 function showOverrideLog(btn) {
