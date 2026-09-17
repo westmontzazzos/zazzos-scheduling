@@ -4735,7 +4735,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('runsheets',null);})"><span class="TCard-icon">📋</span><span class="TCard-title">Run Sheets</span><span class="TCard-sub">Daily staff run sheets</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('update',null);})"><span class="TCard-icon">📸</span><span class="TCard-title">Schedule Upload</span><span class="TCard-sub">Upload new schedule</span></div>
-      <div class="TCard" onclick="gatedTileClick(function(){showTab('messaging',null);})"><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
+      <div class="TCard" style="position:relative;" onclick="gatedTileClick(function(){showTab('messaging',null);})"><div id="messaging-badge" style="display:none;position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:12px;min-width:20px;height:20px;border-radius:10px;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box;">0</div><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('hitlist',null);})"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('drawer',null);})"><span class="TCard-icon">💰</span><span class="TCard-title">Drawer Count</span><span class="TCard-sub">Register counts by shift</span></div>
@@ -6379,6 +6379,7 @@ function goHome() {
   // need to scroll) gets opened via showTab.
   document.getElementById('app-wrap').style.overflowY = 'hidden';
   window.scrollTo(0,0);
+  updateMessagingBadge();
 }
 
 function showTab(tab, btn) {
@@ -8147,6 +8148,7 @@ async function sendManagerMessage() {
     document.getElementById('send-message-modal').style.display = 'none';
     alert('Message sent to ' + recipientLabels + '.');
     if(currentTab === 'messaging') initMessagingTab();
+    updateMessagingBadge();
   } catch(e) {
     alert('Send failed — nothing was recorded. Check your connection and try again: ' + e.message);
   }
@@ -8349,6 +8351,19 @@ async function gatedShowFullMessageLog() {
 // person logged in on this device — either as the recipient of an open
 // message, or as the original sender being asked to verify a fix. Shows
 // at most one at a time; each action re-checks for the next one.
+// Threads dismissed via "Read later" this session -- stops the popup from
+// immediately reappearing, but does NOT affect the unread badge or the
+// Messaging tab's list, since the message itself is still genuinely
+// unresolved. Session-only by design: reopening the app should remind you
+// again, same as how the badge itself would still show it.
+var _readLaterDismissedKeys = {};
+function dismissMsgReadLater() {
+  var root = _pendingMsgAction.thread[0];
+  var key = root.thread_id != null ? root.thread_id : root.id;
+  _readLaterDismissedKeys[key] = true;
+  document.getElementById('msg-recipient-modal').style.display = 'none';
+}
+
 async function checkManagerMessages() {
   var user = getCurrentUser();
   try {
@@ -8369,6 +8384,7 @@ async function checkManagerMessages() {
     var actionable = null;
     Object.keys(threads).forEach(function(key){
       if(actionable) return;
+      if(_readLaterDismissedKeys[key]) return; // skip -- already said "read later" this session
       var thread = threads[key].sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
       var latest = thread[thread.length-1];
       if(latest.status !== 'closed' && latest.to_user === user) {
@@ -8384,6 +8400,39 @@ async function checkManagerMessages() {
       showMsgRecipientModal(actionable);
     }
   } catch(e) { /* silent — non-critical background check */ }
+}
+
+// Counts every thread waiting on the current user (same "actionable" rule
+// as the popup, but counting all of them, not just finding one to show).
+async function updateMessagingBadge() {
+  var badge = document.getElementById('messaging-badge');
+  if(!badge) return;
+  var user = getCurrentUser();
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/manager_messages?order=created_at.asc&select=*', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(!resp.ok) return;
+    var rows = await resp.json();
+    var threads = {};
+    (rows||[]).forEach(function(r){
+      var key = r.thread_id != null ? r.thread_id : r.id;
+      if(!threads[key]) threads[key] = [];
+      threads[key].push(r);
+    });
+    var count = 0;
+    Object.keys(threads).forEach(function(key){
+      var thread = threads[key].sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); });
+      var latest = thread[thread.length-1];
+      if(latest.status !== 'closed' && latest.to_user === user) count++;
+    });
+    if(count > 0) {
+      badge.textContent = count > 9 ? '9+' : String(count);
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch(e) { /* silent -- badge just stays as it was */ }
 }
 
 function showMsgRecipientModal(actionable) {
@@ -8427,6 +8476,7 @@ async function sendMsgReply() {
     if(!resp.ok) throw new Error('reply failed (' + resp.status + ')');
     document.getElementById('msg-recipient-modal').style.display = 'none';
     _pendingMsgAction = null;
+    updateMessagingBadge();
   } catch(e) {
     alert('Reply failed — nothing was recorded. Check your connection and try again: ' + e.message);
   }
@@ -8454,6 +8504,7 @@ async function markMessageFixed() {
     if(!resp.ok) throw new Error('mark fixed failed (' + resp.status + ')');
     document.getElementById('msg-recipient-modal').style.display = 'none';
     _pendingMsgAction = null;
+    updateMessagingBadge();
   } catch(e) {
     alert('Mark fixed failed — nothing was recorded. Check your connection and try again: ' + e.message);
   }
@@ -8490,6 +8541,7 @@ async function confirmMessageResolved() {
     if(!resp.ok) throw new Error('confirm failed (' + resp.status + ')');
     document.getElementById('msg-verify-modal').style.display = 'none';
     _pendingMsgAction = null;
+    updateMessagingBadge();
   } catch(e) {
     alert('Confirm failed — nothing was recorded. Check your connection and try again: ' + e.message);
   }
@@ -8517,6 +8569,7 @@ async function reopenMessage() {
     if(!resp.ok) throw new Error('reopen failed (' + resp.status + ')');
     document.getElementById('msg-verify-modal').style.display = 'none';
     _pendingMsgAction = null;
+    updateMessagingBadge();
   } catch(e) {
     alert('Reopen failed — nothing was recorded. Check your connection and try again: ' + e.message);
   }
@@ -9137,6 +9190,7 @@ function checkAppLock() {
       updateGlobalUserDisplay();
       setTimeout(checkDomsNotes, 500);
       setTimeout(checkManagerMessages, 700);
+      setTimeout(updateMessagingBadge, 700);
     }
     // Now actually do whatever tile the user originally tapped
     if(_pendingTileAction) { var fn = _pendingTileAction; _pendingTileAction = null; fn(); }
@@ -9170,6 +9224,7 @@ function setIdentity(name) {
   updateGlobalUserDisplay();
   setTimeout(checkDomsNotes, 500);
   setTimeout(checkManagerMessages, 700);
+      setTimeout(updateMessagingBadge, 700);
 }
 
 function updateGlobalUserDisplay() {
@@ -14323,6 +14378,9 @@ function handleLockIconTap() {
     <div style="padding:0 16px 16px;display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-secondary" style="flex:1;" onclick="showMsgReplyBox();">💬 Reply</button>
       <button class="btn btn-primary" style="flex:1;" onclick="markMessageFixed();">✅ Mark Fixed</button>
+    </div>
+    <div style="padding:0 16px 16px;">
+      <button class="btn btn-secondary" style="width:100%;background:transparent;color:#888;border:none;font-size:12px;" onclick="dismissMsgReadLater();">Read later</button>
     </div>
     <div id="msg-recipient-send-reply-row" style="padding:0 16px 16px;display:none;">
       <button class="btn btn-primary" style="width:100%;" onclick="sendMsgReply();">Send Reply</button>
