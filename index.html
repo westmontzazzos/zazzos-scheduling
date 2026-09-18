@@ -7099,9 +7099,9 @@ function printPayrollSummary() {
 function acceptErrorByIdx(idx) {
   var e = window._currentErrorList && window._currentErrorList[idx];
   if(!e) return;
-  acceptError(e.di, e.dept, e.msg);
+  acceptError(e.di, e.dept, e.msg, e.timeOffRequestId);
 }
-function acceptError(di, dept, msg) {
+function acceptError(di, dept, msg, timeOffRequestId) {
   // Stable key based on the actual week_start date -- never tied to
   // whatever format the header happens to display in. The header text
   // used to BE the key, which meant changing the display format (e.g.
@@ -7204,7 +7204,7 @@ function acceptError(di, dept, msg) {
   var okBtn = document.createElement('button');
   okBtn.style.cssText = 'flex:1;padding:13px;background:#0d0d0d;color:#fff;border:none;border-radius:10px;font-size:18px;font-weight:700;cursor:pointer;';
   okBtn.textContent = 'CONFIRM';
-  okBtn.addEventListener('click', function(){ zpConfirmOverride(di, dept, msg); });
+  okBtn.addEventListener('click', function(){ zpConfirmOverride(di, dept, msg, timeOffRequestId); });
   btnRow.appendChild(cancelBtn);
   btnRow.appendChild(okBtn);
   inner.appendChild(btnRow);
@@ -7246,7 +7246,7 @@ function bypassKey(di, dept, msg) {
   return di + '|' + dept + '|' + String(msg).replace(/\d+/g, '#');
 }
 
-function zpConfirmOverride(di, dept, msg) {
+function zpConfirmOverride(di, dept, msg, timeOffRequestId) {
   if(!window._zpOverrideWho) { alert('Please select who is overriding.'); return; }
   if(!window._zpOverrideAck) { alert('Please select an acknowledgment.'); return; }
   var pin = (document.getElementById('zp-override-pin')||{}).value;
@@ -7295,6 +7295,24 @@ function zpConfirmOverride(di, dept, msg) {
         }
       } catch(e) { console.log('Permanent role approval failed to save:', e.message); }
     })();
+  }
+
+  // Same rebuild for the Time Off conflict type -- tie the acceptance to
+  // this exact request's real database row instead of a day-index/message
+  // match, which could in principle drift if week boundaries or dates get
+  // computed even slightly differently between renders. This way there is
+  // no matching logic left to drift at all: the request is marked done,
+  // permanently, the moment it's accepted.
+  if(timeOffRequestId) {
+    fetch(SUPABASE_URL + '/rest/v1/time_off_requests?id=eq.' + timeOffRequestId, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify({conflict_acknowledged: true})
+    }).catch(function(e){ console.log('Time off conflict acknowledgment failed to save:', e.message); });
+    if(window._timeOffForErrorCheck) {
+      var reqRow = window._timeOffForErrorCheck.find(function(r){ return r.id === timeOffRequestId; });
+      if(reqRow) reqRow.conflict_acknowledged = true; // takes effect immediately, no reload needed
+    }
   }
 
   var now = new Date();
@@ -7375,7 +7393,7 @@ function renderAcceptedErrors() {
 
 async function loadTimeOffForErrorCheck() {
   try {
-    var r = await fetch(SUPABASE_URL + '/rest/v1/time_off_requests?location=eq.westmont&select=name,request_date,shift_type', {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/time_off_requests?location=eq.westmont&select=id,name,request_date,shift_type,conflict_acknowledged', {
       headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
     });
     window._timeOffForErrorCheck = r.ok ? await r.json() : [];
@@ -12738,6 +12756,7 @@ function checkScheduleErrors() {
       {obj:CASHIERS,lbl:'Cashiers'},{obj:HOSTS,lbl:'Hosts'},{obj:DRIVERS,lbl:'Drivers'}
     ];
     window._timeOffForErrorCheck.forEach(function(req){
+      if(req.conflict_acknowledged) return; // permanently acknowledged -- this exact request is done, period
       var reqDayIdx = dateForDay.indexOf(req.request_date);
       if(reqDayIdx === -1) return; // this request isn't in the currently-loaded week at all
       toBySectionCheck.forEach(function(sec){
@@ -12750,7 +12769,7 @@ function checkScheduleErrors() {
           if(!hasShift) return;
           var shiftLabel = req.shift_type === 'full' ? 'Full Day' : req.shift_type === 'morning' ? 'Half Day — Morning' : 'Half Day — Night';
           var errObj = {di:reqDayIdx, day:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][reqDayIdx], name:personName, dept:sec.lbl,
-            msg:personName+' is scheduled but has an approved Time Off request ('+shiftLabel+')'};
+            msg:personName+' is scheduled but has an approved Time Off request ('+shiftLabel+')', timeOffRequestId:req.id};
           var isDriverErr = sec.lbl === 'Drivers';
           var isBOHErr = ['Managers','Pizza','Kitchen','Prep','Bus','Dish'].indexOf(sec.lbl) !== -1;
           if(isDriverErr) errors.Drivers.push(errObj);
@@ -12797,7 +12816,7 @@ function checkScheduleErrors() {
       var diVal = (e.di !== undefined && e.di !== null && !isNaN(parseInt(e.di))) ? parseInt(e.di) : '';
       var focusVal = (e.name && e.name !== '—') ? e.name : '';
       var errIdx = window._currentErrorList ? window._currentErrorList.length : 0;
-      if(window._currentErrorList) window._currentErrorList.push({di:e.di, dept:e.dept, msg:e.msg});
+      if(window._currentErrorList) window._currentErrorList.push({di:e.di, dept:e.dept, msg:e.msg, timeOffRequestId:e.timeOffRequestId});
       var _days=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
       var _fullDate = FULL_DATES && FULL_DATES[e.di] ? FULL_DATES[e.di].replace(',','') : '';
       var dayLabel = (_days[e.di]||'') + (_fullDate ? ' '+_fullDate : '');
