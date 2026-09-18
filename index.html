@@ -7262,6 +7262,41 @@ function zpConfirmOverride(di, dept, msg) {
   if(!window._bypassedErrors) window._bypassedErrors = {};
   window._bypassedErrors[bypassKey(di, dept, msg)] = true;
 
+  // "X added to Y -- approve this role addition?" reads like a one-time,
+  // permanent decision, but until now accepting it only silenced this one
+  // week's schedule -- the exact same person/role combo came right back
+  // the following week, forever, since a fresh week is fresh data as far
+  // as the bypass system is concerned. If this is that kind of error,
+  // permanently add the role instead of just bypassing this week.
+  var roleAddMatch = msg.match(/^(.+) added to (.+) — approve this role addition\?$/);
+  if(roleAddMatch) {
+    var personName = roleAddMatch[1];
+    var currentRoles = (ROLE_OVERRIDES[personName] || ROLE_MAP[personName] || []).slice();
+    if(currentRoles.indexOf(dept) === -1) currentRoles.push(dept);
+    ROLE_OVERRIDES[personName] = currentRoles; // takes effect immediately, no reload needed
+    (async function(){
+      try {
+        var existing = await fetch(SUPABASE_URL + '/rest/v1/roster_role_overrides?original_name=eq.' + encodeURIComponent(personName) + '&select=id', {
+          headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+        }).then(function(r){ return r.ok ? r.json() : []; }).catch(function(){ return []; });
+        var fields = {roles_json: JSON.stringify(currentRoles), updated_by: getCurrentUser(), updated_at: new Date().toISOString()};
+        if(existing.length) {
+          await fetch(SUPABASE_URL + '/rest/v1/roster_role_overrides?id=eq.' + existing[0].id, {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+            body: JSON.stringify(fields)
+          });
+        } else {
+          await fetch(SUPABASE_URL + '/rest/v1/roster_role_overrides', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+            body: JSON.stringify([Object.assign({original_name: personName}, fields)])
+          });
+        }
+      } catch(e) { console.log('Permanent role approval failed to save:', e.message); }
+    })();
+  }
+
   var now = new Date();
   var logEntry = {
     week_label: weekKey,
