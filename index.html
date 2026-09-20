@@ -5642,7 +5642,7 @@ const NAME_ALIASES = {
 };
 // Names that should never appear in these sections regardless of what a parse
 // returns — e.g. Rhett is a Driver and must never be planted into FOH sections.
-const SECTION_BLOCKLIST = { SERVERS: ['rhett'], BARTENDERS: ['rhett'], CASHIERS: ['rhett'], HOSTS: ['rhett'] };
+const SECTION_BLOCKLIST = { SERVERS: ['rhett'], BARTENDERS: ['rhett'], CASHIERS: ['rhett'], HOSTS: ['rhett'], PIZZA: ['soto', 'luis soto'] };
 // General staff name aliases: short/alt names on the physical schedule → canonical wage-roster name
 
 // DOM'S NOTES
@@ -11824,9 +11824,16 @@ function cleanNames(obj, sectionType, sectionKey) {
   if(!obj) return obj;
   var cleaned = {};
   var blocked = (sectionKey && SECTION_BLOCKLIST[sectionKey]) || [];
+  // Anyone removed via Manage Roster must never be re-added by a future
+  // schedule upload just because a photo has their name on it -- "Remove"
+  // previously only hid someone from payroll displays, while the actual
+  // scheduling data (and this parsing step) never knew they'd been removed
+  // at all, so they'd silently reappear the next time a schedule came in.
+  var removedNames = (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).map(function(r){ return r.name.toLowerCase(); });
   Object.keys(obj).forEach(function(name) {
     var cleanKey = name.replace(/\s*\([\d\s\-\.]+\)/g, '').trim();
     if(blocked.indexOf(cleanKey.toLowerCase()) >= 0) return; // drop entirely
+    if(removedNames.indexOf(cleanKey.toLowerCase()) >= 0) return; // removed from the roster -- never re-add them
     // Resolve known driver aliases (e.g. "Jeff Z" → "Jeff Zeggebeen")
     var aliasKey = DRIVER_ALIASES[cleanKey.toLowerCase()];
     if(aliasKey) cleanKey = aliasKey;
