@@ -105,6 +105,18 @@ body {
 
 /* ── MAIN ── */
 .main { padding: 20px 16px 40px; max-width: 900px; margin: 0 auto; }
+@media (min-width: 900px) {
+  .main { max-width: 1200px; padding: 32px 40px 60px; }
+  .report-title { font-size: 34px !important; }
+  .report-sub { font-size: 15px !important; }
+  body { font-size: 16px; }
+  table th, table td { font-size: 15px !important; padding: 10px 14px !important; }
+  .TCard { padding: 28px 20px !important; }
+  .TCard-icon { font-size: 32px !important; }
+  .TCard-title { font-size: 18px !important; }
+  .TCard-sub { font-size: 13px !important; }
+  #home-tile-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 18px !important; margin-bottom: 40px !important; }
+}
 
 /* ── DAY TABS ── */
 .day-tabs {
@@ -4731,7 +4743,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
       <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.0</div>
     </div>
-    <div class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
+    <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('runsheets',null);})"><span class="TCard-icon">📋</span><span class="TCard-title">Run Sheets</span><span class="TCard-sub">Daily staff run sheets</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('update',null);})"><span class="TCard-icon">📸</span><span class="TCard-title">Schedule Upload</span><span class="TCard-sub">Upload new schedule</span></div>
@@ -6359,6 +6371,16 @@ function sizeHomeScreen() {
   // wide on a 390px screen). This keeps the fix fully isolated to home.
   var appWrap = document.getElementById('app-wrap');
   var homeScreen = document.getElementById('home-screen');
+  if(window.innerWidth >= 900) {
+    // Desktop: exact-fit-to-one-screen was a mobile-only requirement (avoiding
+    // iOS Safari's bounce/rubber-band on a screen with nothing to scroll).
+    // Forcing the same exact height on a tall desktop window just leaves the
+    // content floating, sparse, in the middle of a mostly-empty page.
+    // Natural height with normal scrolling looks and behaves correctly here.
+    homeScreen.style.height = 'auto';
+    if(appWrap) appWrap.style.overflowY = 'auto';
+    return;
+  }
   var userBar = document.getElementById('global-user-bar');
   var usedHeight = 0;
   if(userBar && getComputedStyle(userBar).display !== 'none') usedHeight += userBar.getBoundingClientRect().height;
