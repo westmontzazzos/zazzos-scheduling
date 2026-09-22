@@ -14969,12 +14969,10 @@ function showDomsAckModal(note) {
   var dismissCount = parseInt(localStorage.getItem('zp_doms_dismiss_count') || '0');
   var btnContainer = document.getElementById('doms-ack-buttons');
   btnContainer.innerHTML = '';
-  if(user === 'Alexis A') {
-    var cb = document.createElement('button');
-    cb.textContent = 'Clear';
-    cb.style.cssText = 'flex:1;padding:12px;background:#f0efed;color:#333;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;';
-    cb.onclick = function(){ modal.style.display='none'; };
-    btnContainer.appendChild(cb);
+  if(false) {
+    // (Alexis A special-case removed -- it never recorded an acknowledgment
+    // at all, so the same note would pop up for her forever. She now gets
+    // the same Print/Acknowledge flow as everyone else, below.)
   } else {
     var pb = document.createElement('button');
     pb.textContent = 'Print';
