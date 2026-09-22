@@ -4813,6 +4813,16 @@ document.addEventListener("DOMContentLoaded",function(){
   </div>
   <div class="sched-wrap" id="schedule-content"></div>
   <!-- Schedule Log Modal -->
+  <div id="week-notes-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:20px 18px 36px;max-height:85vh;overflow-y:auto;">
+      <div style="width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.06em;">Notes This Week</div>
+        <div onclick="document.getElementById('week-notes-modal').style.display='none';" style="color:#888;font-size:20px;cursor:pointer;padding:0 4px;">✕</div>
+      </div>
+      <div id="week-notes-body"></div>
+    </div>
+  </div>
   <div id="override-log-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
     <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:20px 18px 36px;max-height:85vh;overflow-y:auto;">
       <div style="width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px;"></div>
@@ -5633,15 +5643,24 @@ function setShiftValue(sectionLabel, secObj, name, di, rawInput) {
 // silently mis-parsing into a garbage time via character-indexing.
 function getShiftDisplay(sectionLabel, entry) {
   if(!entry) return '';
+  // Always show AM/PM/C uppercase, regardless of how it was typed or OCR'd
+  // originally -- this is display-only, the underlying stored value is
+  // never touched, so this can't ever corrupt real schedule data.
+  function normalizeCase(s) {
+    return String(s)
+      .replace(/(am|pm)/gi, function(m){ return m.toUpperCase(); })
+      .replace(/-\s*c(l)?$/i, '-C')
+      .replace(/^c(l)?$/i, 'C');
+  }
   if(isFOHSection(sectionLabel)) {
-    if(!Array.isArray(entry)) return String(entry); // legacy corrupted data — show as-is, don't mis-parse
+    if(!Array.isArray(entry)) return normalizeCase(entry); // legacy corrupted data — show as-is, don't mis-parse
     var start = entry[0] || '';
     var end = entry[1];
-    if(end === 'C') return start ? start + '-C' : '';
-    if(end) return start + '-' + end;
-    return start;
+    if(end === 'C') return start ? normalizeCase(start) + '-C' : '';
+    if(end) return normalizeCase(start) + '-' + normalizeCase(end);
+    return normalizeCase(start);
   }
-  return String(entry);
+  return normalizeCase(entry);
 }
 // Aliases: short names that may appear on physical schedules → canonical key in DRIVERS
 const DRIVER_ALIASES = { 'jeff z': 'Jeff Z', 'jeff zeggeben': 'Jeff Z', 'jeff zeggebeen': 'Jeff Z', 'jeff p': 'Jeff P', 'jeff pietras': 'Jeff P' };
@@ -8985,10 +9004,11 @@ async function renderScheduleCalendar() {
     html += '</div>';
   });
 
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-200);">'
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-200);">'
     + '<div class="Cal-action-btn" onclick="showEventsSummary()"><div class="Cal-action-icon">🎉</div><div class="Cal-action-label">Events</div></div>'
     + '<div class="Cal-action-btn" onclick="copyWeekToNext()"><div class="Cal-action-icon">📋</div><div class="Cal-action-label">Copy Week</div></div>'
     + '<div class="Cal-action-btn" onclick="showOverrideLog(this)"><div class="Cal-action-icon">📝</div><div class="Cal-action-label">Sched Log</div></div>'
+    + '<div class="Cal-action-btn" onclick="showWeekNotes()"><div class="Cal-action-icon">🗒️</div><div class="Cal-action-label">Notes</div></div>'
     + '</div>';
 
   el.innerHTML = html;
@@ -14093,6 +14113,42 @@ async function gatedShowOverrideLog(btn) {
   if(pin === null) return;
   if(String(pin).trim() !== '9608') { alert('Incorrect PIN.'); return; }
   showOverrideLog(btn);
+}
+
+// View every note for the currently-loaded week directly -- no need to
+// enter Edit and scroll to the bottom just to see what's already there.
+function showWeekNotes() {
+  var modal = document.getElementById('week-notes-modal');
+  modal.style.display = 'flex';
+  var body = document.getElementById('week-notes-body');
+  var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var GROUPS = [{key:'DRIVERS', label:'Drivers'}, {key:'FOH', label:'Front of House'}, {key:'BOH', label:'Back of House'}];
+  var rows = [];
+  GROUPS.forEach(function(g){
+    var groupNotes = SCHEDULE_NOTES[g.key];
+    if(!groupNotes || typeof groupNotes !== 'object') return;
+    Object.keys(groupNotes).forEach(function(name){
+      var personNotes = groupNotes[name];
+      if(!personNotes || typeof personNotes !== 'object') return;
+      Object.keys(personNotes).forEach(function(di){
+        var text = personNotes[di];
+        if(!text) return;
+        rows.push({group: g.label, name: name, di: parseInt(di,10), text: text});
+      });
+    });
+  });
+  if(!rows.length) {
+    body.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:20px;">No notes on this week\'s schedule.</div>';
+    return;
+  }
+  rows.sort(function(a,b){ return a.di - b.di || a.group.localeCompare(b.group); });
+  body.innerHTML = rows.map(function(r){
+    return '<div style="border-bottom:1px solid #f0f0f0;padding:10px 0;">'
+      + '<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;">'+dayNames[r.di]+' &middot; '+r.group+'</div>'
+      + '<div style="font-size:14px;font-weight:700;margin-top:2px;">'+shortName(r.name)+'</div>'
+      + '<div style="font-size:13px;color:#c8102e;margin-top:2px;">'+r.text+'</div>'
+      + '</div>';
+  }).join('');
 }
 
 function showOverrideLog(btn) {
