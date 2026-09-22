@@ -14969,10 +14969,19 @@ function showDomsAckModal(note) {
   var dismissCount = parseInt(localStorage.getItem('zp_doms_dismiss_count') || '0');
   var btnContainer = document.getElementById('doms-ack-buttons');
   btnContainer.innerHTML = '';
-  if(false) {
-    // (Alexis A special-case removed -- it never recorded an acknowledgment
-    // at all, so the same note would pop up for her forever. She now gets
-    // the same Print/Acknowledge flow as everyone else, below.)
+  // Ely owns Drivers and Back of House scheduling; Alex (Alexis A) owns
+  // Front of House. Only the person whose section actually has content in
+  // this note needs to acknowledge it -- everyone else (Selena, and anyone
+  // else with no scheduling responsibility here) just clears it, since
+  // requiring them to "acknowledge" a driver or BOH issue they don't
+  // control doesn't mean anything.
+  var isResponsible = (user === 'Ely' && (note.drivers || note.boh)) || (user === 'Alexis A' && note.foh);
+  if(!isResponsible) {
+    var cb = document.createElement('button');
+    cb.textContent = 'Clear';
+    cb.style.cssText = 'flex:1;padding:12px;background:#f0efed;color:#333;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;';
+    cb.onclick = function(){ modal.style.display='none'; };
+    btnContainer.appendChild(cb);
   } else {
     var pb = document.createElement('button');
     pb.textContent = 'Print';
