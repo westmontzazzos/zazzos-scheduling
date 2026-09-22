@@ -9475,18 +9475,32 @@ function seedCustomRosterIntoSections() {
 // names that belong in a given section array, so upload call sites can
 // merge them in live instead of relying on the frozen list alone.
 function customNamesForSection(sectionArrName) {
-  if(typeof CUSTOM_ROSTER === 'undefined' || !CUSTOM_ROSTER.length) return [];
   var names = [];
-  CUSTOM_ROSTER.forEach(function(p){
-    if(p.is_salaried) return;
-    var roles = [];
-    try { roles = JSON.parse(p.roles_json || '[]'); } catch(e) { roles = []; }
-    var belongs = roles.some(function(r){
-      var map = CUSTOM_ROLE_MAP[r];
-      return map && map.arr === sectionArrName;
+  if(typeof CUSTOM_ROSTER !== 'undefined' && CUSTOM_ROSTER.length) {
+    CUSTOM_ROSTER.forEach(function(p){
+      if(p.is_salaried) return;
+      var roles = [];
+      try { roles = JSON.parse(p.roles_json || '[]'); } catch(e) { roles = []; }
+      var belongs = roles.some(function(r){
+        var map = CUSTOM_ROLE_MAP[r];
+        return map && map.arr === sectionArrName;
+      });
+      if(belongs) names.push(p.name);
     });
-    if(belongs) names.push(p.name);
-  });
+  }
+  // An existing roster member whose role got approved via "approve this role
+  // addition" needs the same safety-net coverage -- otherwise their shift in
+  // the newly-approved section can still be silently dropped on re-upload,
+  // exactly like it could before that role was ever approved.
+  if(typeof ROLE_OVERRIDES !== 'undefined') {
+    Object.keys(ROLE_OVERRIDES).forEach(function(name){
+      var belongs = ROLE_OVERRIDES[name].some(function(roleLabel){
+        var map = CUSTOM_ROLE_MAP[roleLabel];
+        return map && map.arr === sectionArrName;
+      });
+      if(belongs && names.indexOf(name) === -1) names.push(name);
+    });
+  }
   return names;
 }
 
