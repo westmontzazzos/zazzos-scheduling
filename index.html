@@ -9078,8 +9078,18 @@ function buildDayCell(section, name, di, innerHtml) {
 function buildNotesFooterRows(section, namesInView) {
   var sectionNotes = SCHEDULE_NOTES[section];
   if(!sectionNotes || typeof sectionNotes !== 'object') return '';
+  // Someone who works multiple sub-sections (a manager covering Dish and
+  // Bus, say) gets pushed into namesInView once per sub-section they
+  // appear in -- without de-duplicating here, their one note gets listed
+  // as a separate identical row for every sub-section they're in.
+  var seenNames = {};
+  var uniqueNames = namesInView.filter(function(name){
+    if(seenNames[name]) return false;
+    seenNames[name] = true;
+    return true;
+  });
   var pairs = [];
-  namesInView.forEach(function(name){
+  uniqueNames.forEach(function(name){
     var personNotes = sectionNotes[name];
     if(!personNotes || typeof personNotes !== 'object' || Array.isArray(personNotes)) return;
     Object.keys(personNotes).forEach(function(di){ pairs.push({name:name, di:parseInt(di,10)}); });
