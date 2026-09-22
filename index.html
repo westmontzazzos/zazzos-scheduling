@@ -4741,8 +4741,8 @@ document.addEventListener("DOMContentLoaded",function(){
 <div id="home-screen" class="main" style="display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;padding-top:env(safe-area-inset-top, 0px);padding-bottom:0;overflow:hidden;">
   <div style="padding:0 20px;">
     <div style="text-align:center;margin-bottom:14px;">
-      <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;">Zazzo's</div>
-      <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westm<span onclick="event.stopPropagation();tapWestmontO();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">o</span>nt</div>
+      <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;">a</span>zzo's</div>
+      <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
       <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.24</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
@@ -4815,6 +4815,12 @@ document.addEventListener("DOMContentLoaded",function(){
   </div>
   <div class="sched-wrap" id="schedule-content"></div>
   <!-- Schedule Log Modal -->
+  <div id="change-pin-modal" style="display:none;position:fixed;inset:0;z-index:10005;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:20px 18px calc(90px + env(safe-area-inset-bottom, 0px));max-height:85vh;overflow-y:auto;box-sizing:border-box;">
+      <div style="width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px;"></div>
+      <div id="change-pin-body"></div>
+    </div>
+  </div>
   <div id="week-notes-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
     <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:20px 18px calc(90px + env(safe-area-inset-bottom, 0px));max-height:85vh;overflow-y:auto;box-sizing:border-box;">
       <div style="width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px;"></div>
@@ -6410,35 +6416,71 @@ function tapWestmontSecret() {
     gatedTileClick(function(){ showTab('private', null); });
   }
 }
-var _westmontOTapCount = 0;
-var _westmontOTapTimer = null;
-function tapWestmontO() {
-  _westmontOTapCount++;
-  clearTimeout(_westmontOTapTimer);
-  _westmontOTapTimer = setTimeout(function(){ _westmontOTapCount = 0; }, 1500);
-  if(_westmontOTapCount >= 5) {
-    _westmontOTapCount = 0;
+var _zazzosATapCount = 0;
+var _zazzosATapTimer = null;
+function tapZazzosA() {
+  _zazzosATapCount++;
+  clearTimeout(_zazzosATapTimer);
+  _zazzosATapTimer = setTimeout(function(){ _zazzosATapCount = 0; }, 1500);
+  if(_zazzosATapCount >= 5) {
+    _zazzosATapCount = 0;
     gatedTileClick(function(){ openChangePinModal(); });
   }
 }
 
-async function openChangePinModal() {
-  var which = confirm('Change the App PIN (used to open the app)?\n\nOK = App PIN\nCancel = Private/Owner PIN instead') ? 'app' : 'private';
+function openChangePinModal() {
+  var modal = document.getElementById('change-pin-modal');
+  modal.style.display = 'flex';
+  renderPinListView();
+}
+
+function renderPinListView() {
+  var body = document.getElementById('change-pin-body');
+  body.innerHTML = ''
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.06em;margin-bottom:14px;">Change Password</div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0;">'
+    + '<div><div style="font-size:14px;font-weight:700;">App PIN</div><div style="font-size:12px;color:#888;">Used to open the app</div></div>'
+    + '<button onclick="startPinChangeForm(\'app\')" class="btn btn-secondary" style="padding:8px 16px;">Change</button>'
+    + '</div>'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;">'
+    + '<div><div style="font-size:14px;font-weight:700;">Private / Owner PIN</div><div style="font-size:12px;color:#888;">Private tab, Schedule Log, private messages</div></div>'
+    + '<button onclick="startPinChangeForm(\'private\')" class="btn btn-secondary" style="padding:8px 16px;">Change</button>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'change-pin-modal\').style.display=\'none\';" class="btn btn-secondary" style="width:100%;margin-top:16px;">Close</button>';
+}
+
+var _pinChangeWhich = null;
+function startPinChangeForm(which) {
+  _pinChangeWhich = which;
+  var label = which === 'app' ? 'App PIN' : 'Private/Owner PIN';
+  var body = document.getElementById('change-pin-body');
+  body.innerHTML = ''
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.06em;margin-bottom:14px;">Change ' + label + '</div>'
+    + '<div style="font-size:12px;color:#888;margin-bottom:4px;">Current ' + label + '</div>'
+    + '<input type="tel" id="pin-change-current" inputmode="numeric" placeholder="Current PIN" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;box-sizing:border-box;margin-bottom:12px;">'
+    + '<div style="font-size:12px;color:#888;margin-bottom:4px;">New ' + label + ' (numbers only)</div>'
+    + '<input type="tel" id="pin-change-new" inputmode="numeric" placeholder="New PIN" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;box-sizing:border-box;margin-bottom:12px;">'
+    + '<div style="font-size:12px;color:#888;margin-bottom:4px;">Confirm new ' + label + '</div>'
+    + '<input type="tel" id="pin-change-confirm" inputmode="numeric" placeholder="Re-enter new PIN" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;box-sizing:border-box;margin-bottom:4px;">'
+    + '<div id="pin-change-error" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;"></div>'
+    + '<div style="display:flex;gap:8px;">'
+    + '<button onclick="renderPinListView()" class="btn btn-secondary" style="flex:0 0 auto;">← Back</button>'
+    + '<button onclick="submitPinChange()" class="btn btn-primary" style="flex:1;">Save New PIN</button>'
+    + '</div>';
+}
+
+async function submitPinChange() {
+  var which = _pinChangeWhich;
   var label = which === 'app' ? 'App PIN' : 'Private/Owner PIN';
   var currentValue = which === 'app' ? APP_PIN : PRIVATE_PIN;
+  var errEl = document.getElementById('pin-change-error');
+  var current = document.getElementById('pin-change-current').value.trim();
+  var newPin = document.getElementById('pin-change-new').value.trim();
+  var confirmPin = document.getElementById('pin-change-confirm').value.trim();
 
-  var enteredCurrent = prompt('Enter the CURRENT ' + label + ' to confirm it\'s really you:');
-  if(enteredCurrent === null) return;
-  if(enteredCurrent.trim() !== currentValue) { alert('That\'s not the current ' + label + '.'); return; }
-
-  var newPin = prompt('Enter the NEW ' + label + ' (numbers only):');
-  if(newPin === null) return;
-  newPin = newPin.trim();
-  if(!newPin || !/^\d+$/.test(newPin)) { alert('PIN must be numbers only.'); return; }
-
-  var confirmPin = prompt('Re-enter the new ' + label + ' to confirm:');
-  if(confirmPin === null) return;
-  if(confirmPin.trim() !== newPin) { alert('Those didn\'t match. Nothing was changed.'); return; }
+  if(current !== currentValue) { errEl.textContent = 'That\'s not the current ' + label + '.'; return; }
+  if(!newPin || !/^\d+$/.test(newPin)) { errEl.textContent = 'New PIN must be numbers only.'; return; }
+  if(confirmPin !== newPin) { errEl.textContent = 'Those two didn\'t match.'; return; }
 
   var key = which === 'app' ? 'app_pin' : 'private_pin';
   try {
@@ -6448,9 +6490,10 @@ async function openChangePinModal() {
       body: JSON.stringify([{key: key, value: newPin, updated_by: getCurrentUser(), updated_at: new Date().toISOString()}])
     });
     if(which === 'app') APP_PIN = newPin; else PRIVATE_PIN = newPin;
-    alert(label + ' changed successfully.');
+    document.getElementById('change-pin-body').innerHTML = '<div style="text-align:center;padding:20px 0;"><div style="font-size:32px;">✅</div><div style="font-size:14px;font-weight:700;margin-top:8px;">' + label + ' changed successfully.</div></div>'
+      + '<button onclick="document.getElementById(\'change-pin-modal\').style.display=\'none\';" class="btn btn-primary" style="width:100%;margin-top:16px;">Done</button>';
   } catch(e) {
-    alert('Failed to save the new PIN: ' + e.message);
+    errEl.textContent = 'Failed to save: ' + e.message;
   }
 }
 
