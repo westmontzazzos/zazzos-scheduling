@@ -14131,7 +14131,7 @@ function showWeekNotes() {
   var modal = document.getElementById('week-notes-modal');
   modal.style.display = 'flex';
   var body = document.getElementById('week-notes-body');
-  var dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
   var GROUPS = [{key:'DRIVERS', label:'Drivers'}, {key:'FOH', label:'Front of House'}, {key:'BOH', label:'Back of House'}];
   var rows = [];
   GROUPS.forEach(function(g){
@@ -14143,7 +14143,7 @@ function showWeekNotes() {
       Object.keys(personNotes).forEach(function(di){
         var text = personNotes[di];
         if(!text) return;
-        rows.push({group: g.label, name: name, di: parseInt(di,10), text: text});
+        rows.push({groupKey: g.key, group: g.label, name: name, di: parseInt(di,10), text: text});
       });
     });
   });
@@ -14152,13 +14152,37 @@ function showWeekNotes() {
     return;
   }
   rows.sort(function(a,b){ return a.di - b.di || a.group.localeCompare(b.group); });
-  body.innerHTML = rows.map(function(r){
+  body.innerHTML = rows.map(function(r, idx){
+    var dateLabel = (typeof FULL_DATES !== 'undefined' && FULL_DATES[r.di]) ? dayNames[r.di] + ' ' + FULL_DATES[r.di] : dayNames[r.di];
+    var textEsc = String(r.text).replace(/"/g,'&quot;');
+    var nameEsc = r.name.replace(/'/g,"\\'");
     return '<div style="border-bottom:1px solid #f0f0f0;padding:10px 0;">'
-      + '<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;">'+dayNames[r.di]+' &middot; '+r.group+'</div>'
+      + '<div style="font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:0.03em;">'+dateLabel+' &middot; '+r.group+'</div>'
       + '<div style="font-size:14px;font-weight:700;margin-top:2px;">'+shortName(r.name)+'</div>'
-      + '<div style="font-size:13px;color:#c8102e;margin-top:2px;">'+r.text+'</div>'
-      + '</div>';
+      + '<div style="display:flex;gap:6px;margin-top:4px;">'
+      + '<input type="text" value="'+textEsc+'" oninput="updateWeekNoteText(\''+r.groupKey+'\', \''+nameEsc+'\', '+r.di+', this.value)" style="flex:1;font-size:13px;color:#c8102e;padding:6px 8px;border:1px solid #ddd;border-radius:6px;">'
+      + '<button onclick="deleteWeekNote(\''+r.groupKey+'\', \''+nameEsc+'\', '+r.di+')" style="background:#f5f5f5;border:none;border-radius:6px;padding:0 12px;color:#888;font-size:16px;cursor:pointer;">🗑</button>'
+      + '</div></div>';
   }).join('');
+}
+
+// Edits/deletes here write directly to the same SCHEDULE_NOTES object the
+// schedule grid itself reads from -- there's only one copy of this data,
+// so a change here is automatically the same change everywhere it's shown.
+function updateWeekNoteText(section, name, di, value) {
+  if(!SCHEDULE_NOTES[section]) SCHEDULE_NOTES[section] = {};
+  if(!SCHEDULE_NOTES[section][name]) SCHEDULE_NOTES[section][name] = {};
+  SCHEDULE_NOTES[section][name][di] = value;
+  if(typeof renderSchedule === 'function' && document.getElementById('schedule-content')) renderSchedule();
+}
+function deleteWeekNote(section, name, di) {
+  if(SCHEDULE_NOTES[section] && SCHEDULE_NOTES[section][name]) {
+    delete SCHEDULE_NOTES[section][name][di];
+    if(!Object.keys(SCHEDULE_NOTES[section][name]).length) delete SCHEDULE_NOTES[section][name];
+    if(!Object.keys(SCHEDULE_NOTES[section]).length) delete SCHEDULE_NOTES[section];
+  }
+  if(typeof renderSchedule === 'function' && document.getElementById('schedule-content')) renderSchedule();
+  showWeekNotes(); // refresh this list to reflect the deletion immediately
 }
 
 function showOverrideLog(btn) {
