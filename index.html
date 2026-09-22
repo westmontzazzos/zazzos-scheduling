@@ -4755,7 +4755,13 @@ document.addEventListener("DOMContentLoaded",function(){
     </div>
   </div>
 </div>
-<div id="floating-home-btn" onclick="goHome()" style="display:none;position:fixed;bottom:18px;left:18px;z-index:2000;background:var(--red);color:#fff;border-radius:50%;width:52px;height:52px;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 8px rgba(0,0,0,0.3);cursor:pointer;">⌂</div>
+<div id="floating-home-btn" onclick="goHome()" aria-label="Home" title="Home" style="display:none;position:fixed;bottom:calc(18px + env(safe-area-inset-bottom, 0px));left:18px;z-index:2000;background:var(--red);color:#fff;border-radius:50%;width:52px;height:52px;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.28);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;display:block;">
+    <path d="M3 11.5 12 4l9 7.5"/>
+    <path d="M5.5 9.5V20h13V9.5"/>
+    <path d="M9.5 20v-6h5v6"/>
+  </svg>
+</div>
 <div id="global-status-bar" style="display:none;padding:6px 14px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:0.06em;color:#fff;"></div>
 <div id="global-user-bar" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:5px 14px;background:#f7f7f7;border-bottom:1px solid #eee;font-size:11px;color:#888;">
   Signed in as <b id="global-user-display" style="color:#333;"></b>
