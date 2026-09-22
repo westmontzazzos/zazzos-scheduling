@@ -5650,7 +5650,7 @@ const NAME_ALIASES = {
   'laura': 'Laura Z', 'laura z': 'Laura Z',
   'eddy': 'Eddie', 'eddie': 'Eddie',
   'matt': 'Matt', 'matt daniher': 'Matt', 'matt d': 'Matt',
-  'raul': 'Raul'
+  'raul': 'Raul', 'lia': 'Lea'
 };
 // Names that should never appear in these sections regardless of what a parse
 // returns — e.g. Rhett is a Driver and must never be planted into FOH sections.
@@ -12718,9 +12718,7 @@ function checkScheduleErrors() {
       var anyDriverToday = Object.values(DRIVERS).some(function(d){ return d[ddi]; });
       if(!anyDriverToday) continue;
       if(amCount < 2)
-        errors.Drivers.push({di:ddi, day:dday, name:'—', dept:'Drivers', msg:'Only '+amCount+' AM driver(s) at or before 10:30AM — need exactly 2'});
-      if(amCount > 2)
-        errors.Drivers.push({di:ddi, day:dday, name:'—', dept:'Drivers', msg:amCount+' AM drivers at or before 10:30AM — maximum is 2'});
+        errors.Drivers.push({di:ddi, day:dday, name:'—', dept:'Drivers', msg:'Only '+amCount+' AM driver(s) at or before 10:30AM — need at least 2'});
       if(closerCount === 0)
         errors.Drivers.push({di:ddi, day:dday, name:'—', dept:'Drivers', msg:'No driver closer (nobody with C)'});
       if(closerCount > 1)
