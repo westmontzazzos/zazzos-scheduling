@@ -9308,6 +9308,7 @@ function checkAppLock() {
       setTimeout(checkDomsNotes, 500);
       setTimeout(checkManagerMessages, 700);
       setTimeout(updateMessagingBadge, 700);
+      setTimeout(checkScheduleErrors, 900);
     }
     // Now actually do whatever tile the user originally tapped
     if(_pendingTileAction) { var fn = _pendingTileAction; _pendingTileAction = null; fn(); }
@@ -9342,6 +9343,7 @@ function setIdentity(name) {
   setTimeout(checkDomsNotes, 500);
   setTimeout(checkManagerMessages, 700);
       setTimeout(updateMessagingBadge, 700);
+      setTimeout(checkScheduleErrors, 900);
 }
 
 function updateGlobalUserDisplay() {
@@ -12421,6 +12423,12 @@ function confirmEarlyBOHStarts() {
 }
 
 function checkScheduleErrors() {
+  // Never show anything -- not even silently compute -- before the app is
+  // actually unlocked. This function gets triggered from loadAllWeeks(),
+  // which runs the instant the page loads, completely independent of the
+  // PIN gate; without this check, the error popup could appear before the
+  // person has typed anything at all.
+  if(!_appUnlocked) return;
 
   // Skip weeks that ended more than 2 weeks ago — recent past weeks still checked
   if(allWeeks && allWeeks[currentWeekIdx] && allWeeks[currentWeekIdx].week_start) {
