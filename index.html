@@ -12748,7 +12748,7 @@ function checkScheduleErrors() {
   ALL_SECS.forEach(function(sec) {
     Object.keys(sec.obj).forEach(function(name) {
       if(_managerNames.indexOf(name) !== -1) return; // managers can work any section
-      var allowed = ROLE_MAP[name] || _customAllowedMap[name];
+      var allowed = ROLE_OVERRIDES[name] || ROLE_MAP[name] || _customAllowedMap[name];
       // No entry in ROLE_MAP means this person has no defined role at all —
       // that is not a pass, it's the strongest possible violation. Role
       // controls placement, never name or spelling; an unrecognized name
