@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Zazzo's — v2.28</title>
+<title>Zazzo's — v2.29</title>
 <link rel="apple-touch-icon" id="za-touch-icon-apple">
 <link rel="icon" type="image/png" id="za-touch-icon-favicon">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4743,7 +4743,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.28</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.29</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -12052,7 +12052,14 @@ function cleanNames(obj, sectionType, sectionKey) {
   // scheduling data (and this parsing step) never knew they'd been removed
   // at all, so they'd silently reappear the next time a schedule came in.
   var removedNames = (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).map(function(r){ return r.name.toLowerCase(); });
-  Object.keys(obj).forEach(function(name) {
+  Object.keys(obj).forEach(function(rawName) {
+    // Collapse any run of whitespace (including non-breaking spaces the
+    // photo parser sometimes produces) to a single space, and drop a
+    // trailing period, BEFORE alias lookup -- an exact-string alias like
+    // 'reagan l' only matches if the incoming key is written exactly that
+    // way; a stray double space or invisible character silently defeats
+    // it and the name comes back unresolved every single week.
+    var name = rawName.replace(/[\s\u00A0]+/g, ' ').trim().replace(/\.$/, '');
     var cleanKey = name.replace(/\s*\([\d\s\-\.]+\)/g, '').trim();
     if(blocked.indexOf(cleanKey.toLowerCase()) >= 0) return; // drop entirely
     if(removedNames.indexOf(cleanKey.toLowerCase()) >= 0) return; // removed from the roster -- never re-add them
@@ -12067,7 +12074,7 @@ function cleanNames(obj, sectionType, sectionKey) {
     } else if(NAME_ALIASES[lower]) {
       cleanKey = NAME_ALIASES[lower];
     }
-    var incoming = obj[name];
+    var incoming = obj[rawName];
     if(cleaned[cleanKey] === undefined) {
       cleaned[cleanKey] = incoming;
     } else {
