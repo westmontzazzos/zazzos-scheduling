@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Zazzo's — v3.2</title>
+<title>Zazzo's — v3.3</title>
 <link rel="apple-touch-icon" id="za-touch-icon-apple">
 <link rel="icon" type="image/png" id="za-touch-icon-favicon">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4743,7 +4743,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.2</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.3</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -9320,9 +9320,15 @@ function renderSchedule() {
     }
   } else if(currentSchedView==='foh') {
     var fohAllNames = [];
+    var _secLblMap = {SERVERS:'Servers',BARTENDERS:'Bartenders',CASHIERS:'Cashiers',HOSTS:'Hosts'};
     [{l:'SERVERS',d:SERVERS},{l:'BARTENDERS',d:BARTENDERS},{l:'CASHIERS',d:CASHIERS},{l:'HOSTS',d:HOSTS}].forEach(({l,d})=>{
       html+=`<tr class="sched-sec-hdr"><td colspan="8">${l}</td></tr>`;
       schedSort(Object.entries(d),'foh').forEach(([name,days])=>{
+        // Not on the roster with a real role here = not on the visible
+        // schedule, full stop, until a manager approves it in the
+        // Schedule Log. Edit mode still shows it so it can be fixed or
+        // removed directly -- only the normal read view hides it.
+        if(!window._schedEditMode && !isNameAllowedInSection(name, _secLblMap[l])) return;
         fohAllNames.push(name);
         html+=`<tr><td>${shortName(name)}</td>`;
         days.forEach((e,di)=>{
@@ -9343,9 +9349,13 @@ function renderSchedule() {
     }
   } else {
     var bohAllNames = [];
+    var _secLblMapBOH = {MANAGERS:null,PIZZA:'Pizza',KITCHEN:'Kitchen',PREP:'Prep',BUS:'Bus',DISH:'Dish'};
     [{l:'MANAGERS',d:MANAGERS},{l:'PIZZA',d:PIZZA},{l:'KITCHEN',d:KITCHEN},{l:'PREP',d:PREP},{l:'BUS',d:BUS},{l:'DISH',d:DISH}].forEach(({l,d})=>{
       html+=`<tr class="sched-sec-hdr"><td colspan="8">${l}</td></tr>`;
       schedSort(Object.entries(d),'boh').forEach(([name,days])=>{
+        // Managers section is exempt (managers can work anywhere by
+        // definition); everyone else follows the same rule as FOH above.
+        if(l!=='MANAGERS' && !window._schedEditMode && !isNameAllowedInSection(name, _secLblMapBOH[l])) return;
         bohAllNames.push(name);
         html+=`<tr><td>${shortName(name)}</td>`;
         days.forEach((raw,di)=>{
@@ -9507,6 +9517,30 @@ var ROLE_OVERRIDES = {};         // {original_name: ['Server','Cashier',...]} --
                                   // changed from the app (hardcoded or app-added), no code push required
 var ROLE_RATE_OVERRIDES = {};    // {original_name: {'Cashier': 15, 'Server': 9}} -- per-role rate corrections
 var FULL_ROSTER_NAMES = [];      // [{n, role, origName, rate}] -- every hourly employee, regardless of hours this week
+
+var CUSTOM_ROLE_TO_SECLBL = {
+  'Server':'Servers','Bartender':'Bartenders','Cashier':'Cashiers','Host':'Hosts',
+  'Pizza':'Pizza','Kitchen':'Kitchen','Dish':'Dish','Prep':'Prep','Bus':'Bus'
+};
+// Single source of truth for "is this person allowed in this section" --
+// used by BOTH the schedule display (renderSchedule) and the error-checker,
+// so a name can never appear on the visible schedule without also being
+// recognized by the same rule that generates approval warnings. Previously
+// these were two separate, duplicated checks that could silently disagree.
+function isNameAllowedInSection(name, sectionLbl) {
+  if(Object.keys(MANAGERS).indexOf(name) !== -1) return true; // managers can work any section
+  var customAllowed = null;
+  if(typeof CUSTOM_ROSTER !== 'undefined' && CUSTOM_ROSTER.length) {
+    var person = CUSTOM_ROSTER.find(function(p){ return p.name === name && !p.is_salaried; });
+    if(person) {
+      var roles = [];
+      try { roles = JSON.parse(person.roles_json || '[]'); } catch(e) { roles = []; }
+      customAllowed = roles.map(function(r){ return CUSTOM_ROLE_TO_SECLBL[r]; }).filter(Boolean);
+    }
+  }
+  var allowed = ROLE_OVERRIDES[name] || ROLE_MAP[name] || customAllowed;
+  return !!(allowed && allowed.indexOf(sectionLbl) !== -1);
+}
 
 function loadCustomRosterThenRender() {
   Promise.all([
@@ -10432,7 +10466,7 @@ function renderPrivate() {
   if(unmatched.length){
     html+='<div style="background:#FFF8E1;border:1px solid #F0C040;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:12.5px;">';
     html+='<div style="font-weight:700;color:#8a6d00;margin-bottom:6px;">⚠ Not in wage roster — hours below are NOT included in the totals on this page</div>';
-    html+='<div style="font-size:10px;color:#c2a860;margin-bottom:8px;">build v3.2</div>';
+    html+='<div style="font-size:10px;color:#c2a860;margin-bottom:8px;">build v3.3</div>';
     unmatched.sort(function(a,b){return b.wh-a.wh;}).forEach(function(u){
       html+='<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>'+u.n+' <span style="color:var(--gray-400)">('+u.sec+')</span></span><span class="mono">'+u.wh.toFixed(1)+'h</span></div>';
     });
@@ -12034,6 +12068,11 @@ function cleanNames(obj, sectionType, sectionKey) {
     var name = rawName.replace(/[\s\u00A0]+/g, ' ').trim().replace(/\.$/, '');
     var cleanKey = name.replace(/\s*\([\d\s\-\.]+\)/g, '').trim();
     if(blocked.indexOf(cleanKey.toLowerCase()) >= 0) return; // drop entirely
+    // Only "Reagan" (exact) is ever a valid name here. Any other spelling
+    // or suffix ("Raegan", "Reagan L", "Reagan Lee", trailing initials,
+    // etc.) is dropped outright -- not merged, not aliased, gone -- no
+    // matter how a future schedule photo happens to OCR it.
+    if(/reagan|raegan/i.test(cleanKey) && cleanKey !== 'Reagan') return;
     if(removedNames.indexOf(cleanKey.toLowerCase()) >= 0) return; // removed from the roster -- never re-add them
     // Resolve known driver aliases (e.g. "Jeff Z" → "Jeff Zeggebeen")
     var aliasKey = DRIVER_ALIASES[cleanKey.toLowerCase()];
