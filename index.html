@@ -12116,6 +12116,15 @@ function normalizeSectionDotTimes(obj, isFOH) {
 
 function parseWeekData(week) {
   try {
+    // Rebuild NAME_ALIASES from scratch every time, instead of trusting
+    // whatever's accumulated in memory. This makes it self-correcting: even
+    // if something elsewhere ever deletes or corrupts an entry, the very
+    // next week load repairs it -- no full app reload required.
+    Object.keys(NAME_ALIASES).forEach(function(k){ delete NAME_ALIASES[k]; });
+    Object.assign(NAME_ALIASES, BASE_NAME_ALIASES);
+    if(typeof CUSTOM_ALIASES_LIST !== 'undefined') {
+      CUSTOM_ALIASES_LIST.forEach(function(row){ NAME_ALIASES[row.alias.toLowerCase()] = row.canonical_name; });
+    }
     var boh = week.boh_data ? JSON.parse(week.boh_data) : {};
     var foh = week.foh_data ? JSON.parse(week.foh_data) : {};
     // Load events — EVENTS_LIST is the single source of truth; WEEK_EVENTS
