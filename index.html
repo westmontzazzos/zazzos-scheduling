@@ -6457,11 +6457,11 @@ function renderPinListView() {
     + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;letter-spacing:0.06em;margin-bottom:14px;">Change Password</div>'
     + '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f0f0f0;">'
     + '<div><div style="font-size:14px;font-weight:700;">App PIN</div><div style="font-size:12px;color:#888;">Used to open the app</div></div>'
-    + '<button onclick="startPinChangeForm(\'app\')" class="btn btn-secondary" style="padding:8px 16px;">Change</button>'
+    + '<button onclick="startPinChangeForm(\'app\')" class="btn btn-secondary" style="flex:0 0 auto;">Change</button>'
     + '</div>'
     + '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;">'
     + '<div><div style="font-size:14px;font-weight:700;">Private / Owner PIN</div><div style="font-size:12px;color:#888;">Private tab, Schedule Log, private messages</div></div>'
-    + '<button onclick="startPinChangeForm(\'private\')" class="btn btn-secondary" style="padding:8px 16px;">Change</button>'
+    + '<button onclick="startPinChangeForm(\'private\')" class="btn btn-secondary" style="flex:0 0 auto;">Change</button>'
     + '</div>'
     + '<button onclick="document.getElementById(\'change-pin-modal\').style.display=\'none\';" class="btn btn-secondary" style="width:100%;margin-top:16px;">Close</button>';
 }
@@ -6478,7 +6478,7 @@ function startPinChangeForm(which) {
     + '<div style="font-size:12px;color:#888;margin-bottom:4px;">New ' + label + ' (numbers only)</div>'
     + '<input type="tel" id="pin-change-new" inputmode="numeric" placeholder="New PIN" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;box-sizing:border-box;margin-bottom:12px;">'
     + '<div style="font-size:12px;color:#888;margin-bottom:4px;">Confirm new ' + label + '</div>'
-    + '<input type="tel" id="pin-change-confirm" inputmode="numeric" placeholder="Re-enter new PIN" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;box-sizing:border-box;margin-bottom:4px;">'
+    + '<input type="tel" id="pin-change-confirm" inputmode="numeric" placeholder="Re-enter new PIN" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px;font-size:14px;box-sizing:border-box;margin-bottom:12px;">'
     + '<div id="pin-change-error" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;"></div>'
     + '<div style="display:flex;gap:8px;">'
     + '<button onclick="renderPinListView()" class="btn btn-secondary" style="flex:0 0 auto;">← Back</button>'
