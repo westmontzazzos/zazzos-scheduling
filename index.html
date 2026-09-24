@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Zazzo's — v3.3</title>
+<title>Zazzo's — v3.4</title>
 <link rel="apple-touch-icon" id="za-touch-icon-apple">
 <link rel="icon" type="image/png" id="za-touch-icon-favicon">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4743,7 +4743,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.3</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.4</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -5719,7 +5719,16 @@ const NAME_ALIASES = {
 const BASE_NAME_ALIASES = Object.assign({}, NAME_ALIASES);
 // Names that should never appear in these sections regardless of what a parse
 // returns — e.g. Rhett is a Driver and must never be planted into FOH sections.
-const SECTION_BLOCKLIST = { SERVERS: ['rhett', 'raegan', 'reagan l'], BARTENDERS: ['rhett'], CASHIERS: ['rhett'], HOSTS: ['rhett'], PIZZA: ['soto', 'luis soto'] };
+const SECTION_BLOCKLIST = {
+  SERVERS: ['rhett', 'raegan', 'reagan l', 'annaka', 'allie', 'kamini', 'julia', 'elena', 'claudia g', 'claudia g.', 'claudia m', 'claudia m.'],
+  BARTENDERS: ['rhett', 'allie'],
+  CASHIERS: ['rhett', 'natalie'],
+  HOSTS: ['rhett', 'natalie'],
+  PIZZA: ['soto', 'luis soto', 'ever', 'monico', 'monico esparza'],
+  KITCHEN: ['ever', 'jose b'],
+  DISH: ['armani', 'armani finley', 'jaxon', 'eric', 'matt', 'matt daniher', 'matt d'],
+  BUS: ['armani', 'armani finley', 'jaxon', 'eric']
+};
 // General staff name aliases: short/alt names on the physical schedule → canonical wage-roster name
 
 // DOM'S NOTES
@@ -5734,7 +5743,6 @@ const PIZZA = {
   'Carlos': [null,null,null,null,null,null,null],
   'Carlos Jr': [null,null,null,null,null,null,null],
   'Eddie': [null,null,null,null,null,null,null],
-  'Ever': [null,null,null,null,null,null,null],
   'Gonzo': [null,null,null,null,null,null,null],
   'Jesus': [null,null,null,null,null,null,null],
   'Leo': [null,null,null,null,null,null,null],
@@ -5749,9 +5757,7 @@ const PIZZA = {
 const KITCHEN = {
   'Arturo': [null,null,null,null,null,null,null],
   'Carlos': [null,null,null,null,null,null,null],
-  'Ever': [null,null,null,null,null,null,null],
   'Jesus': [null,null,null,null,null,null,null],
-  'Jose B': [null,null,null,null,null,null,null],
   'Nithia': [null,null,null,null,null,null,null],
   'Laura Z': [null,null,null,null,null,null,null],
 };
@@ -5761,13 +5767,11 @@ const PREP = {
 };
 const BUS = {
   'Armani': [null,null,null,null,null,null,null],
-  'Eric': [null,null,null,null,null,null,null],
   'Marco': [null,null,null,null,null,null,null],
 };
 const DISH = {
   'Armani': [null,null,null,null,null,null,null],
   'Gonzalo': [null,null,null,null,null,null,null],
-  'Jaxon': [null,null,null,null,null,null,null],
   'Marco': [null,null,null,null,null,null,null],
 };
 
@@ -5783,31 +5787,25 @@ const ROLE_MAP = {
   'Arturo':['Kitchen','Pizza'],'Arturo Viveros':['Kitchen','Pizza'],
   'Carlos':['Kitchen','Pizza'],'Carlos Mora':['Kitchen','Pizza'],
   'Jesus':['Kitchen','Pizza'],'Jesus Murillo':['Kitchen','Pizza'],
-  'Jose B':['Kitchen'],'Derek':['Kitchen'],'Nithia Maldonado':['Kitchen'],'Nithia':['Kitchen'],
-  'Ever':['Kitchen','Pizza'],'Carlos Jr':['Pizza'],'Eddie':['Pizza'],'Eddie Cruz':['Pizza'],'Eddy':['Pizza'],
+  'Derek':['Kitchen'],'Nithia Maldonado':['Kitchen'],'Nithia':['Kitchen'],
+  'Carlos Jr':['Pizza'],'Eddie':['Pizza'],'Eddie Cruz':['Pizza'],'Eddy':['Pizza'],
   'Gonzo':['Pizza','Dish','Bus'],'Gonzalo':['Pizza','Dish','Bus'],
-  'Leo':['Pizza'],'Luis':['Pizza'],'Luis Perez':['Pizza'],'Luis Soto':['Pizza'],
-  'Monico':['Pizza'],'Monico Esparza':['Pizza'],'Soto':['Pizza'],
+  'Leo':['Pizza'],'Luis':['Pizza'],'Luis Perez':['Pizza'],'Monico':['Pizza'],'Soto':['Pizza'],
   'Oscar':['Pizza'],'Oscar Velazquez':['Pizza'],'Victor':['Pizza'],'Victor Cruz':['Pizza'],
   'Nick':['Prep','Kitchen'],'Nicholas Urbana':['Prep','Kitchen'],'Sylvia':['Prep'],'Laura Z':['Kitchen','Pizza','Dish'],
   'Marco':['Pizza','Dish','Bus'],'Marco Sanchez':['Pizza','Dish','Bus'],
-  'Armani':['Dish','Bus'],'Armani Finley':['Dish','Bus'],
-  'Jaxon':['Dish','Bus'],'Eric':['Dish','Bus'],'Matt':['Dish'],'Raul':['Dish','Bus'],
+  'Armani':['Dish','Bus'],'Raul':['Dish','Bus'],
   'Abby':['Servers','Cashiers','Hosts'],'Alexis':['Servers'],'Bridget':['Servers'],
   'Claudia':['Servers'],'Dorris':['Servers','Cashiers'],
   'Hannah':['Servers'],'Hannah M':['Servers'],'Hannah M.':['Servers'],'Hannah Z':['Servers','Cashiers'],'Hannah Z.':['Servers','Cashiers'],
   'Jaime':['Servers','Bartenders'],'Kelly':['Servers','Bartenders'],
   'Sio':['Servers','Cashiers','Bartenders'],'Sio McAvoy':['Servers','Cashiers','Bartenders'],
-  'Annaka':['Servers'],'Allie':['Servers'],
-  'Courtney':['Servers'],'Kamini':['Servers'],
-  'Justin':['Servers','Bartenders'],'Julia':['Servers'],'Brianna':['Servers'],'Erika':['Servers'],'Elena':['Servers'],
-  'Lindsay':['Bartenders'],'Brooke':['Bartenders'],'Cheeks':['Bartenders'],
+  'Courtney':['Servers'],'Justin':['Servers','Bartenders'],'Brianna':['Servers'],'Erika':['Servers'],'Lindsay':['Bartenders'],'Brooke':['Bartenders'],'Cheeks':['Bartenders'],
   'Danielle':['Bartenders'],'Mary':['Bartenders'],'Lea':['Bartenders'],'Carrie':['Bartenders'],
-  'Jack':['Cashiers'],'Jack Ruane':['Cashiers'],'Mike':['Cashiers'],'Natalie':['Cashiers','Hosts'],'Presley':['Cashiers','Hosts'],
+  'Jack':['Cashiers'],'Jack Ruane':['Cashiers'],'Mike':['Cashiers'],'Presley':['Cashiers','Hosts'],
   'Tia':['Cashiers','Hosts'],'Emilie':['Cashiers','Hosts'],'Ellianna':['Cashiers','Hosts'],
   'Keegan':['Cashiers','Hosts'],'Molly':['Cashiers','Hosts'],'Charlie':['Cashiers','Hosts'],
-  'Claudia G':['Servers'],'Claudia G.':['Servers'],'Claudia M':['Servers'],'Claudia M.':['Servers']
-};
+  };
 
 function filterByRole(names, sectionLabel) {
   return names.filter(function(n){
@@ -5877,11 +5875,8 @@ const SERVERS = {
   'Kelly': [null,null,null,null,null,null,null],
   'Sio': [null,null,null,null,null,null,null],
   'Hannah M': [null,null,null,null,null,null,null],
-  'Allie': [null,null,null,null,null,null,null],
   'Courtney': [null,null,null,null,null,null,null],
-  'Kamini': [null,null,null,null,null,null,null],
   'Justin': [null,null,null,null,null,null,null],
-  'Julia': [null,null,null,null,null,null,null],
 };
 const BARTENDERS = {
   'Lindsay': [null,null,null,null,null,null,null],
@@ -5896,7 +5891,6 @@ const BARTENDERS = {
 };
 const CASHIERS = {
   'Jack': [null,null,null,null,null,null,null],
-  'Natalie': [null,null,null,null,null,null,null],
   'Sio': [null,null,null,null,null,null,null],
   'Presley': [null,null,null,null,null,null,null],
   'Tia': [null,null,null,null,null,null,null],
@@ -5908,7 +5902,6 @@ const CASHIERS = {
 };
 const HOSTS = {
   'Tia': [null,null,null,null,null,null,null],
-  'Natalie': [null,null,null,null,null,null,null],
   'Molly': [null,null,null,null,null,null,null],
   'Charlie': [null,null,null,null,null,null,null],
   'Ellianna': [null,null,null,null,null,null,null],
@@ -7624,13 +7617,13 @@ function printWageRoster() {
   var sections=[
     {l:'Owners',r:[['Dom',true,60000],['Ely Calero',true,100000],['Lisa Barraco',true,40000]]},
     {l:'Managers',r:[['Alexis A',true,60000],['Brett',true,10000],['Selena Gonzales',true,40292]]},
-    {l:'Pizza',r:[['Laura Z',false,19],['Arturo Viveros',false,21],['Carlos Jr',false,17.5],['Carlos Mora',false,19.25],['Eddie Cruz',false,19],['Gonzo',false,17],['Jesus Murillo',false,21],['Leo',false,17.5],['Luis Perez',false,20],['Luis Soto',false,19],['Monico Esparza',false,20],['Oscar Velazquez',false,19],['Victor Cruz',false,20.5]]},
+    {l:'Pizza',r:[['Laura Z',false,19],['Arturo Viveros',false,21],['Carlos Jr',false,17.5],['Carlos Mora',false,19.25],['Eddie Cruz',false,19],['Gonzo',false,17],['Jesus Murillo',false,21],['Leo',false,17.5],['Luis Perez',false,20],['Oscar Velazquez',false,19],['Victor Cruz',false,20.5]]},
     {l:'Kitchen',r:[['Laura Z',false,19],['Nithia',false,18.50],['Nicholas Urbana',false,20]]},
     {l:'Prep / Utility',r:[['Sylvia',false,15]]},
-    {l:'Bus / Dish',r:[['Armani Finley',false,16],['Eric',false,15],['Gonzalo',false,17],['Jaxon',false,15],['Marco Sanchez',false,16],['Matt',false,15],['Raul',false,15]]},
-    {l:'Servers',r:[['Abby',false,9],['Alexis',false,9],['Allie',false,9],['Bridget',false,9],['Claudia M',false,9],['Dorris',false,9],['Hannah',false,9],['Hannah M',false,9],['Jaime',false,9],['Julia',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9],['Elena',false,9]]},
+    {l:'Bus / Dish',r:[['Gonzalo',false,17],['Marco Sanchez',false,16],['Raul',false,15]]},
+    {l:'Servers',r:[['Abby',false,9],['Alexis',false,9],['Bridget',false,9],['Dorris',false,9],['Hannah',false,9],['Hannah M',false,9],['Jaime',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9]]},
     {l:'Bartenders',r:[['Brooke',false,9],['Carrie',false,9],['Cheeks',false,9],['Danielle',false,9],['Justin',false,9],['Lea',false,9],['Lindsay',false,9],['Mary',false,9]]},
-    {l:'Cashiers / Hosts',r:[['Ellianna',false,15],['Emilie',false,15],['Jack Ruane',false,16],['Keegan',false,15],['Molly',false,15],['Natalie',false,15],['Presley',false,15],['Sio McAvoy',false,17],['Tia',false,15]]}
+    {l:'Cashiers / Hosts',r:[['Ellianna',false,15],['Emilie',false,15],['Jack Ruane',false,16],['Keegan',false,15],['Molly',false,15],['Presley',false,15],['Sio McAvoy',false,17],['Tia',false,15]]}
   ];
   var grand=0;
   sections.forEach(function(sec){
@@ -10466,7 +10459,7 @@ function renderPrivate() {
   if(unmatched.length){
     html+='<div style="background:#FFF8E1;border:1px solid #F0C040;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:12.5px;">';
     html+='<div style="font-weight:700;color:#8a6d00;margin-bottom:6px;">⚠ Not in wage roster — hours below are NOT included in the totals on this page</div>';
-    html+='<div style="font-size:10px;color:#c2a860;margin-bottom:8px;">build v3.3</div>';
+    html+='<div style="font-size:10px;color:#c2a860;margin-bottom:8px;">build v3.4</div>';
     unmatched.sort(function(a,b){return b.wh-a.wh;}).forEach(function(u){
       html+='<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>'+u.n+' <span style="color:var(--gray-400)">('+u.sec+')</span></span><span class="mono">'+u.wh.toFixed(1)+'h</span></div>';
     });
@@ -10767,12 +10760,9 @@ const DEFAULT_ROSTER = {
   'Jesus Murillo': [{role:'Kitchen',rate:21.0,keys:['Jesus']},{role:'Pizza',rate:21.0,keys:['Jesus']}],
   'Carlos Mora': [{role:'Kitchen',rate:19.25,keys:['Carlos']},{role:'Pizza',rate:19.25,keys:['Carlos']}],
   'Nicholas Urbana': [{role:'Prep',rate:20.0,keys:['Nick']},{role:'Kitchen',rate:20.0,keys:['Nick']}],
-  'Ever': [{role:'Pizza',rate:17.5,keys:['Ever']},{role:'Kitchen',rate:17.5,keys:['Ever']}],
   'Luis Perez': [{role:'Pizza',rate:20.0,keys:['Luis']}],
   'Victor Cruz': [{role:'Pizza',rate:20.5,keys:['Victor']}],
-  'Monico Esparza': [{role:'Pizza',rate:20.0,keys:['Monico']}],
   'Oscar Velazquez': [{role:'Pizza',rate:19.0,keys:['Oscar']}],
-  'Luis Soto': [{role:'Pizza',rate:19.0,keys:['Soto']}],
   'Gonzo': [{role:'Bus',rate:17.0,keys:['Gonzo']},{role:'Pizza',rate:17.0,keys:['Gonzo']},{role:'Dish',rate:17.0,keys:['Gonzo']}],
   'Carlos Jr': [{role:'Pizza',rate:17.5,keys:['Carlos Jr']}],
   'Leo': [{role:'Pizza',rate:17.5,keys:['Leo']}],
@@ -10780,40 +10770,29 @@ const DEFAULT_ROSTER = {
   'Sylvia': [{role:'Prep',rate:15.0,keys:['Sylvia']}],
   'Jack Ruane': [{role:'Cashier',rate:16.0,keys:['Jack']}],
   'Marco Sanchez': [{role:'Dish',rate:16.0,keys:['Marco']},{role:'Pizza',rate:16.0,keys:['Marco']},{role:'Bus',rate:16.0,keys:['Marco']}],
-  'Armani Finley': [{role:'Dish',rate:16.0,keys:['Armani']},{role:'Bus',rate:16.0,keys:['Armani']}],
   'Gonzalo': [{role:'Dish',rate:17.0,keys:['Gonzalo']},{role:'Pizza',rate:17.0,keys:['Gonzalo']},{role:'Bus',rate:17.0,keys:['Gonzalo']}],
-  'Eric': [{role:'Dish',rate:15.0,keys:['Eric']},{role:'Bus',rate:15.0,keys:['Eric']}],
-  'Jaxon': [{role:'Dish',rate:15.0,keys:['Jaxon']},{role:'Bus',rate:15.0,keys:['Jaxon']}],
-  'Matt': [{role:'Dish',rate:15.0,keys:['Matt']}],
   'Raul': [{role:'Dish',rate:15.0,keys:['Raul']},{role:'Bus',rate:15.0,keys:['Raul']}],
   'Sio McAvoy': [{role:'Cashier',rate:17.0,keys:['Sio']},{role:'Server',rate:17.0,keys:['Sio']},{role:'Bartender',rate:9.0,keys:['Sio']}],
   'Mike Henie': [{role:'Cashier',rate:15.0,keys:['Mike']}],
   'Brianna': [{role:'Server',rate:9.0,keys:['Brianna']}],
   'Erika': [{role:'Server',rate:9.0,keys:['Erika']}],
-  'Elena': [{role:'Server',rate:9.0,keys:['Elena']}],
   'Hannah Z': [{role:'Server',rate:9.0,keys:['Hannah Z','Hannah Z.']},{role:'Cashier',rate:15.0,keys:['Hannah Z','Hannah Z.']}],
   'Abby': [{role:'Server',rate:9.0,keys:['Abby']},{role:'Cashier',rate:15.0,keys:['Abby']},{role:'Host',rate:15.0,keys:['Abby']}],
   'Alexis': [{role:'Server',rate:9.0,keys:['Alexis']}],
   'Bridget': [{role:'Server',rate:9.0,keys:['Bridget']}],
-  'Claudia M': [{role:'Server',rate:9.0,keys:['Claudia','Claudia M','Claudia M.']}],
   'Dorris': [{role:'Server',rate:9.0,keys:['Dorris']},{role:'Cashier',rate:17.0,keys:['Dorris']}],
   'Hannah': [{role:'Server',rate:9.0,keys:['Hannah']}],
   'Jaime': [{role:'Server',rate:9.0,keys:['Jaime']},{role:'Bartender',rate:9.0,keys:['Jaime']}],
   'Kelly': [{role:'Server',rate:9.0,keys:['Kelly']},{role:'Bartender',rate:9.0,keys:['Kelly']}],
-  'Claudia G': [{role:'Server',rate:9.0,keys:['Claudia G','Claudia G.']}],
   'Hannah M': [{role:'Server',rate:9.0,keys:['Hannah M','Hannah M.']}],
-  'Allie': [{role:'Server',rate:9.0,keys:['Allie']}],
   'Courtney': [{role:'Server',rate:9.0,keys:['Courtney']}],
-  'Kamini': [{role:'Server',rate:9.0,keys:['Kamini']}],
   'Charlie': [{role:'Cashier',rate:15.0,keys:['Charlie']},{role:'Host',rate:15.0,keys:['Charlie']}],
   'Justin': [{role:'Server',rate:9.0,keys:['Justin']},{role:'Bartender',rate:9.0,keys:['Justin']}],
-  'Julia': [{role:'Server',rate:9.0,keys:['Julia']}],
   'Lindsay': [{role:'Bartender',rate:9.0,keys:['Lindsay']}],
   'Brooke': [{role:'Bartender',rate:9.0,keys:['Brooke']}],
   'Cheeks': [{role:'Bartender',rate:9.0,keys:['Cheeks']}],
   'Danielle': [{role:'Bartender',rate:9.0,keys:['Danielle']}],
   'Mary': [{role:'Bartender',rate:9.0,keys:['Mary']}],
-  'Natalie': [{role:'Cashier',rate:15.0,keys:['Natalie']},{role:'Host',rate:15.0,keys:['Natalie']}],
   'Presley': [{role:'Cashier',rate:15.0,keys:['Presley']},{role:'Host',rate:15.0,keys:['Presley']}],
   'Tia': [{role:'Cashier',rate:15.0,keys:['Tia']},{role:'Host',rate:15.0,keys:['Tia']}],
   'Emilie': [{role:'Cashier',rate:15.0,keys:['Emilie']},{role:'Host',rate:15.0,keys:['Emilie']}],
@@ -10877,17 +10856,16 @@ function getEffectiveHourlyRate(name) {
 
 const RATES = {
   'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie Cruz':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
-  'Victor':20.50,'Arturo':21,'Jose B':23,'Nick':20,'Armani':16,'Marco':16,
+  'Victor':20.50,'Arturo':21,'Nick':20,'Armani':16,'Marco':16,
   'Nithia':18.50,'Arturo Viveros':21,'Jesus Murillo':21,'Derek':19,
   'Carlos Mora':19.25,'Nicholas Urbana':20,'Luis Perez':20,'Victor Cruz':20.50,
-  'Monico Esparza':20,'Oscar Velazquez':19,'Luis Soto':19,'Gonzo':17,
-  'Carlos Jr':17.50,'Leo':17.50,'Ever':17.50,'Sylvia':15,
-  'Jack Ruane':16,'Marco Sanchez':16,'Armani Finley':16,'Gonzalo':17,'Sio McAvoy':17,'Mike':15,
-  'Eric':15,'Jaxon':15,'Matt':15,'Raul':15,
+  'Oscar Velazquez':19,'Gonzo':17,
+  'Carlos Jr':17.50,'Leo':17.50,'Sylvia':15,
+  'Jack Ruane':16,'Marco Sanchez':16,'Gonzalo':17,'Sio McAvoy':17,'Mike':15,
+  'Raul':15,
   'Abby':9,'Alexis':9,'Bridget':9,'Claudia':9,'Dorris':9,'Hannah':9,
-  'Jaime':9,'Kelly':9,'Hannah M':9,'Brianna':9,'Erika':9,'Elena':9,
-  'Allie':9,'Courtney':9,'Kamini':9,'Charlie':15,'Justin':9,'Lindsay':9,'Brooke':9,'Cheeks':9,
-  'Danielle':9,'Mary':9,'Natalie':15,'Presley':15,'Tia':15,'Emilie':15,'Ellianna':15,'Keegan':15,'Julia':9,'Molly':15,'Lea':9
+  'Jaime':9,'Kelly':9,'Hannah M':9,'Brianna':9,'Erika':9,'Courtney':9,'Charlie':15,'Justin':9,'Lindsay':9,'Brooke':9,'Cheeks':9,
+  'Danielle':9,'Mary':9,'Presley':15,'Tia':15,'Emilie':15,'Ellianna':15,'Keegan':15,'Molly':15,'Lea':9
 };
 
 function renderHitList() {
@@ -11325,7 +11303,7 @@ function renderHitList() {
     }
 
     // Essential staff — cannot cut, advisory only
-    var ESSENTIAL = {'Carlos':1,'Luis':1,'Jose B':1,'Jesus':1,'Arturo':1,'Victor':1};
+    var ESSENTIAL = {'Carlos':1,'Luis':1,'Jesus':1,'Arturo':1,'Victor':1};
 
     // Build full ranked staff list for this day (everyone on the floor, by shift cost high→low)
     var allStaff = [];
