@@ -8984,7 +8984,7 @@ function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
     if(!sectionObj) return;
     Object.keys(sectionObj).forEach(function(name){
       if(SALARIED_EMPLOYEES[name]) return;
-      var rate = RATES[name] || 9;
+      var rate = getEffectiveHourlyRate(name);
       var days = sectionObj[name];
       if(!Array.isArray(days)) return;
       for(var di=0; di<7; di++) {
@@ -8999,7 +8999,7 @@ function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
     if(!sectionObj) return;
     Object.keys(sectionObj).forEach(function(name){
       if(SALARIED_EMPLOYEES[name]) return;
-      var rate = RATES[name] || 9;
+      var rate = getEffectiveHourlyRate(name);
       var days = sectionObj[name];
       if(!Array.isArray(days)) return;
       for(var di=0; di<7; di++) {
@@ -10840,6 +10840,20 @@ function shortName(fullName) {
 }
 
 
+// Single rate resolver for everything that used to read RATES[name] directly
+// (Heat Map / daily labor cost projection). Checks the same Manage Roster
+// override (roster_rates, via CUSTOM_ROSTER_RATES) the payroll report
+// already respects, so an edit in the app updates BOTH screens instead of
+// only the payroll report. Falls back to the hardcoded RATES table only
+// when no override exists.
+function getEffectiveHourlyRate(name) {
+  if(typeof CUSTOM_ROSTER_RATES !== 'undefined') {
+    var override = CUSTOM_ROSTER_RATES.find(function(r){ return r.original_name === name && r.annual_salary == null && r.rate != null; });
+    if(override) return override.rate;
+  }
+  return RATES[name] || 9;
+}
+
 const RATES = {
   'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie Cruz':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
   'Victor':20.50,'Arturo':21,'Jose B':23,'Nick':20,'Armani':16,'Marco':16,
@@ -10894,7 +10908,7 @@ function renderHitList() {
       var key=entry[0], days=entry[1];
       var displayName = sec.names[key]||key;
       if(SALARIED[displayName]) return; // salaried staff carry no hourly cost
-      var rate = RATES[displayName]||9;
+      var rate = getEffectiveHourlyRate(displayName);
       var sh = parseBOHHours(days[di], di);
       if(!sh) return;
       getShiftHours(sh.st, sh.en).forEach(function(h){
@@ -11001,7 +11015,7 @@ function renderHitList() {
           var key=entry[0], daysArr=entry[1];
           var displayName = sec.names[key]||key;
           if(SALARIED[displayName]) return;
-          var rate = RATES[displayName]||9;
+          var rate = getEffectiveHourlyRate(displayName);
           var sh = parseBOHHours(daysArr[d], d);
           if(!sh) return;
           if(!dayActive[key]){ dayActive[key]=true; }
@@ -11143,7 +11157,7 @@ function renderHitList() {
       Object.entries(sec.d).forEach(function(entry){
         var name=entry[0], days=entry[1];
         if(SALARIED[name]) return;
-        var rate=RATES[name]||9;
+        var rate=getEffectiveHourlyRate(name);
         var sh=parseBOHHours(days[di],di);
         if(!sh) return;
         var hrs=deptHrs(sh);
@@ -11155,7 +11169,7 @@ function renderHitList() {
     [{d:BUS},{d:DISH}].forEach(function(sec){
       Object.entries(sec.d).forEach(function(entry){
         var name=entry[0], days=entry[1];
-        var rate=RATES[name]||9;
+        var rate=getEffectiveHourlyRate(name);
         var sh=parseBOHHours(days[di],di);
         if(!sh) return;
         var hrs=deptHrs(sh);
@@ -11299,7 +11313,7 @@ function renderHitList() {
       Object.entries(sec.d).forEach(function(entry){
         var name=entry[0], days=entry[1];
         if(SALARIED[name]) return;
-        var rate=RATES[name]||9;
+        var rate=getEffectiveHourlyRate(name);
         var sh=parseBOHHours(days[di],di);
         if(!sh) return;
         var hrs=deptHrs(sh), cost=hrs*rate;
