@@ -4963,6 +4963,9 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="padding:0 16px 8px;">
       <button onclick="gatedShowFullMessageLog()" class="btn btn-secondary" style="width:100%;">💬 Full Message Log</button>
     </div>
+    <div style="padding:0 16px 8px;">
+      <button onclick="fixStaleNamesAllWeeks()" class="btn btn-secondary" style="width:100%;">🔧 Fix Stale Names in All Saved Weeks</button>
+    </div>
     <div id="private-data"></div>
   </div>
 </div>
@@ -5695,6 +5698,13 @@ const DRIVER_ALIASES = { 'jeff z': 'Jeff Z', 'jeff zeggeben': 'Jeff Z', 'jeff ze
 // Single universal name-correction table, applied to EVERY section every time
 // schedule data loads (not just on upload). Add entries here going forward —
 // this is the one place that needs updating, not scattered per-upload logic.
+// Full-name keys that predate the no-full-last-names convention, corrected
+// wherever they're found -- both live (every time a week loads) and via
+// the one-time "Fix Stale Names in All Saved Weeks" migration in Private.
+// Add future corrections here in one place rather than duplicating logic.
+const STALE_NAME_MIGRATIONS = {
+  KITCHEN: { 'Nithia Maldonado': 'Nithia' }
+};
 const NAME_ALIASES = {
   'alex': 'Alexis A', 'alex a': 'Alexis A',
   'nithia': 'Nithia', 'nithia maldonado': 'Nithia', 'lithia': 'Nithia',
@@ -12129,10 +12139,14 @@ function parseWeekData(week) {
     Object.keys(PIZZA).forEach(k => delete PIZZA[k]);       if(boh.PIZZA)    Object.assign(PIZZA, boh.PIZZA);
     Object.keys(KITCHEN).forEach(k => delete KITCHEN[k]);   if(boh.KITCHEN)  Object.assign(KITCHEN, boh.KITCHEN);
     // Nick is allowed in Kitchen and Prep - no deletion
-    // Enforce the short display form -- flip the OLD direction (this used
-    // to convert 'Nithia' back to 'Nithia Maldonado', silently undoing the
-    // no-full-last-names fix every time schedule data loaded from Supabase).
-    if(KITCHEN['Nithia Maldonado'] && !KITCHEN['Nithia']) { KITCHEN['Nithia'] = KITCHEN['Nithia Maldonado']; delete KITCHEN['Nithia Maldonado']; }
+    // Correct any stale full-name keys against the current short-name
+    // convention. STALE_NAME_MIGRATIONS is shared with the one-time
+    // "Fix Stale Names in All Saved Weeks" migration in Private, so both
+    // read from the same single list instead of duplicating this logic.
+    Object.keys(STALE_NAME_MIGRATIONS.KITCHEN).forEach(function(staleName){
+      var correctName = STALE_NAME_MIGRATIONS.KITCHEN[staleName];
+      if(KITCHEN[staleName] && !KITCHEN[correctName]) { KITCHEN[correctName] = KITCHEN[staleName]; delete KITCHEN[staleName]; }
+    });
     Object.keys(PREP).forEach(k => delete PREP[k]);         if(boh.PREP)     Object.assign(PREP, boh.PREP);
     Object.keys(BUS).forEach(k => delete BUS[k]);           if(boh.BUS)      Object.assign(BUS, boh.BUS);
     Object.keys(DISH).forEach(k => delete DISH[k]);         if(boh.DISH)     Object.assign(DISH, boh.DISH);
@@ -14231,6 +14245,68 @@ async function gatedShowOverrideLog(btn) {
   if(pin === null) return;
   if(String(pin).trim() !== PRIVATE_PIN) { alert('Incorrect PIN.'); return; }
   showOverrideLog(btn);
+}
+
+// One-time migration: corrects every already-saved week's data directly in
+// the database, not just future uploads. STALE_NAME_MIGRATIONS is the same
+// map the live loader uses, so this stays in sync automatically as new
+// corrections get added there.
+async function fixStaleNamesAllWeeks() {
+  var pin = await askPin('Enter PIN to run this fix');
+  if(pin === null) return;
+  if(String(pin).trim() !== PRIVATE_PIN) { alert('Incorrect PIN.'); return; }
+
+  if(!confirm('This will scan every saved week and correct any stale names found (e.g. Nithia Maldonado -> Nithia), writing the fix directly to each affected week. Continue?')) return;
+
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/schedules?select=id,boh_data', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(!resp.ok) throw new Error('Could not load saved weeks (' + resp.status + ')');
+    var weeks = await resp.json();
+
+    var fixedCount = 0;
+    for(var i = 0; i < weeks.length; i++) {
+      var week = weeks[i];
+      var boh;
+      try { boh = JSON.parse(week.boh_data || '{}'); } catch(e) { continue; }
+      if(!boh.KITCHEN) continue;
+
+      var changed = false;
+      Object.keys(STALE_NAME_MIGRATIONS.KITCHEN).forEach(function(staleName){
+        var correctName = STALE_NAME_MIGRATIONS.KITCHEN[staleName];
+        if(boh.KITCHEN[staleName]) {
+          if(!boh.KITCHEN[correctName]) {
+            boh.KITCHEN[correctName] = boh.KITCHEN[staleName];
+          } else {
+            // Both keys exist (e.g. partial data from before and after the
+            // fix) -- merge day by day rather than silently dropping either.
+            for(var d = 0; d < 7; d++) {
+              if(!boh.KITCHEN[correctName][d] && boh.KITCHEN[staleName][d]) boh.KITCHEN[correctName][d] = boh.KITCHEN[staleName][d];
+            }
+          }
+          delete boh.KITCHEN[staleName];
+          changed = true;
+        }
+      });
+
+      if(changed) {
+        await fetch(SUPABASE_URL + '/rest/v1/schedules?id=eq.' + week.id, {
+          method: 'PATCH',
+          headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+          body: JSON.stringify({boh_data: JSON.stringify(boh)})
+        });
+        fixedCount++;
+      }
+    }
+
+    alert(fixedCount > 0
+      ? 'Fixed ' + fixedCount + ' week(s) with stale names. Reload the app to see the correction.'
+      : 'No stale names found in any saved week.');
+    if(fixedCount > 0 && typeof loadAllWeeks === 'function') await loadAllWeeks();
+  } catch(e) {
+    alert('Fix failed: ' + e.message);
+  }
 }
 
 // View every note for the currently-loaded week directly -- no need to
