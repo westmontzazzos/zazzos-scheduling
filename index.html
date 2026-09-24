@@ -5570,12 +5570,10 @@ function parseHour(raw) {
 
 // DOM'S NOTES
 const DRIVERS = {
-  'AJ': [null,null,null,null,null,null,null],
-  'Alex D': [null,null,null,null,null,null,null],
+  'Alexis V': [null,null,null,null,null,null,null],
   'Andrew': [null,null,null,null,null,null,null],
-  'Casandra D': [null,null,null,null,null,null,null],
-  'Greg': [null,null,null,null,null,null,null],
-  'Hector': [null,null,null,null,null,null,null],
+  'Charlie': [null,null,null,null,null,null,null],
+  'Hannah Z': [null,null,null,null,null,null,null],
   'Jeff Z': [null,null,null,null,null,null,null],
   'Jeff P': [null,null,null,null,null,null,null],
   'Joliet Mike': [null,null,null,null,null,null,null],
@@ -5585,6 +5583,7 @@ const DRIVERS = {
   'Oscar D': [null,null,null,null,null,null,null],
   'Rhett': [null,null,null,null,null,null,null],
   'Rick': [null,null,null,null,null,null,null],
+  'Sio': [null,null,null,null,null,null,null],
 };
 
 // Dispatch is manual, per-day only — it's not tied to any fixed employee,
@@ -5727,7 +5726,8 @@ const SECTION_BLOCKLIST = {
   PIZZA: ['soto', 'luis soto', 'ever', 'monico', 'monico esparza'],
   KITCHEN: ['ever', 'jose b'],
   DISH: ['armani', 'armani finley', 'jaxon', 'eric', 'matt', 'matt daniher', 'matt d'],
-  BUS: ['armani', 'armani finley', 'jaxon', 'eric']
+  BUS: ['armani', 'armani finley', 'jaxon', 'eric'],
+  DRIVERS: ['casandra d', 'casandra', 'cassandra d', 'cassandra']
 };
 // General staff name aliases: short/alt names on the physical schedule → canonical wage-roster name
 
@@ -5743,9 +5743,7 @@ const PIZZA = {
   'Carlos': [null,null,null,null,null,null,null],
   'Carlos Jr': [null,null,null,null,null,null,null],
   'Eddie': [null,null,null,null,null,null,null],
-  'Gonzo': [null,null,null,null,null,null,null],
   'Jesus': [null,null,null,null,null,null,null],
-  'Leo': [null,null,null,null,null,null,null],
   'Luis': [null,null,null,null,null,null,null],
   'Monico': [null,null,null,null,null,null,null],
   'Soto': [null,null,null,null,null,null,null],
@@ -5784,26 +5782,28 @@ const DISH = {
 // don't belong to, once and for all, rather than just catching it after
 // the fact every single time.
 const ROLE_MAP = {
-  'Arturo':['Kitchen','Pizza'],'Arturo Viveros':['Kitchen','Pizza'],
-  'Carlos':['Kitchen','Pizza'],'Carlos Mora':['Kitchen','Pizza'],
-  'Jesus':['Kitchen','Pizza'],'Jesus Murillo':['Kitchen','Pizza'],
+  'Arturo':['Kitchen','Pizza'],'Arturo V':['Kitchen','Pizza'],
+  'Carlos':['Kitchen','Pizza'],'Carlos M':['Kitchen','Pizza'],
+  'Jesus':['Kitchen','Pizza'],'Jesus M':['Kitchen','Pizza'],
   'Derek':['Kitchen'],'Nithia Maldonado':['Kitchen'],'Nithia':['Kitchen'],
-  'Carlos Jr':['Pizza'],'Eddie':['Pizza'],'Eddie Cruz':['Pizza'],'Eddy':['Pizza'],
-  'Gonzo':['Pizza','Dish','Bus'],'Gonzalo':['Pizza','Dish','Bus'],
-  'Leo':['Pizza'],'Luis':['Pizza'],'Luis Perez':['Pizza'],'Monico':['Pizza'],'Soto':['Pizza'],
-  'Oscar':['Pizza'],'Oscar Velazquez':['Pizza'],'Victor':['Pizza'],'Victor Cruz':['Pizza'],
-  'Nick':['Prep','Kitchen'],'Nicholas Urbana':['Prep','Kitchen'],'Sylvia':['Prep'],'Laura Z':['Kitchen','Pizza','Dish'],
-  'Marco':['Pizza','Dish','Bus'],'Marco Sanchez':['Pizza','Dish','Bus'],
+  'Carlos Jr':['Pizza'],'Eddie':['Pizza'],'Eddie C':['Pizza'],'Eddy':['Pizza'],
+  'Gonzalo':['Pizza','Dish','Bus'],
+  'Luis':['Pizza'],'Luis Perez':['Pizza'],'Monico':['Pizza'],'Soto':['Pizza'],
+  'Oscar':['Pizza'],'Oscar V':['Pizza'],'Victor':['Pizza'],'Victor C':['Pizza'],
+  'Nick':['Prep'],'Nick U':['Prep'],'Sylvia':['Prep'],'Laura Z':['Kitchen','Pizza','Dish'],
+  'Marco':['Pizza','Dish','Bus'],'Marco S':['Pizza','Dish','Bus'],
   'Armani':['Dish','Bus'],'Raul':['Dish','Bus'],
-  'Abby':['Servers','Cashiers','Hosts'],'Alexis':['Servers'],'Bridget':['Servers'],
+  'Abby':['Servers','Cashiers','Hosts'],'Alexis V':['Servers'],'Bridget':['Servers'],
+  'Ava':['Cashiers'],'Maylen':['Cashiers'],
+  'Joan':['Servers'],'Kenzie':['Servers'],'Reagan':['Servers'],'Shiann':['Servers'],
   'Claudia':['Servers'],'Dorris':['Servers','Cashiers'],
-  'Hannah':['Servers'],'Hannah M':['Servers'],'Hannah M.':['Servers'],'Hannah Z':['Servers','Cashiers'],'Hannah Z.':['Servers','Cashiers'],
+  'Hannah M':['Servers'],'Hannah M.':['Servers'],'Hannah Z':['Servers','Cashiers'],'Hannah Z.':['Servers','Cashiers'],
   'Jaime':['Servers','Bartenders'],'Kelly':['Servers','Bartenders'],
-  'Sio':['Servers','Cashiers','Bartenders'],'Sio McAvoy':['Servers','Cashiers','Bartenders'],
-  'Courtney':['Servers'],'Justin':['Servers','Bartenders'],'Brianna':['Servers'],'Erika':['Servers'],'Lindsay':['Bartenders'],'Brooke':['Bartenders'],'Cheeks':['Bartenders'],
+  'Sio':['Servers','Cashiers','Bartenders'],
+  'Justin':['Servers','Bartenders'],'Brianna':['Servers'],'Erika':['Servers'],'Lindsay':['Bartenders'],'Brooke':['Bartenders'],'Cheeks':['Bartenders'],
   'Danielle':['Bartenders'],'Mary':['Bartenders'],'Lea':['Bartenders'],'Carrie':['Bartenders'],
-  'Jack':['Cashiers'],'Jack Ruane':['Cashiers'],'Mike':['Cashiers'],'Presley':['Cashiers','Hosts'],
-  'Tia':['Cashiers','Hosts'],'Emilie':['Cashiers','Hosts'],'Ellianna':['Cashiers','Hosts'],
+  'Presley':['Cashiers','Hosts'],
+  'Tia':['Cashiers','Hosts'],
   'Keegan':['Cashiers','Hosts'],'Molly':['Cashiers','Hosts'],'Charlie':['Cashiers','Hosts'],
   };
 
@@ -5866,16 +5866,18 @@ function getBOHSection(sectionData, di) {
 // DOM'S NOTES
 const SERVERS = {
   'Abby': [null,null,null,null,null,null,null],
-  'Alexis': [null,null,null,null,null,null,null],
+  'Alexis V': [null,null,null,null,null,null,null],
   'Bridget': [null,null,null,null,null,null,null],
   'Claudia': [null,null,null,null,null,null,null],
   'Dorris': [null,null,null,null,null,null,null],
-  'Hannah': [null,null,null,null,null,null,null],
   'Jaime': [null,null,null,null,null,null,null],
+  'Joan': [null,null,null,null,null,null,null],
   'Kelly': [null,null,null,null,null,null,null],
+  'Kenzie': [null,null,null,null,null,null,null],
+  'Reagan': [null,null,null,null,null,null,null],
+  'Shiann': [null,null,null,null,null,null,null],
   'Sio': [null,null,null,null,null,null,null],
   'Hannah M': [null,null,null,null,null,null,null],
-  'Courtney': [null,null,null,null,null,null,null],
   'Justin': [null,null,null,null,null,null,null],
 };
 const BARTENDERS = {
@@ -5890,12 +5892,11 @@ const BARTENDERS = {
   'Lea': [null,null,null,null,null,null,null],
 };
 const CASHIERS = {
-  'Jack': [null,null,null,null,null,null,null],
+  'Ava': [null,null,null,null,null,null,null],
+  'Maylen': [null,null,null,null,null,null,null],
   'Sio': [null,null,null,null,null,null,null],
   'Presley': [null,null,null,null,null,null,null],
   'Tia': [null,null,null,null,null,null,null],
-  'Emilie': [null,null,null,null,null,null,null],
-  'Ellianna': [null,null,null,null,null,null,null],
   'Keegan': [null,null,null,null,null,null,null],
   'Molly': [null,null,null,null,null,null,null],
   'Charlie': [null,null,null,null,null,null,null],
@@ -5904,7 +5905,6 @@ const HOSTS = {
   'Tia': [null,null,null,null,null,null,null],
   'Molly': [null,null,null,null,null,null,null],
   'Charlie': [null,null,null,null,null,null,null],
-  'Ellianna': [null,null,null,null,null,null,null],
 };
 
 // Lookup map so custom-roster entries (added via the Private tab Manage
@@ -7617,13 +7617,13 @@ function printWageRoster() {
   var sections=[
     {l:'Owners',r:[['Dom',true,60000],['Ely Calero',true,100000],['Lisa Barraco',true,40000]]},
     {l:'Managers',r:[['Alexis A',true,60000],['Brett',true,10000],['Selena Gonzales',true,40292]]},
-    {l:'Pizza',r:[['Laura Z',false,19],['Arturo Viveros',false,21],['Carlos Jr',false,17.5],['Carlos Mora',false,19.25],['Eddie Cruz',false,19],['Gonzo',false,17],['Jesus Murillo',false,21],['Leo',false,17.5],['Luis Perez',false,20],['Oscar Velazquez',false,19],['Victor Cruz',false,20.5]]},
-    {l:'Kitchen',r:[['Laura Z',false,19],['Nithia',false,18.50],['Nicholas Urbana',false,20]]},
+    {l:'Pizza',r:[['Laura Z',false,19],['Arturo V',false,21],['Carlos Jr',false,17.5],['Carlos M',false,19.25],['Eddie C',false,19],['Jesus M',false,21],['Luis Perez',false,20],['Oscar V',false,19],['Victor C',false,20.5]]},
+    {l:'Kitchen',r:[['Laura Z',false,19],['Nithia',false,18.50]]},
     {l:'Prep / Utility',r:[['Sylvia',false,15]]},
-    {l:'Bus / Dish',r:[['Gonzalo',false,17],['Marco Sanchez',false,16],['Raul',false,15]]},
-    {l:'Servers',r:[['Abby',false,9],['Alexis',false,9],['Bridget',false,9],['Dorris',false,9],['Hannah',false,9],['Hannah M',false,9],['Jaime',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9]]},
+    {l:'Bus / Dish',r:[['Gonzalo',false,17],['Marco S',false,16],['Raul',false,15]]},
+    {l:'Servers',r:[['Abby',false,9],['Alexis V',false,9],['Bridget',false,9],['Dorris',false,9],['Hannah M',false,9],['Jaime',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9]]},
     {l:'Bartenders',r:[['Brooke',false,9],['Carrie',false,9],['Cheeks',false,9],['Danielle',false,9],['Justin',false,9],['Lea',false,9],['Lindsay',false,9],['Mary',false,9]]},
-    {l:'Cashiers / Hosts',r:[['Ellianna',false,15],['Emilie',false,15],['Jack Ruane',false,16],['Keegan',false,15],['Molly',false,15],['Presley',false,15],['Sio McAvoy',false,17],['Tia',false,15]]}
+    {l:'Cashiers / Hosts',r:[['Keegan',false,15],['Molly',false,15],['Presley',false,15],['Sio',false,17],['Tia',false,15]]}
   ];
   var grand=0;
   sections.forEach(function(sec){
@@ -10756,36 +10756,36 @@ const SALARIED_EMPLOYEES = {'Brett':1,'Dom':1,'Ely':1,'Selena':1,'Lisa':1,'Alexi
 const DEFAULT_ROSTER = {
   'Laura Z': [{role:'Pizza',rate:19.0,keys:['Laura Z']},{role:'Kitchen',rate:19.0,keys:['Laura Z']}],
   'Nithia': [{role:'Kitchen',rate:18.5,keys:['Nithia']}],
-  'Arturo Viveros': [{role:'Kitchen',rate:21.0,keys:['Arturo']},{role:'Pizza',rate:21.0,keys:['Arturo']}],
-  'Jesus Murillo': [{role:'Kitchen',rate:21.0,keys:['Jesus']},{role:'Pizza',rate:21.0,keys:['Jesus']}],
-  'Carlos Mora': [{role:'Kitchen',rate:19.25,keys:['Carlos']},{role:'Pizza',rate:19.25,keys:['Carlos']}],
-  'Nicholas Urbana': [{role:'Prep',rate:20.0,keys:['Nick']},{role:'Kitchen',rate:20.0,keys:['Nick']}],
+  'Arturo V': [{role:'Kitchen',rate:21.0,keys:['Arturo']},{role:'Pizza',rate:21.0,keys:['Arturo']}],
+  'Jesus M': [{role:'Kitchen',rate:21.0,keys:['Jesus']},{role:'Pizza',rate:21.0,keys:['Jesus']}],
+  'Carlos M': [{role:'Kitchen',rate:19.25,keys:['Carlos']},{role:'Pizza',rate:19.25,keys:['Carlos']}],
+  'Nick U': [{role:'Prep',rate:20.0,keys:['Nick']}],
   'Luis Perez': [{role:'Pizza',rate:20.0,keys:['Luis']}],
-  'Victor Cruz': [{role:'Pizza',rate:20.5,keys:['Victor']}],
-  'Oscar Velazquez': [{role:'Pizza',rate:19.0,keys:['Oscar']}],
-  'Gonzo': [{role:'Bus',rate:17.0,keys:['Gonzo']},{role:'Pizza',rate:17.0,keys:['Gonzo']},{role:'Dish',rate:17.0,keys:['Gonzo']}],
+  'Victor C': [{role:'Pizza',rate:20.5,keys:['Victor']}],
+  'Oscar V': [{role:'Pizza',rate:19.0,keys:['Oscar']}],
   'Carlos Jr': [{role:'Pizza',rate:17.5,keys:['Carlos Jr']}],
-  'Leo': [{role:'Pizza',rate:17.5,keys:['Leo']}],
-  'Eddie Cruz': [{role:'Kitchen',rate:19.0,keys:['Eddie','Eddy']},{role:'Pizza',rate:19.0,keys:['Eddie','Eddy']}],
+  'Eddie C': [{role:'Pizza',rate:19.0,keys:['Eddie','Eddy']}],
   'Sylvia': [{role:'Prep',rate:15.0,keys:['Sylvia']}],
-  'Jack Ruane': [{role:'Cashier',rate:16.0,keys:['Jack']}],
-  'Marco Sanchez': [{role:'Dish',rate:16.0,keys:['Marco']},{role:'Pizza',rate:16.0,keys:['Marco']},{role:'Bus',rate:16.0,keys:['Marco']}],
-  'Gonzalo': [{role:'Dish',rate:17.0,keys:['Gonzalo']},{role:'Pizza',rate:17.0,keys:['Gonzalo']},{role:'Bus',rate:17.0,keys:['Gonzalo']}],
+  'Marco S': [{role:'Dish',rate:16.0,keys:['Marco']},{role:'Pizza',rate:16.0,keys:['Marco']},{role:'Bus',rate:16.0,keys:['Marco']}],
+  'Gonzalo': [{role:'Dish',rate:17.0,keys:['Gonzalo','Gonzo']},{role:'Pizza',rate:17.0,keys:['Gonzalo','Gonzo']},{role:'Bus',rate:17.0,keys:['Gonzalo','Gonzo']}],
   'Raul': [{role:'Dish',rate:15.0,keys:['Raul']},{role:'Bus',rate:15.0,keys:['Raul']}],
-  'Sio McAvoy': [{role:'Cashier',rate:17.0,keys:['Sio']},{role:'Server',rate:17.0,keys:['Sio']},{role:'Bartender',rate:9.0,keys:['Sio']}],
-  'Mike Henie': [{role:'Cashier',rate:15.0,keys:['Mike']}],
+  'Sio': [{role:'Cashier',rate:17.0,keys:['Sio','Sio McAvoy']},{role:'Server',rate:9.0,keys:['Sio','Sio McAvoy']},{role:'Bartender',rate:9.0,keys:['Sio','Sio McAvoy']}],
   'Brianna': [{role:'Server',rate:9.0,keys:['Brianna']}],
   'Erika': [{role:'Server',rate:9.0,keys:['Erika']}],
   'Hannah Z': [{role:'Server',rate:9.0,keys:['Hannah Z','Hannah Z.']},{role:'Cashier',rate:15.0,keys:['Hannah Z','Hannah Z.']}],
-  'Abby': [{role:'Server',rate:9.0,keys:['Abby']},{role:'Cashier',rate:15.0,keys:['Abby']},{role:'Host',rate:15.0,keys:['Abby']}],
-  'Alexis': [{role:'Server',rate:9.0,keys:['Alexis']}],
+  'Abby': [{role:'Server',rate:9.0,keys:['Abby']},{role:'Cashier',rate:17.0,keys:['Abby']},{role:'Host',rate:17.0,keys:['Abby']}],
+  'Ava': [{role:'Cashier',rate:15.0,keys:['Ava']}],
+  'Maylen': [{role:'Cashier',rate:15.0,keys:['Maylen']}],
+  'Joan': [{role:'Server',rate:9.0,keys:['Joan']}],
+  'Kenzie': [{role:'Server',rate:9.0,keys:['Kenzie']}],
+  'Reagan': [{role:'Server',rate:9.0,keys:['Reagan']}],
+  'Shiann': [{role:'Server',rate:9.0,keys:['Shiann']}],
+  'Alexis V': [{role:'Server',rate:9.0,keys:['Alexis']}],
   'Bridget': [{role:'Server',rate:9.0,keys:['Bridget']}],
   'Dorris': [{role:'Server',rate:9.0,keys:['Dorris']},{role:'Cashier',rate:17.0,keys:['Dorris']}],
-  'Hannah': [{role:'Server',rate:9.0,keys:['Hannah']}],
   'Jaime': [{role:'Server',rate:9.0,keys:['Jaime']},{role:'Bartender',rate:9.0,keys:['Jaime']}],
   'Kelly': [{role:'Server',rate:9.0,keys:['Kelly']},{role:'Bartender',rate:9.0,keys:['Kelly']}],
   'Hannah M': [{role:'Server',rate:9.0,keys:['Hannah M','Hannah M.']}],
-  'Courtney': [{role:'Server',rate:9.0,keys:['Courtney']}],
   'Charlie': [{role:'Cashier',rate:15.0,keys:['Charlie']},{role:'Host',rate:15.0,keys:['Charlie']}],
   'Justin': [{role:'Server',rate:9.0,keys:['Justin']},{role:'Bartender',rate:9.0,keys:['Justin']}],
   'Lindsay': [{role:'Bartender',rate:9.0,keys:['Lindsay']}],
@@ -10795,8 +10795,6 @@ const DEFAULT_ROSTER = {
   'Mary': [{role:'Bartender',rate:9.0,keys:['Mary']}],
   'Presley': [{role:'Cashier',rate:15.0,keys:['Presley']},{role:'Host',rate:15.0,keys:['Presley']}],
   'Tia': [{role:'Cashier',rate:15.0,keys:['Tia']},{role:'Host',rate:15.0,keys:['Tia']}],
-  'Emilie': [{role:'Cashier',rate:15.0,keys:['Emilie']},{role:'Host',rate:15.0,keys:['Emilie']}],
-  'Ellianna': [{role:'Cashier',rate:15.0,keys:['Ellianna']},{role:'Host',rate:15.0,keys:['Ellianna']}],
   'Keegan': [{role:'Cashier',rate:15.0,keys:['Keegan']},{role:'Host',rate:15.0,keys:['Keegan']}],
   'Molly': [{role:'Cashier',rate:15.0,keys:['Molly']},{role:'Host',rate:15.0,keys:['Molly']}],
   'Lea': [{role:'Bartender',rate:9.0,keys:['Lea']}]
@@ -10855,17 +10853,17 @@ function getEffectiveHourlyRate(name) {
 }
 
 const RATES = {
-  'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie Cruz':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
+  'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie C':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
   'Victor':20.50,'Arturo':21,'Nick':20,'Armani':16,'Marco':16,
-  'Nithia':18.50,'Arturo Viveros':21,'Jesus Murillo':21,'Derek':19,
-  'Carlos Mora':19.25,'Nicholas Urbana':20,'Luis Perez':20,'Victor Cruz':20.50,
-  'Oscar Velazquez':19,'Gonzo':17,
-  'Carlos Jr':17.50,'Leo':17.50,'Sylvia':15,
-  'Jack Ruane':16,'Marco Sanchez':16,'Gonzalo':17,'Sio McAvoy':17,'Mike':15,
+  'Nithia':18.50,'Arturo V':21,'Jesus M':21,'Derek':19,
+  'Carlos M':19.25,'Nick U':20,'Luis Perez':20,'Victor C':20.50,
+  'Oscar V':19,
+  'Carlos Jr':17.50,'Sylvia':15,
+  'Marco S':16,'Gonzalo':17,'Sio':17,
   'Raul':15,
-  'Abby':9,'Alexis':9,'Bridget':9,'Claudia':9,'Dorris':9,'Hannah':9,
-  'Jaime':9,'Kelly':9,'Hannah M':9,'Brianna':9,'Erika':9,'Courtney':9,'Charlie':15,'Justin':9,'Lindsay':9,'Brooke':9,'Cheeks':9,
-  'Danielle':9,'Mary':9,'Presley':15,'Tia':15,'Emilie':15,'Ellianna':15,'Keegan':15,'Molly':15,'Lea':9
+  'Abby':9,'Alexis V':9,'Bridget':9,'Claudia':9,'Dorris':9,
+  'Jaime':9,'Kelly':9,'Hannah M':9,'Brianna':9,'Erika':9,'Charlie':15,'Justin':9,'Lindsay':9,'Brooke':9,'Cheeks':9,
+  'Danielle':9,'Mary':9,'Presley':15,'Tia':15,'Keegan':15,'Molly':15,'Lea':9
 };
 
 function renderHitList() {
@@ -13662,7 +13660,7 @@ async function readScheduleImage(dataUrl, type) {
         delete sched.BARTENDERS['Allie'];
       }
       // Normalize FOH short names to full names
-      var fohAliases = {'sio': 'Sio', 'sio mcavoy': 'Sio', 'alexis': 'Alexis'};
+      var fohAliases = {'sio': 'Sio', 'sio mcavoy': 'Sio', 'alexis': 'Alexis V'};
       ['SERVERS','BARTENDERS','CASHIERS','HOSTS'].forEach(function(sec){
         if(!sched[sec]) return;
         Object.keys(sched[sec]).forEach(function(name){
