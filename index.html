@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Zazzo's — v2.31</title>
+<title>Zazzo's — v2.32</title>
 <link rel="apple-touch-icon" id="za-touch-icon-apple">
 <link rel="icon" type="image/png" id="za-touch-icon-favicon">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4743,7 +4743,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.31</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.32</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -5071,11 +5071,6 @@ document.addEventListener("DOMContentLoaded",function(){
       <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.05em;margin-bottom:10px;">Current Roster</div>
       <div style="font-size:12px;color:#999;margin-bottom:8px;">✎ Edit lets you change a name, rate/salary, and aliases together. ✕ Remove stops them appearing going forward -- past pay history is unaffected.</div>
       <div id="roster-current-list" style="font-size:13px;color:#aaa;">Loading...</div>
-
-      <div style="height:1px;background:var(--gray-100);margin:18px 0;"></div>
-
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.05em;margin-bottom:10px;">Removed Employees</div>
-      <div id="roster-removed-list" style="font-size:13px;color:#aaa;">Loading...</div>
     </div>
   </div>
 </div>
@@ -9827,8 +9822,6 @@ async function saveAddRole() {
 
 function renderManageRosterLists() {
   var curList = document.getElementById('roster-current-list');
-  var remList = document.getElementById('roster-removed-list');
-
   // Current roster = everyone in the live HLY+SAL arrays (hardcoded + custom
   // additions), regardless of hours worked this week -- so someone with 0
   // hours (just added, or between shifts) can still be seen and removed here.
@@ -9848,17 +9841,6 @@ function renderManageRosterLists() {
         + '<button onclick="editRosterEmployee(\''+origEsc+'\')" style="background:#f0f4ff;border:1px solid #c2d1f3;color:#1e4fa3;border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;flex:0 0 74px;width:74px;text-align:center;box-sizing:border-box;">✎ Edit</button>'
         + '<button onclick="removeRosterEmployee(\''+origEsc+'\')" style="background:#fff0f0;border:1px solid #f3c2c9;color:#c8102e;border-radius:6px;padding:5px 0;font-size:12px;cursor:pointer;flex:0 0 74px;width:74px;text-align:center;box-sizing:border-box;">✕ Remove</button>'
         + '</div></div>';
-    }).join('');
-  }
-
-  if(!CUSTOM_ROSTER_REMOVED.length) {
-    remList.innerHTML = '<div style="color:#aaa;">No one currently removed.</div>';
-  } else {
-    remList.innerHTML = CUSTOM_ROSTER_REMOVED.map(function(r){
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #f2f2f2;">'
-        + '<div>'+r.name+'</div>'
-        + '<button onclick="restoreRosterEmployee('+r.id+')" style="background:#f0fff4;border:1px solid #b7e4c7;color:#1a7a3c;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">↺ Restore</button>'
-        + '</div>';
     }).join('');
   }
 }
@@ -9948,16 +9930,6 @@ function removeRosterEmployee(name) {
     if(!r.ok) throw new Error('Failed');
     loadCustomRosterThenRender();
   }).catch(function(e){ alert('Failed to remove: ' + e.message); });
-}
-
-function restoreRosterEmployee(id) {
-  fetch(SUPABASE_URL + '/rest/v1/roster_removed?id=eq.' + id, {
-    method: 'DELETE',
-    headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
-  }).then(function(r){
-    if(!r.ok) throw new Error('Failed');
-    loadCustomRosterThenRender();
-  }).catch(function(e){ alert('Failed to restore: ' + e.message); });
 }
 
 function editRosterEmployee(origName) {
@@ -10460,6 +10432,7 @@ function renderPrivate() {
   if(unmatched.length){
     html+='<div style="background:#FFF8E1;border:1px solid #F0C040;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:12.5px;">';
     html+='<div style="font-weight:700;color:#8a6d00;margin-bottom:6px;">⚠ Not in wage roster — hours below are NOT included in the totals on this page</div>';
+    html+='<div style="font-size:10px;color:#c2a860;margin-bottom:8px;">build v2.32</div>';
     unmatched.sort(function(a,b){return b.wh-a.wh;}).forEach(function(u){
       html+='<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>'+u.n+' <span style="color:var(--gray-400)">('+u.sec+')</span></span><span class="mono">'+u.wh.toFixed(1)+'h</span></div>';
     });
