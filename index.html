@@ -5715,6 +5715,13 @@ const NAME_ALIASES = {
   'matt': 'Matt', 'matt daniher': 'Matt', 'matt d': 'Matt',
   'raul': 'Raul', 'lia': 'Lea'
 };
+// Preserved copy of the built-in mappings above, taken before any custom
+// alias is ever added or removed. Removing a custom alias must only undo
+// the custom part -- if the same key is also a built-in protection (e.g.
+// Nithia Maldonado -> Nithia), deleting it from NAME_ALIASES outright would
+// silently strip that protection until a full page reload, which is
+// exactly what caused her to show unmatched after tapping refresh.
+const BASE_NAME_ALIASES = Object.assign({}, NAME_ALIASES);
 // Names that should never appear in these sections regardless of what a parse
 // returns — e.g. Rhett is a Driver and must never be planted into FOH sections.
 const SECTION_BLOCKLIST = { SERVERS: ['rhett'], BARTENDERS: ['rhett'], CASHIERS: ['rhett'], HOSTS: ['rhett'], PIZZA: ['soto', 'luis soto'] };
@@ -10073,7 +10080,14 @@ function removeOneAlias(id) {
     headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
   }).then(function(r){
     if(!r.ok) throw new Error('Failed');
-    delete NAME_ALIASES[entry.alias.toLowerCase()];
+    // Only remove the custom contribution -- if this key is also a
+    // built-in protection, restore it instead of leaving it gone.
+    var lowerAlias = entry.alias.toLowerCase();
+    if(BASE_NAME_ALIASES[lowerAlias]) {
+      NAME_ALIASES[lowerAlias] = BASE_NAME_ALIASES[lowerAlias];
+    } else {
+      delete NAME_ALIASES[lowerAlias];
+    }
     CUSTOM_ALIASES_LIST = CUSTOM_ALIASES_LIST.filter(function(a){ return a.id !== id; });
     renderEditAliasesList();
   }).catch(function(e){ alert('Failed to remove: ' + e.message); });
