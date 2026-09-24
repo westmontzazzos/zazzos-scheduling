@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<title>Zazzo's — v2.30</title>
+<title>Zazzo's — v2.31</title>
 <link rel="apple-touch-icon" id="za-touch-icon-apple">
 <link rel="icon" type="image/png" id="za-touch-icon-favicon">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -4743,7 +4743,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.30</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v2.31</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -5724,7 +5724,7 @@ const NAME_ALIASES = {
 const BASE_NAME_ALIASES = Object.assign({}, NAME_ALIASES);
 // Names that should never appear in these sections regardless of what a parse
 // returns — e.g. Rhett is a Driver and must never be planted into FOH sections.
-const SECTION_BLOCKLIST = { SERVERS: ['rhett'], BARTENDERS: ['rhett'], CASHIERS: ['rhett'], HOSTS: ['rhett'], PIZZA: ['soto', 'luis soto'] };
+const SECTION_BLOCKLIST = { SERVERS: ['rhett', 'raegan', 'reagan l'], BARTENDERS: ['rhett'], CASHIERS: ['rhett'], HOSTS: ['rhett'], PIZZA: ['soto', 'luis soto'] };
 // General staff name aliases: short/alt names on the physical schedule → canonical wage-roster name
 
 // DOM'S NOTES
