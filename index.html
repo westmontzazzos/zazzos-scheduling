@@ -4965,6 +4965,7 @@ document.addEventListener("DOMContentLoaded",function(){
     </div>
     <div style="padding:0 16px 8px;">
       <button onclick="fixStaleNamesAllWeeks()" class="btn btn-secondary" style="width:100%;">🔧 Fix Stale Names in All Saved Weeks</button>
+      <button onclick="purgeAllBOHSchedules()" class="btn btn-secondary" style="width:100%;background:#fff0f0;color:#c0392b;border:1px solid #e0a0a0;margin-top:8px;">🗑️ Purge All Back of House Schedules (Kitchen/Pizza/Prep/Dish/Bus)</button>
     </div>
     <div id="private-data"></div>
   </div>
@@ -14362,6 +14363,56 @@ async function gatedShowOverrideLog(btn) {
 // the database, not just future uploads. STALE_NAME_MIGRATIONS is the same
 // map the live loader uses, so this stays in sync automatically as new
 // corrections get added there.
+async function purgeAllBOHSchedules() {
+  var pin = await askPin('Enter PIN to run this purge');
+  if(pin === null) return;
+  if(String(pin).trim() !== PRIVATE_PIN) { alert('Incorrect PIN.'); return; }
+
+  if(!confirm('This will PERMANENTLY DELETE Kitchen, Pizza, Prep, Dish, and Bus schedule data from EVERY saved week, past and future. Manager schedules, Front of House, and Drivers will NOT be touched. This cannot be undone. Continue?')) return;
+  if(!confirm('Are you absolutely sure? Every BOH shift ever entered, for every week, will be gone. Type-check: this is your final confirmation.')) return;
+
+  try {
+    var resp = await fetch(SUPABASE_URL + '/rest/v1/schedules?select=id,boh_data', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(!resp.ok) throw new Error('Could not load saved weeks (' + resp.status + ')');
+    var weeks = await resp.json();
+
+    var purgedCount = 0;
+    var BOH_HOURLY_SECS = ['KITCHEN','PIZZA','PREP','DISH','BUS'];
+    for(var i = 0; i < weeks.length; i++) {
+      var week = weeks[i];
+      var boh;
+      try { boh = JSON.parse(week.boh_data || '{}'); } catch(e) { continue; }
+
+      var hadData = false;
+      BOH_HOURLY_SECS.forEach(function(sec){
+        if(boh[sec] && Object.keys(boh[sec]).length) hadData = true;
+      });
+      if(!hadData) continue; // nothing to purge for this week
+
+      BOH_HOURLY_SECS.forEach(function(sec){ boh[sec] = {}; });
+      // MANAGERS is deliberately left untouched -- it lives in the same
+      // boh_data blob but manager schedules aren't part of what "back of
+      // house schedule" means here.
+
+      await fetch(SUPABASE_URL + '/rest/v1/schedules?id=eq.' + week.id, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+        body: JSON.stringify({boh_data: JSON.stringify(boh)})
+      });
+      purgedCount++;
+    }
+
+    alert(purgedCount > 0
+      ? 'Purged Kitchen/Pizza/Prep/Dish/Bus data from ' + purgedCount + ' week(s). Manager schedules were left intact. Reload the app to see the change.'
+      : 'No BOH schedule data found in any saved week -- nothing to purge.');
+    if(purgedCount > 0 && typeof loadAllWeeks === 'function') await loadAllWeeks();
+  } catch(e) {
+    alert('Purge failed: ' + e.message);
+  }
+}
+
 async function fixStaleNamesAllWeeks() {
   var pin = await askPin('Enter PIN to run this fix');
   if(pin === null) return;
