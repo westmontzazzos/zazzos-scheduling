@@ -9017,7 +9017,7 @@ function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
   function addBOHStyle(sectionObj) {
     if(!sectionObj) return;
     Object.keys(sectionObj).forEach(function(name){
-      if(SALARIED_EMPLOYEES[name]) return;
+      if(SALARY_ROSTER[name]) return;
       var rate = getEffectiveHourlyRate(name);
       var days = sectionObj[name];
       if(!Array.isArray(days)) return;
@@ -9032,7 +9032,7 @@ function computeWeekDailyLaborCost(bohObj, fohObj, drvObj) {
   function addFOHStyle(sectionObj) {
     if(!sectionObj) return;
     Object.keys(sectionObj).forEach(function(name){
-      if(SALARIED_EMPLOYEES[name]) return;
+      if(SALARY_ROSTER[name]) return;
       var rate = getEffectiveHourlyRate(name);
       var days = sectionObj[name];
       if(!Array.isArray(days)) return;
@@ -10250,14 +10250,9 @@ function renderPrivate() {
   function fmt$(n){return'$'+n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
   function fmtI$(n){return'$'+Math.round(n).toLocaleString();}
 
-  var SAL=[
-    {n:'Ely',s:100000,role:'Owner'},
-    {n:'Lisa Barraco',s:40000,role:'Owner'},
-    {n:'Dom',s:60000,role:'Owner'},
-    {n:'Selena Gonzales',s:40292,role:'Manager'},
-    {n:'Brett',s:10000,role:'Manager'},
-    {n:'Alex',s:60000,role:'Manager'}
-  ];
+  var SAL = Object.keys(SALARY_ROSTER).map(function(k){
+    return {n: SALARY_ROSTER[k].fullName, s: SALARY_ROSTER[k].salary, role: SALARY_ROSTER[k].role};
+  });
   // Unified roster engine: every hourly person -- whether hardcoded in
   // DEFAULT_ROSTER or added later through Manage Roster -- goes through
   // this exact same path. ROLE_OVERRIDES (from roster_role_overrides) lets
@@ -10491,7 +10486,7 @@ function renderPrivate() {
   // never returned by any src() is invisible to this wage report.
   var coveredArrs = new Set();
   HLY.forEach(function(e){ e.src().forEach(function(a){ if(a) coveredArrs.add(a); }); });
-  var SAL_NAMES = SALARIED_EMPLOYEES;
+  var SAL_NAMES = SALARY_ROSTER;
   var unmatched = [];
   [
     {d:MANAGERS,label:'Managers',type:'b'},{d:PIZZA,label:'Pizza',type:'b'},
@@ -10788,13 +10783,23 @@ function parseFOHHours(entry, di, role) {
   return {st: st, en: en, flag: flag, flagMsg: flagMsg, isClose: !!isClose};
 }
 
-// Single source of truth for who's salaried. Every place in the app that
-// needs to exclude someone from hourly cost math, or knows not to flag them
-// as "not in wage roster," reads from this ONE list — not a separate copy.
-// This exists because two different hardcoded copies of this same list
-// (one here, one in the Private tab report) drifted out of sync and caused
-// a correctly-salaried employee to wrongly show as unmatched.
-const SALARIED_EMPLOYEES = {'Brett':1,'Dom':1,'Ely':1,'Selena':1,'Lisa':1,'Alex':1};
+// SINGLE SOURCE OF TRUTH for every salaried person: name, salary, role, and
+// the full legal name needed on the printed wage report. This replaced two
+// separate hardcoded lists (SALARIED_EMPLOYEES here, and a second "SAL" list
+// inside the Private tab's report code) that had to be kept in sync by hand
+// -- exactly the kind of drift that caused a correctly-salaried employee to
+// wrongly show as unmatched in an earlier session. Keyed by the SHORT name
+// because that's what actually appears as a literal key in the schedule's
+// MANAGERS section (managers are never scheduled by full name); fullName is
+// only for the print report, which needs real last names for payroll.
+const SALARY_ROSTER = {
+  'Ely':    {salary:100000, role:'Owner',   fullName:'Ely'},
+  'Lisa':   {salary:40000,  role:'Owner',   fullName:'Lisa Barraco'},
+  'Dom':    {salary:60000,  role:'Owner',   fullName:'Dom'},
+  'Selena': {salary:40292,  role:'Manager', fullName:'Selena Gonzales'},
+  'Brett':  {salary:10000,  role:'Manager', fullName:'Brett'},
+  'Alex':   {salary:60000,  role:'Manager', fullName:'Alex'}
+};
 
 // Single source of truth for hourly pay rates, promoted to global scope so
 // any feature that needs cost math (Heat Map, the calendar's per-day cost
@@ -10950,7 +10955,7 @@ function renderHitList() {
   HOURS.forEach(function(h){ dayGrid[h] = {count:0, cost:0}; });
 
   // Salaried staff — excluded from the hourly heat map (like drivers). Alex is hourly, so not here.
-  var SALARIED = SALARIED_EMPLOYEES;
+  var SALARIED = SALARY_ROSTER;
 
   var bohSections = [
     {d:MANAGERS,names:{}},{d:PIZZA,names:{}},{d:KITCHEN,names:{}},
