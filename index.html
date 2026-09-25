@@ -4952,15 +4952,12 @@ document.addEventListener("DOMContentLoaded",function(){
       <button onclick="printPayrollSummary()" class="btn btn-primary" style="width:100%;">Print Weekly Labor Cost -- By Employee</button>
     </div>
     <div style="padding:0 16px 8px;">
-      <button onclick="openManageRosterModal()" class="btn btn-secondary" style="width:100%;">👥 Manage Roster -- Add / Remove / Edit Staff</button>
-    </div>
-    <div style="padding:0 16px 8px;">
       <button onclick="gatedShowOverrideLog(this)" class="btn btn-secondary" style="width:100%;">📋 Schedule Log</button>
     </div>
     <div style="padding:0 16px 8px;">
       <button onclick="gatedShowFullMessageLog()" class="btn btn-secondary" style="width:100%;">💬 Full Message Log</button>
     </div>
-    <div style="padding:0 16px 8px;">
+    <div style="padding:0 16px 16px;">
       <button onclick="openAdminToolsModal()" class="btn btn-secondary" style="width:100%;">⚙️ Admin</button>
     </div>
     <div id="private-data"></div>
@@ -4975,6 +4972,9 @@ document.addEventListener("DOMContentLoaded",function(){
       <div onclick="document.getElementById('admin-tools-modal').style.display='none';" style="color:#fff;font-size:20px;cursor:pointer;padding:0 4px;">✕</div>
     </div>
     <div style="padding:14px 16px 8px;">
+      <button onclick="openManageRosterModal()" class="btn btn-secondary" style="width:100%;">👥 Manage Roster -- Add / Remove / Edit Staff</button>
+    </div>
+    <div style="padding:0 16px 8px;">
       <button onclick="printWageRoster()" class="btn btn-secondary" style="width:100%;">Print Wage Roster -- By Job</button>
     </div>
     <div style="padding:0 16px 8px;">
@@ -9488,6 +9488,17 @@ function gatedTileClick(actionFn) {
   document.getElementById('app-lock').style.display = 'flex';
   setTimeout(function(){ document.getElementById('app-lock-input').focus(); }, 50);
 }
+// Manual dot-masking for PIN fields, replacing the -webkit-text-security CSS
+// trick. That CSS property alone (independent of type or autocomplete) is
+// enough for Safari to treat the field as a password and offer "Use Strong
+// Password?" / Keychain save -- this avoids the property entirely by hiding
+// the real input (transparent text) and drawing dots in a separate overlay.
+function updatePinDots(inputEl, dotsId) {
+  var dots = document.getElementById(dotsId);
+  if(!dots) return;
+  dots.textContent = inputEl.value ? Array(inputEl.value.length + 1).join('\u2022 ').trim() : '\u2022 \u2022 \u2022 \u2022';
+}
+
 function checkAppLock() {
   var pin = document.getElementById('app-lock-input').value;
   if(pin===APP_PIN) {
@@ -10547,7 +10558,7 @@ function renderPrivate() {
     });
   });
   if(unmatched.length){
-    html+='<div style="background:#FFF8E1;border:1px solid #F0C040;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:12.5px;">';
+    html+='<div style="background:#FFF8E1;border:1px solid #F0C040;border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12.5px;">';
     html+='<div style="font-weight:700;color:#8a6d00;margin-bottom:6px;">⚠ Not in wage roster — hours below are NOT included in the totals on this page</div>';
     html+='<div style="font-size:10px;color:#c2a860;margin-bottom:8px;">build v3.6</div>';
     unmatched.sort(function(a,b){return b.wh-a.wh;}).forEach(function(u){
