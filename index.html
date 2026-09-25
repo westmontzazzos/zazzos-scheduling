@@ -4964,10 +4964,25 @@ document.addEventListener("DOMContentLoaded",function(){
       <button onclick="gatedShowFullMessageLog()" class="btn btn-secondary" style="width:100%;">💬 Full Message Log</button>
     </div>
     <div style="padding:0 16px 8px;">
-      <button onclick="fixStaleNamesAllWeeks()" class="btn btn-secondary" style="width:100%;">🔧 Fix Stale Names in All Saved Weeks</button>
-      <button onclick="purgeAllBOHSchedules()" class="btn btn-secondary" style="width:100%;background:#fff0f0;color:#c0392b;border:1px solid #e0a0a0;margin-top:8px;">🗑️ Purge All Back of House Schedules (Kitchen/Pizza/Prep/Dish/Bus/Managers)</button>
+      <button onclick="openAdminToolsModal()" class="btn btn-secondary" style="width:100%;">⚙️ Admin</button>
     </div>
     <div id="private-data"></div>
+  </div>
+</div>
+
+<!-- ADMIN TOOLS MODAL -->
+<div id="admin-tools-modal" style="display:none;position:fixed;inset:0;z-index:10004;background:rgba(0,0,0,0.65);align-items:flex-end;justify-content:center;">
+  <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;max-height:88vh;overflow-y:auto;box-sizing:border-box;padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px));">
+    <div style="background:var(--red);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:2;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.06em;color:#fff;">Admin Tools</div>
+      <div onclick="document.getElementById('admin-tools-modal').style.display='none';" style="color:#fff;font-size:20px;cursor:pointer;padding:0 4px;">✕</div>
+    </div>
+    <div style="padding:14px 16px 8px;">
+      <button onclick="fixStaleNamesAllWeeks()" class="btn btn-secondary" style="width:100%;">🔧 Fix Stale Names in All Saved Weeks</button>
+    </div>
+    <div style="padding:0 16px 8px;">
+      <button onclick="purgeAllBOHSchedules()" class="btn btn-secondary" style="width:100%;background:#fff0f0;color:#c0392b;border:1px solid #e0a0a0;">🗑️ Purge All BOH Schedules</button>
+    </div>
   </div>
 </div>
 
@@ -14428,6 +14443,10 @@ async function gatedShowOverrideLog(btn) {
 // the database, not just future uploads. STALE_NAME_MIGRATIONS is the same
 // map the live loader uses, so this stays in sync automatically as new
 // corrections get added there.
+function openAdminToolsModal() {
+  document.getElementById('admin-tools-modal').style.display = 'flex';
+}
+
 async function purgeAllBOHSchedules() {
   var pin = await askPin('Enter PIN to run this purge');
   if(pin === null) return;
