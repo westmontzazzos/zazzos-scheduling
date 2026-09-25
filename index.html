@@ -5697,11 +5697,11 @@ const DRIVER_ALIASES = { 'jeff z': 'Jeff Z', 'jeff zeggeben': 'Jeff Z', 'jeff ze
 // the one-time "Fix Stale Names in All Saved Weeks" migration in Private.
 // Add future corrections here in one place rather than duplicating logic.
 const STALE_NAME_MIGRATIONS = {
-  KITCHEN: { 'Nithia Maldonado': 'Nithia' }
+  KITCHEN: { 'Nithia Maldonado': 'Nithia M' }
 };
 const NAME_ALIASES = {
   'alex': 'Alex', 'alex a': 'Alex',
-  'nithia': 'Nithia', 'nithia maldonado': 'Nithia', 'lithia': 'Nithia',
+  'nithia': 'Nithia M', 'nithia maldonado': 'Nithia M', 'lithia': 'Nithia M',
   'nick': 'Nick', 'nicholas': 'Nick', 'nicholas urbana': 'Nick',
   'sio': 'Sio', 'sio mcavoy': 'Sio',
   'laura': 'Laura Z', 'laura z': 'Laura Z',
@@ -5720,7 +5720,7 @@ const NAME_ALIASES = {
 // Preserved copy of the built-in mappings above, taken before any custom
 // alias is ever added or removed. Removing a custom alias must only undo
 // the custom part -- if the same key is also a built-in protection (e.g.
-// Nithia Maldonado -> Nithia), deleting it from NAME_ALIASES outright would
+// Nithia Maldonado -> Nithia M), deleting it from NAME_ALIASES outright would
 // silently strip that protection until a full page reload, which is
 // exactly what caused her to show unmatched after tapping refresh.
 const BASE_NAME_ALIASES = Object.assign({}, NAME_ALIASES);
@@ -7675,9 +7675,9 @@ function printWageRoster() {
   function subRow(lbl,ann){pb(rH+2);rect(p,M,y,PW-2*M,rH,[0.93,0.93,0.91]);text(p,M+4,y+10,lbl+' Subtotal',8,true,[0.35,0.35,0.35]);rtext(p,CA,y+10,'~$'+Math.round(ann).toLocaleString()+' / yr',8.5,true);y+=rH+3;}
   var sections=[
     {l:'Owners',r:[['Dom',true,60000],['Ely',true,100000],['Lisa Barraco',true,40000]]},
-    {l:'Managers',r:[['Alex',true,60000],['Brett',true,10000],['Selena Gonzales',true,40292]]},
+    {l:'Managers',r:[['Alex',true,60000],['Brett',true,10000],['Selena G',true,40292]]},
     {l:'Pizza',r:[['Laura Z',false,19],['Arturo V',false,21],['Carlos Jr',false,17.5],['Carlos M',false,19.25],['Eddie C',false,19],['Jesus M',false,21],['Luis P',false,20],['Oscar V',false,19],['Victor C',false,20.5]]},
-    {l:'Kitchen',r:[['Laura Z',false,19],['Nithia',false,18.50]]},
+    {l:'Kitchen',r:[['Laura Z',false,19],['Nithia M',false,18.50]]},
     {l:'Prep / Utility',r:[['Sylvia',false,15]]},
     {l:'Bus / Dish',r:[['Gonzalo',false,17],['Marco S',false,16],['Raul',false,15]]},
     {l:'Servers',r:[['Abby',false,9],['Alexis V',false,9],['Bridget',false,9],['Dorris',false,9],['Hannah M',false,9],['Jaime',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9]]},
@@ -10816,7 +10816,7 @@ const SALARY_ROSTER = {
   'Ely':    {salary:100000, role:'Owner',   fullName:'Ely'},
   'Lisa':   {salary:40000,  role:'Owner',   fullName:'Lisa Barraco'},
   'Dom':    {salary:60000,  role:'Owner',   fullName:'Dom'},
-  'Selena': {salary:40292,  role:'Manager', fullName:'Selena Gonzales'},
+  'Selena': {salary:40292,  role:'Manager', fullName:'Selena G'},
   'Brett':  {salary:10000,  role:'Manager', fullName:'Brett'},
   'Alex':   {salary:60000,  role:'Manager', fullName:'Alex'}
 };
@@ -10835,7 +10835,7 @@ const SALARY_ROSTER = {
 // or roster_rates takes priority over what's here.
 const DEFAULT_ROSTER = {
   'Laura Z': [{role:'Pizza',rate:19.0,keys:['Laura Z']},{role:'Kitchen',rate:19.0,keys:['Laura Z']}],
-  'Nithia': [{role:'Kitchen',rate:18.5,keys:['Nithia']}],
+  'Nithia M': [{role:'Kitchen',rate:18.5,keys:['Nithia']}],
   'Arturo V': [{role:'Kitchen',rate:21.0,keys:['Arturo']},{role:'Pizza',rate:21.0,keys:['Arturo']}],
   'Jesus M': [{role:'Kitchen',rate:21.0,keys:['Jesus']},{role:'Pizza',rate:21.0,keys:['Jesus']}],
   'Carlos M': [{role:'Kitchen',rate:19.25,keys:['Carlos']},{role:'Pizza',rate:19.25,keys:['Carlos']}],
@@ -10936,7 +10936,7 @@ function getEffectiveHourlyRate(name) {
 const RATES = {
   'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie C':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
   'Victor':20.50,'Arturo':21,'Nick':20,'Armani':16,'Marco':16,
-  'Nithia':18.50,'Arturo V':21,'Jesus M':21,'Derek':19,
+  'Nithia M':18.50,'Arturo V':21,'Jesus M':21,'Derek':19,
   'Carlos M':19.25,'Nick U':20,'Luis P':20,'Victor C':20.50,
   'Oscar V':19,
   'Carlos Jr':17.50,'Sylvia':15,
@@ -13683,7 +13683,7 @@ async function readScheduleImage(dataUrl, type) {
           }
         });
         // Normalize short names to full names
-        var kitchenAliases = {'nithia': 'Nithia', 'lithia': 'Nithia', 'nicholas': 'Nick', 'nicholas urbana': 'Nick', 'laura': 'Laura Z'};
+        var kitchenAliases = {'nithia': 'Nithia M', 'lithia': 'Nithia M', 'nicholas': 'Nick', 'nicholas urbana': 'Nick', 'laura': 'Laura Z'};
         Object.keys(sched.KITCHEN).forEach(function(name){
           var alias = kitchenAliases[name.toLowerCase()];
           if(alias && alias !== name) {
@@ -14369,7 +14369,7 @@ async function fixStaleNamesAllWeeks() {
   if(pin === null) return;
   if(String(pin).trim() !== PRIVATE_PIN) { alert('Incorrect PIN.'); return; }
 
-  if(!confirm('This will scan every saved week and correct any stale names found (e.g. Nithia Maldonado -> Nithia), writing the fix directly to each affected week. Continue?')) return;
+  if(!confirm('This will scan every saved week and correct any stale names found (e.g. Nithia Maldonado -> Nithia M), writing the fix directly to each affected week. Continue?')) return;
 
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/schedules?select=id,boh_data', {
