@@ -6610,6 +6610,11 @@ function goHome() {
 
 function showTab(tab, btn) {
   currentTab = tab;
+  // The schedule-errors popup should only interrupt you once per visit to
+  // Schedule or Run Sheets (and once right after signing in) -- never on
+  // any other tab, and never again just from working within the same tab
+  // visit. Arriving at either of these tabs re-arms exactly one popup.
+  if(tab === 'schedule' || tab === 'runsheets') window._errorPopupShownForThisVisit = false;
   document.getElementById('home-screen').style.display = 'none';
   document.getElementById('home-header').style.display = 'none';
   document.getElementById('floating-home-btn').style.display = 'flex';
@@ -13214,9 +13219,13 @@ function checkScheduleErrors() {
   var allErrsForSig = (errors.BOH||[]).concat(errors.FOH||[]).concat(errors.Drivers||[]);
   var errorSig = totalErrors + '|' + allErrsForSig.map(function(e){ return e.di+':'+e.dept+':'+e.msg; }).sort().join(',');
   window._currentErrorSig = errorSig;
-  if(totalErrors > 0 && window._dismissedErrorSig !== errorSig) {
+  var _onErrorEligibleTab = (currentTab === 'schedule' || currentTab === 'runsheets');
+  var _errorPopupEligible = _onErrorEligibleTab || !window._signInErrorCheckDone;
+  if(totalErrors > 0 && _errorPopupEligible && !window._errorPopupShownForThisVisit && window._dismissedErrorSig !== errorSig) {
     document.getElementById('sched-error-modal').style.display = 'flex';
+    window._errorPopupShownForThisVisit = true;
   }
+  window._signInErrorCheckDone = true;
 }
 
 function printScheduleErrors() {
