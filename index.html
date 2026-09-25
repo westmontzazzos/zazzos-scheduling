@@ -10531,7 +10531,7 @@ function renderPrivate() {
   if(unmatched.length){
     html+='<div style="background:#FFF8E1;border:1px solid #F0C040;border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;font-size:12.5px;">';
     html+='<div style="font-weight:700;color:#8a6d00;margin-bottom:6px;">⚠ Not in wage roster — hours below are NOT included in the totals on this page</div>';
-    html+='<div style="font-size:10px;color:#c2a860;margin-bottom:8px;">build v3.5</div>';
+    html+='<div style="font-size:10px;color:#c2a860;margin-bottom:8px;">build v3.6</div>';
     unmatched.sort(function(a,b){return b.wh-a.wh;}).forEach(function(u){
       html+='<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>'+u.n+' <span style="color:var(--gray-400)">('+u.sec+')</span></span><span class="mono">'+u.wh.toFixed(1)+'h</span></div>';
     });
