@@ -5697,14 +5697,14 @@ const DRIVER_ALIASES = { 'jeff z': 'Jeff Z', 'jeff zeggeben': 'Jeff Z', 'jeff ze
 // the one-time "Fix Stale Names in All Saved Weeks" migration in Private.
 // Add future corrections here in one place rather than duplicating logic.
 const STALE_NAME_MIGRATIONS = {
-  KITCHEN: { 'Nithia Maldonado': 'Nithia M' }
+  KITCHEN: { 'Nithia Maldonado': 'Nithia' }
 };
 const NAME_ALIASES = {
   'alex': 'Alex', 'alex a': 'Alex',
-  'nithia': 'Nithia M', 'nithia maldonado': 'Nithia M', 'lithia': 'Nithia M',
+  'nithia': 'Nithia', 'nithia maldonado': 'Nithia', 'lithia': 'Nithia',
   'nick': 'Nick', 'nicholas': 'Nick', 'nicholas urbana': 'Nick',
   'sio': 'Sio', 'sio mcavoy': 'Sio',
-  'laura': 'Laura Z', 'laura z': 'Laura Z',
+  'laura': 'Laura', 'laura z': 'Laura',
   'eddy': 'Eddie', 'eddie': 'Eddie',
   'matt': 'Matt', 'matt daniher': 'Matt', 'matt d': 'Matt',
   'raul': 'Raul', 'lia': 'Lea', 'gonzo': 'Gonzalo', 'alexis': 'Alexis V'
@@ -5720,7 +5720,7 @@ const NAME_ALIASES = {
 // Preserved copy of the built-in mappings above, taken before any custom
 // alias is ever added or removed. Removing a custom alias must only undo
 // the custom part -- if the same key is also a built-in protection (e.g.
-// Nithia Maldonado -> Nithia M), deleting it from NAME_ALIASES outright would
+// Nithia Maldonado -> Nithia), deleting it from NAME_ALIASES outright would
 // silently strip that protection until a full page reload, which is
 // exactly what caused her to show unmatched after tapping refresh.
 const BASE_NAME_ALIASES = Object.assign({}, NAME_ALIASES);
@@ -7675,11 +7675,11 @@ function printWageRoster() {
   function subRow(lbl,ann){pb(rH+2);rect(p,M,y,PW-2*M,rH,[0.93,0.93,0.91]);text(p,M+4,y+10,lbl+' Subtotal',8,true,[0.35,0.35,0.35]);rtext(p,CA,y+10,'~$'+Math.round(ann).toLocaleString()+' / yr',8.5,true);y+=rH+3;}
   var sections=[
     {l:'Owners',r:[['Dom',true,60000],['Ely',true,100000],['Lisa Barraco',true,40000]]},
-    {l:'Managers',r:[['Alex',true,60000],['Brett',true,10000],['Selena G',true,40292]]},
-    {l:'Pizza',r:[['Laura Z',false,19],['Arturo V',false,21],['Carlos Jr',false,17.5],['Carlos M',false,19.25],['Eddie C',false,19],['Jesus M',false,21],['Luis P',false,20],['Oscar V',false,19],['Victor C',false,20.5]]},
-    {l:'Kitchen',r:[['Laura Z',false,19],['Nithia M',false,18.50]]},
-    {l:'Prep / Utility',r:[['Sylvia M',false,15]]},
-    {l:'Bus / Dish',r:[['Gonzalo',false,17],['Marco S',false,16],['Raul',false,15]]},
+    {l:'Managers',r:[['Alex',true,60000],['Brett',true,10000],['Selena',true,40292]]},
+    {l:'Pizza',r:[['Laura',false,19],['Arturo',false,21],['Jr',false,17.5],['Carlos',false,19.25],['Eddie',false,19],['Jesus',false,21],['Luis',false,20],['Oscar',false,19],['Victor',false,20.5]]},
+    {l:'Kitchen',r:[['Laura',false,19],['Nithia',false,18.50]]},
+    {l:'Prep / Utility',r:[['Sylvia',false,15]]},
+    {l:'Bus / Dish',r:[['Gonzalo',false,17],['Marco',false,16],['Raul',false,15]]},
     {l:'Servers',r:[['Abby',false,9],['Alexis V',false,9],['Bridget',false,9],['Dorris',false,9],['Hannah M',false,9],['Jaime',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9]]},
     {l:'Bartenders',r:[['Brooke',false,9],['Carrie',false,9],['Cheeks',false,9],['Danielle',false,9],['Justin',false,9],['Lea',false,9],['Lindsay',false,9],['Mary',false,9]]},
     {l:'Cashiers / Hosts',r:[['Keegan',false,15],['Molly',false,15],['Presley',false,15],['Sio',false,17],['Tia',false,15]]}
@@ -10816,7 +10816,7 @@ const SALARY_ROSTER = {
   'Ely':    {salary:100000, role:'Owner',   fullName:'Ely'},
   'Lisa':   {salary:40000,  role:'Owner',   fullName:'Lisa Barraco'},
   'Dom':    {salary:60000,  role:'Owner',   fullName:'Dom'},
-  'Selena': {salary:40292,  role:'Manager', fullName:'Selena G'},
+  'Selena': {salary:40292,  role:'Manager', fullName:'Selena'},
   'Brett':  {salary:10000,  role:'Manager', fullName:'Brett'},
   'Alex':   {salary:60000,  role:'Manager', fullName:'Alex'}
 };
@@ -10834,19 +10834,19 @@ const SALARY_ROSTER = {
 // button without ever needing a code change -- an override in roster_role_overrides
 // or roster_rates takes priority over what's here.
 const DEFAULT_ROSTER = {
-  'Laura Z': [{role:'Pizza',rate:19.0,keys:['Laura Z']},{role:'Kitchen',rate:19.0,keys:['Laura Z']}],
-  'Nithia M': [{role:'Kitchen',rate:18.5,keys:['Nithia']}],
-  'Arturo V': [{role:'Kitchen',rate:21.0,keys:['Arturo']},{role:'Pizza',rate:21.0,keys:['Arturo']}],
-  'Jesus M': [{role:'Kitchen',rate:21.0,keys:['Jesus']},{role:'Pizza',rate:21.0,keys:['Jesus']}],
-  'Carlos M': [{role:'Kitchen',rate:19.25,keys:['Carlos']},{role:'Pizza',rate:19.25,keys:['Carlos']}],
-  'Nick U': [{role:'Prep',rate:20.0,keys:['Nick']}],
-  'Luis P': [{role:'Pizza',rate:20.0,keys:['Luis']}],
-  'Victor C': [{role:'Pizza',rate:20.5,keys:['Victor']}],
-  'Oscar V': [{role:'Pizza',rate:19.0,keys:['Oscar']}],
-  'Carlos Jr': [{role:'Pizza',rate:17.5,keys:['Carlos Jr']}],
-  'Eddie C': [{role:'Pizza',rate:19.0,keys:['Eddie','Eddy']}],
-  'Sylvia M': [{role:'Prep',rate:15.0,keys:['Sylvia']}],
-  'Marco S': [{role:'Dish',rate:16.0,keys:['Marco']},{role:'Pizza',rate:16.0,keys:['Marco']},{role:'Bus',rate:16.0,keys:['Marco']}],
+  'Laura': [{role:'Pizza',rate:19.0,keys:['Laura Z']},{role:'Kitchen',rate:19.0,keys:['Laura Z']}],
+  'Nithia': [{role:'Kitchen',rate:18.5,keys:['Nithia']}],
+  'Arturo': [{role:'Kitchen',rate:21.0,keys:['Arturo']},{role:'Pizza',rate:21.0,keys:['Arturo']}],
+  'Jesus': [{role:'Kitchen',rate:21.0,keys:['Jesus']},{role:'Pizza',rate:21.0,keys:['Jesus']}],
+  'Carlos': [{role:'Kitchen',rate:19.25,keys:['Carlos']},{role:'Pizza',rate:19.25,keys:['Carlos']}],
+  'Nick': [{role:'Prep',rate:20.0,keys:['Nick']}],
+  'Luis': [{role:'Pizza',rate:20.0,keys:['Luis']}],
+  'Victor': [{role:'Pizza',rate:20.5,keys:['Victor']}],
+  'Oscar': [{role:'Pizza',rate:19.0,keys:['Oscar']}],
+  'Jr': [{role:'Pizza',rate:17.5,keys:['Carlos Jr']}],
+  'Eddie': [{role:'Pizza',rate:19.0,keys:['Eddie','Eddy']}],
+  'Sylvia': [{role:'Prep',rate:15.0,keys:['Sylvia']}],
+  'Marco': [{role:'Dish',rate:16.0,keys:['Marco']},{role:'Pizza',rate:16.0,keys:['Marco']},{role:'Bus',rate:16.0,keys:['Marco']}],
   'Gonzalo': [{role:'Dish',rate:17.0,keys:['Gonzalo','Gonzo']},{role:'Pizza',rate:17.0,keys:['Gonzalo','Gonzo']},{role:'Bus',rate:17.0,keys:['Gonzalo','Gonzo']}],
   'Raul': [{role:'Dish',rate:15.0,keys:['Raul']},{role:'Bus',rate:15.0,keys:['Raul']}],
   'Sio': [{role:'Cashier',rate:17.0,keys:['Sio','Sio McAvoy']},{role:'Server',rate:9.0,keys:['Sio','Sio McAvoy']},{role:'Bartender',rate:9.0,keys:['Sio','Sio McAvoy']}],
@@ -10934,13 +10934,11 @@ function getEffectiveHourlyRate(name) {
 }
 
 const RATES = {
-  'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie C':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
+  'Carlos':19.25,'Eddie':19,'Eddy':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
   'Victor':20.50,'Arturo':21,'Nick':20,'Armani':16,'Marco':16,
-  'Nithia M':18.50,'Arturo V':21,'Jesus M':21,'Derek':19,
-  'Carlos M':19.25,'Nick U':20,'Luis P':20,'Victor C':20.50,
-  'Oscar V':19,
-  'Carlos Jr':17.50,'Sylvia M':15,
-  'Marco S':16,'Gonzalo':17,'Sio':17,
+  'Nithia':18.50,'Derek':19,
+  'Jr':17.50,'Sylvia':15,
+  'Gonzalo':17,'Sio':17,
   'Raul':15,
   'Abby':9,'Alexis V':9,'Bridget':9,'Claudia':9,'Dorris':9,
   'Jaime':9,'Kelly':9,'Hannah M':9,'Brianna':9,'Erika':9,'Charlie':15,'Justin':9,'Lindsay':9,'Brooke':9,'Cheeks':9,
@@ -13683,7 +13681,7 @@ async function readScheduleImage(dataUrl, type) {
           }
         });
         // Normalize short names to full names
-        var kitchenAliases = {'nithia': 'Nithia M', 'lithia': 'Nithia M', 'nicholas': 'Nick', 'nicholas urbana': 'Nick', 'laura': 'Laura Z'};
+        var kitchenAliases = {'nithia': 'Nithia', 'lithia': 'Nithia', 'nicholas': 'Nick', 'nicholas urbana': 'Nick', 'laura': 'Laura'};
         Object.keys(sched.KITCHEN).forEach(function(name){
           var alias = kitchenAliases[name.toLowerCase()];
           if(alias && alias !== name) {
@@ -14369,7 +14367,7 @@ async function fixStaleNamesAllWeeks() {
   if(pin === null) return;
   if(String(pin).trim() !== PRIVATE_PIN) { alert('Incorrect PIN.'); return; }
 
-  if(!confirm('This will scan every saved week and correct any stale names found (e.g. Nithia Maldonado -> Nithia M), writing the fix directly to each affected week. Continue?')) return;
+  if(!confirm('This will scan every saved week and correct any stale names found (e.g. Nithia Maldonado -> Nithia), writing the fix directly to each affected week. Continue?')) return;
 
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/schedules?select=id,boh_data', {
