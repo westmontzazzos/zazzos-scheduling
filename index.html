@@ -4965,7 +4965,7 @@ document.addEventListener("DOMContentLoaded",function(){
     </div>
     <div style="padding:0 16px 8px;">
       <button onclick="fixStaleNamesAllWeeks()" class="btn btn-secondary" style="width:100%;">🔧 Fix Stale Names in All Saved Weeks</button>
-      <button onclick="purgeAllBOHSchedules()" class="btn btn-secondary" style="width:100%;background:#fff0f0;color:#c0392b;border:1px solid #e0a0a0;margin-top:8px;">🗑️ Purge All Back of House Schedules (Kitchen/Pizza/Prep/Dish/Bus)</button>
+      <button onclick="purgeAllBOHSchedules()" class="btn btn-secondary" style="width:100%;background:#fff0f0;color:#c0392b;border:1px solid #e0a0a0;margin-top:8px;">🗑️ Purge All Back of House Schedules (Kitchen/Pizza/Prep/Dish/Bus/Managers)</button>
     </div>
     <div id="private-data"></div>
   </div>
@@ -14368,8 +14368,8 @@ async function purgeAllBOHSchedules() {
   if(pin === null) return;
   if(String(pin).trim() !== PRIVATE_PIN) { alert('Incorrect PIN.'); return; }
 
-  if(!confirm('This will PERMANENTLY DELETE Kitchen, Pizza, Prep, Dish, and Bus schedule data from EVERY saved week, past and future. Manager schedules, Front of House, and Drivers will NOT be touched. This cannot be undone. Continue?')) return;
-  if(!confirm('Are you absolutely sure? Every BOH shift ever entered, for every week, will be gone. Type-check: this is your final confirmation.')) return;
+  if(!confirm('This will PERMANENTLY DELETE Kitchen, Pizza, Prep, Dish, Bus, AND Manager schedule data from EVERY saved week, past and future. Front of House and Drivers will NOT be touched. The roster itself (names, roles, rates) is never touched by this -- only schedule assignments. This cannot be undone. Continue?')) return;
+  if(!confirm('Are you absolutely sure? Every BOH and Manager shift ever entered, for every week, will be gone. This is your final confirmation.')) return;
 
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/schedules?select=id,boh_data', {
@@ -14379,7 +14379,7 @@ async function purgeAllBOHSchedules() {
     var weeks = await resp.json();
 
     var purgedCount = 0;
-    var BOH_HOURLY_SECS = ['KITCHEN','PIZZA','PREP','DISH','BUS'];
+    var BOH_HOURLY_SECS = ['KITCHEN','PIZZA','PREP','DISH','BUS','MANAGERS'];
     for(var i = 0; i < weeks.length; i++) {
       var week = weeks[i];
       var boh;
@@ -14392,9 +14392,6 @@ async function purgeAllBOHSchedules() {
       if(!hadData) continue; // nothing to purge for this week
 
       BOH_HOURLY_SECS.forEach(function(sec){ boh[sec] = {}; });
-      // MANAGERS is deliberately left untouched -- it lives in the same
-      // boh_data blob but manager schedules aren't part of what "back of
-      // house schedule" means here.
 
       await fetch(SUPABASE_URL + '/rest/v1/schedules?id=eq.' + week.id, {
         method: 'PATCH',
@@ -14405,7 +14402,7 @@ async function purgeAllBOHSchedules() {
     }
 
     alert(purgedCount > 0
-      ? 'Purged Kitchen/Pizza/Prep/Dish/Bus data from ' + purgedCount + ' week(s). Manager schedules were left intact. Reload the app to see the change.'
+      ? 'Purged Kitchen/Pizza/Prep/Dish/Bus/Manager data from ' + purgedCount + ' week(s). Front of House and Drivers were left intact. Reload the app to see the change.'
       : 'No BOH schedule data found in any saved week -- nothing to purge.');
     if(purgedCount > 0 && typeof loadAllWeeks === 'function') await loadAllWeeks();
   } catch(e) {
