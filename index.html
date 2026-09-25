@@ -7432,7 +7432,7 @@ function zpConfirmOverride(di, dept, msg, timeOffRequestId) {
   var roleAddMatch = msg.match(/^(.+) added to (.+) — approve this role addition\?$/);
   if(roleAddMatch) {
     var personName = roleAddMatch[1];
-    var currentRoles = (ROLE_OVERRIDES[personName] || ROLE_MAP[personName] || []).slice();
+    var currentRoles = getAllowedRoles(personName, []).slice();
     if(currentRoles.indexOf(dept) === -1) currentRoles.push(dept);
     ROLE_OVERRIDES[personName] = currentRoles; // takes effect immediately, no reload needed
     (async function(){
@@ -9511,6 +9511,21 @@ var ROLE_OVERRIDES = {};         // {original_name: ['Server','Cashier',...]} --
 var ROLE_RATE_OVERRIDES = {};    // {original_name: {'Cashier': 15, 'Server': 9}} -- per-role rate corrections
 var FULL_ROSTER_NAMES = [];      // [{n, role, origName, rate}] -- every hourly employee, regardless of hours this week
 
+// SINGLE SOURCE OF TRUTH for "what roles is this person allowed to work."
+// ROLE_MAP (or customAllowed, for app-added staff with no ROLE_MAP entry)
+// is the floor. ROLE_OVERRIDES can only ADD roles on top of that floor --
+// it must never be treated as a replacement, or a stale override captured
+// before ROLE_MAP was later expanded (e.g. Charlie given a Driver override,
+// then Cashiers/Hosts added to ROLE_MAP afterward) silently hides roles
+// that are correctly defined elsewhere. Every role check in the app must
+// call this instead of reading ROLE_OVERRIDES/ROLE_MAP directly.
+function getAllowedRoles(name, customAllowed) {
+  var base = (ROLE_MAP[name] || customAllowed || []).slice();
+  var overrides = ROLE_OVERRIDES[name] || [];
+  overrides.forEach(function(r){ if(base.indexOf(r) === -1) base.push(r); });
+  return base;
+}
+
 var CUSTOM_ROLE_TO_SECLBL = {
   'Server':'Servers','Bartender':'Bartenders','Cashier':'Cashiers','Host':'Hosts',
   'Pizza':'Pizza','Kitchen':'Kitchen','Dish':'Dish','Prep':'Prep','Bus':'Bus'
@@ -9531,7 +9546,7 @@ function isNameAllowedInSection(name, sectionLbl) {
       customAllowed = roles.map(function(r){ return CUSTOM_ROLE_TO_SECLBL[r]; }).filter(Boolean);
     }
   }
-  var allowed = ROLE_OVERRIDES[name] || ROLE_MAP[name] || customAllowed;
+  var allowed = getAllowedRoles(name, customAllowed);
   return !!(allowed && allowed.indexOf(sectionLbl) !== -1);
 }
 
@@ -12959,7 +12974,7 @@ function checkScheduleErrors() {
   ALL_SECS.forEach(function(sec) {
     Object.keys(sec.obj).forEach(function(name) {
       if(_managerNames.indexOf(name) !== -1) return; // managers can work any section
-      var allowed = ROLE_OVERRIDES[name] || ROLE_MAP[name] || _customAllowedMap[name];
+      var allowed = getAllowedRoles(name, _customAllowedMap[name]);
       // No entry in ROLE_MAP means this person has no defined role at all —
       // that is not a pass, it's the strongest possible violation. Role
       // controls placement, never name or spelling; an unrecognized name
