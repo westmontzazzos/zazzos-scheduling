@@ -13971,25 +13971,73 @@ function renderEventsSummaryTable() {
   table.innerHTML = rows;
 }
 
-// Copies the currently-loaded week's entire schedule (every section,
-// drivers, dispatch, and events) into the following week, as a starting
-// point to edit from instead of building from scratch. Checks first
-// whether next week already has data and confirms before overwriting
-// anything real.
+// Copies a chosen week's entire schedule (every section, drivers,
+// dispatch, and events) into a chosen destination week, as a starting
+// point to edit from instead of building from scratch. Both the source
+// week and the destination week are picked by the user -- source from a
+// dropdown of saved weeks, destination via a date picker (any date in the
+// target week; it's normalized to that week's Monday). Checks first
+// whether the destination week already has data and warns before
+// overwriting anything real.
 var _copyWeekNextStr = null;
 var _copyWeekNextLabel = null;
 var _copyWeekExisting = null;
 
+function _mondayOf(dateObj) {
+  var day = dateObj.getDay(); // 0=Sun
+  var diff = (day === 0) ? -6 : 1 - day;
+  var mon = new Date(dateObj); mon.setDate(dateObj.getDate() + diff);
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+function _fmtYMD(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function _fmtMD(d) {
+  return String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0') + '/' + String(d.getFullYear()).slice(-2);
+}
+function _weekRangeLabel(mon) {
+  var end = new Date(mon); end.setDate(mon.getDate()+6);
+  return _fmtMD(mon) + '\u2013' + _fmtMD(end);
+}
+
 async function copyWeekToNext() {
-  var current = allWeeks && allWeeks[currentWeekIdx] ? allWeeks[currentWeekIdx] : null;
-  if(!current || !current.week_start) { alert('No week loaded to copy from.'); return; }
+  if(!allWeeks || !allWeeks.length) { alert('No saved weeks to copy from.'); return; }
+  var sorted = allWeeks.slice().sort(function(a,b){ return a.week_start.localeCompare(b.week_start); });
+  var srcSel = document.getElementById('copy-week-src');
+  srcSel.innerHTML = sorted.map(function(w){
+    var mon = new Date(w.week_start + 'T00:00:00');
+    return '<option value="'+w.week_start+'">'+_weekRangeLabel(mon)+'</option>';
+  }).join('');
+  var current = allWeeks[currentWeekIdx] || sorted[sorted.length-1];
+  srcSel.value = current.week_start;
 
-  var curStart = new Date(current.week_start + 'T00:00:00');
-  var nextStart = new Date(curStart); nextStart.setDate(curStart.getDate() + 7);
-  _copyWeekNextStr = nextStart.getFullYear() + '-' + String(nextStart.getMonth()+1).padStart(2,'0') + '-' + String(nextStart.getDate()).padStart(2,'0');
-  _copyWeekNextLabel = String(nextStart.getMonth()+1).padStart(2,'0') + '/' + String(nextStart.getDate()).padStart(2,'0') + '/' + String(nextStart.getFullYear()).slice(-2);
+  var srcStart = new Date(current.week_start + 'T00:00:00');
+  var nextStart = new Date(srcStart); nextStart.setDate(srcStart.getDate() + 7);
+  document.getElementById('copy-week-dest').value = _fmtYMD(nextStart);
 
+  document.querySelectorAll('.copy-week-cb').forEach(function(cb){ cb.checked = false; });
+  onCopyWeekSrcChange();
+  await onCopyWeekDestChange();
+  document.getElementById('copy-week-modal').style.display = 'flex';
+}
+
+function onCopyWeekSrcChange() {
+  var val = document.getElementById('copy-week-src').value;
+  var mon = new Date(val + 'T00:00:00');
+  document.getElementById('copy-week-src-sub').textContent = 'Week of ' + _weekRangeLabel(mon);
+}
+
+async function onCopyWeekDestChange() {
+  var raw = document.getElementById('copy-week-dest').value; // YYYY-MM-DD
+  var sub = document.getElementById('copy-week-dest-sub');
+  if(!raw) { _copyWeekNextStr = null; _copyWeekNextLabel = null; _copyWeekExisting = null; sub.textContent = ''; return; }
+  var picked = new Date(raw + 'T00:00:00');
+  var mon = _mondayOf(picked);
+  _copyWeekNextStr = _fmtYMD(mon);
+  _copyWeekNextLabel = _weekRangeLabel(mon);
   _copyWeekExisting = null;
+  sub.textContent = 'Week of ' + _copyWeekNextLabel + ' \u2014 checking...';
   try {
     var checkResp = await fetch(SUPABASE_URL + '/rest/v1/schedules?week_start=eq.' + _copyWeekNextStr + '&select=id', {
       headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
@@ -13999,31 +14047,32 @@ async function copyWeekToNext() {
       if(rows && rows.length) _copyWeekExisting = rows[0];
     }
   } catch(e) { /* fall through — treat as no existing row */ }
-
-  document.querySelectorAll('.copy-week-cb').forEach(function(cb){ cb.checked = false; });
-  document.getElementById('copy-week-sub').textContent = 'To week of ' + _copyWeekNextLabel + (_copyWeekExisting ? ' — that week already has a schedule saved' : '');
-  document.getElementById('copy-week-modal').style.display = 'flex';
+  sub.textContent = 'Week of ' + _copyWeekNextLabel + (_copyWeekExisting ? ' — that week already has a schedule saved (selected sections will overwrite it)' : ' — new week');
 }
 
 async function runCopyWeekToNext() {
   var checked = Array.prototype.filter.call(document.querySelectorAll('.copy-week-cb'), function(cb){ return cb.checked; }).map(function(cb){ return cb.value; });
   if(!checked.length) { alert('Pick at least one section to copy.'); return; }
+  if(!_copyWeekNextStr) { alert('Pick a destination week.'); return; }
+
+  var srcVal = document.getElementById('copy-week-src').value;
+  var sourceWeek = allWeeks.find(function(w){ return w.week_start === srcVal; });
+  if(!sourceWeek) { alert('Could not find that source week — close this and try again.'); return; }
 
   var SECTION_LABELS = {boh:'Back of House', foh:'Front of House', drivers:'Drivers', dispatch:'Dispatch', events:'Events'};
   var sectionsText = checked.map(function(s){ return SECTION_LABELS[s] || s; }).join(', ');
 
-  var current = allWeeks && allWeeks[currentWeekIdx] ? allWeeks[currentWeekIdx] : null;
-  var srcStart = current ? new Date(current.week_start + 'T00:00:00') : null;
-  var srcLabel = srcStart ? String(srcStart.getMonth()+1).padStart(2,'0')+'/'+String(srcStart.getDate()).padStart(2,'0')+'/'+String(srcStart.getFullYear()).slice(-2) : 'unknown week';
+  var srcStart = new Date(sourceWeek.week_start + 'T00:00:00');
+  var srcLabel = String(srcStart.getMonth()+1).padStart(2,'0')+'/'+String(srcStart.getDate()).padStart(2,'0')+'/'+String(srcStart.getFullYear()).slice(-2);
 
   var payload = {};
-  if(checked.indexOf('boh') !== -1) payload.boh_data = JSON.stringify({MANAGERS:MANAGERS,PIZZA:PIZZA,KITCHEN:KITCHEN,PREP:PREP,BUS:BUS,DISH:DISH});
-  if(checked.indexOf('foh') !== -1) payload.foh_data = JSON.stringify({SERVERS:SERVERS,BARTENDERS:BARTENDERS,CASHIERS:CASHIERS,HOSTS:HOSTS});
-  if(checked.indexOf('drivers') !== -1) { payload.driver_data = JSON.stringify(DRIVERS); payload.schedule_notes_data = JSON.stringify(SCHEDULE_NOTES); }
-  if(checked.indexOf('dispatch') !== -1) payload.dispatch_data = JSON.stringify(DISPATCH);
+  if(checked.indexOf('boh') !== -1) payload.boh_data = sourceWeek.boh_data || JSON.stringify({MANAGERS:{},PIZZA:{},KITCHEN:{},PREP:{},BUS:{},DISH:{}});
+  if(checked.indexOf('foh') !== -1) payload.foh_data = sourceWeek.foh_data || JSON.stringify({SERVERS:{},BARTENDERS:{},CASHIERS:{},HOSTS:{}});
+  if(checked.indexOf('drivers') !== -1) { payload.driver_data = sourceWeek.driver_data || JSON.stringify({}); payload.schedule_notes_data = sourceWeek.schedule_notes_data || JSON.stringify({}); }
+  if(checked.indexOf('dispatch') !== -1) payload.dispatch_data = sourceWeek.dispatch_data || JSON.stringify({});
   if(checked.indexOf('events') !== -1) {
-    payload.event_data = JSON.stringify(WEEK_EVENTS);
-    payload.events_list_data = JSON.stringify(EVENTS_LIST);
+    payload.event_data = sourceWeek.event_data || JSON.stringify([null,null,null,null,null,null,null]);
+    payload.events_list_data = sourceWeek.events_list_data || JSON.stringify([[],[],[],[],[],[],[]]);
   }
   payload.last_edited_by = getCurrentUser();
   payload.last_edited_at = new Date().toISOString();
@@ -14074,7 +14123,7 @@ async function runCopyWeekToNext() {
         body: JSON.stringify([{
           week_label: 'Week of ' + _copyWeekNextLabel,
           day_index: -1,
-          dept: 'Copy to Next Week',
+          dept: 'Copy Schedule',
           msg: sectionsText + ' copied from week of ' + srcLabel + ' to week of ' + _copyWeekNextLabel + (_copyWeekExisting ? ' (overwrote existing schedule)' : ' (new week)'),
           who: getCurrentUser(),
           ack_type: 'copy_week',
@@ -14973,13 +15022,21 @@ function handleLockIconTap() {
 
 <!-- Copy to Next Week — pick which section(s) to copy -->
 <div id="copy-week-modal" style="display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:14px;width:92%;max-width:420px;overflow:hidden;">
+  <div style="background:#fff;border-radius:14px;width:92%;max-width:420px;overflow:hidden;max-height:90vh;overflow-y:auto;">
     <div style="background:var(--red);padding:14px 16px;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;color:#fff;">Copy to Next Week</div>
-      <div id="copy-week-sub" style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;"></div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;color:#fff;">Copy Schedule</div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;">Pick a week to copy from, and a week to copy it into.</div>
     </div>
     <div style="padding:16px;">
-      <div style="font-size:11px;color:#888;margin-bottom:12px;">Pick what to copy. Only the sections you check get copied — everything else on the target week stays as-is.</div>
+      <div style="font-size:11px;font-weight:700;color:#666;margin-bottom:4px;">COPY FROM</div>
+      <select id="copy-week-src" onchange="onCopyWeekSrcChange()" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:4px;box-sizing:border-box;"></select>
+      <div id="copy-week-src-sub" style="font-size:11px;color:#888;margin-bottom:14px;"></div>
+
+      <div style="font-size:11px;font-weight:700;color:#666;margin-bottom:4px;">COPY TO (pick any date in that week)</div>
+      <input type="date" id="copy-week-dest" onchange="onCopyWeekDestChange()" style="width:100%;padding:9px 10px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-bottom:4px;box-sizing:border-box;">
+      <div id="copy-week-dest-sub" style="font-size:11px;color:#888;margin-bottom:14px;"></div>
+
+      <div style="font-size:11px;color:#888;margin-bottom:12px;border-top:1px solid #eee;padding-top:12px;">Pick what to copy. Only the sections you check get copied — everything else on the target week stays as-is.</div>
       <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px;"><input type="checkbox" class="copy-week-cb" value="boh" style="width:18px;height:18px;"> Back of House</label>
       <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px;"><input type="checkbox" class="copy-week-cb" value="foh" style="width:18px;height:18px;"> Front of House</label>
       <label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #eee;font-size:14px;"><input type="checkbox" class="copy-week-cb" value="drivers" style="width:18px;height:18px;"> Drivers</label>
