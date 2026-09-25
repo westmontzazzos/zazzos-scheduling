@@ -5708,6 +5708,7 @@ const NAME_ALIASES = {
   'laura': 'Laura', 'laura z': 'Laura',
   'eddy': 'Eddie', 'eddie': 'Eddie',
   'matt': 'Matt', 'matt daniher': 'Matt', 'matt d': 'Matt',
+  'jr': 'Junior', 'junior': 'Junior', 'carlos jr': 'Junior',
   'raul': 'Raul', 'lia': 'Lea', 'gonzo': 'Gonzalo', 'alexis': 'Alexis'
   // Bare first-name aliases for Arturo/Jesus/Luis/Oscar/Victor/Marco were
   // added and then reverted in the same night -- the wage report's hours
@@ -5750,7 +5751,7 @@ const MANAGERS = {
 };
 const PIZZA = {
   'Carlos': [null,null,null,null,null,null,null],
-  'Carlos Jr': [null,null,null,null,null,null,null],
+  'Junior': [null,null,null,null,null,null,null],
   'Eddie': [null,null,null,null,null,null,null],
   'Jesus': [null,null,null,null,null,null,null],
   'Luis': [null,null,null,null,null,null,null],
@@ -10844,7 +10845,7 @@ const DEFAULT_ROSTER = {
   'Luis': [{role:'Pizza',rate:20.0,keys:['Luis']}],
   'Victor': [{role:'Pizza',rate:20.5,keys:['Victor']}],
   'Oscar': [{role:'Pizza',rate:19.0,keys:['Oscar']}],
-  'Junior': [{role:'Pizza',rate:17.5,keys:['Carlos Jr']}],
+  'Junior': [{role:'Pizza',rate:17.5,keys:['Junior']}],
   'Eddie': [{role:'Pizza',rate:19.0,keys:['Eddie','Eddy']}],
   'Sylvia': [{role:'Prep',rate:15.0,keys:['Sylvia']}],
   'Marco': [{role:'Dish',rate:16.0,keys:['Marco']},{role:'Pizza',rate:16.0,keys:['Marco']},{role:'Bus',rate:16.0,keys:['Marco']}],
@@ -12116,14 +12117,24 @@ function cleanNames(obj, sectionType, sectionKey) {
   var removedNames = (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).map(function(r){ return r.name.toLowerCase(); });
   Object.keys(obj).forEach(function(rawName) {
     // Collapse any run of whitespace (including non-breaking spaces the
-    // photo parser sometimes produces) to a single space, and drop a
-    // trailing period, BEFORE alias lookup -- an exact-string alias like
-    // 'reagan l' only matches if the incoming key is written exactly that
-    // way; a stray double space or invisible character silently defeats
-    // it and the name comes back unresolved every single week.
-    var name = rawName.replace(/[\s\u00A0]+/g, ' ').trim().replace(/\.$/, '');
+    // photo parser sometimes produces) to a single space, strip zero-width/
+    // invisible unicode characters some OCR passes silently insert between
+    // words (these are invisible on screen and NOT matched by \s, so a name
+    // that looks exactly like a known alias can still fail to match it),
+    // and drop a trailing period, BEFORE alias lookup -- an exact-string
+    // alias like 'reagan l' only matches if the incoming key is written
+    // exactly that way; a stray double space or invisible character
+    // silently defeats it and the name comes back unresolved every week.
+    var name = rawName.replace(/[\u200B-\u200D\uFEFF\u2060]/g, '').replace(/[\s\u00A0]+/g, ' ').trim().replace(/\.$/, '');
     var cleanKey = name.replace(/\s*\([\d\s\-\.]+\)/g, '').trim();
     if(blocked.indexOf(cleanKey.toLowerCase()) >= 0) return; // drop entirely
+    // Belt-and-suspenders fallback for names that have repeatedly come back
+    // stuck despite the alias table being correct: compare with ALL spaces
+    // removed too, so even an invisible character the strip above doesn't
+    // catch, or a missing/extra space, can't defeat the match.
+    var squashed = cleanKey.toLowerCase().replace(/\s+/g, '');
+    var SQUASH_FALLBACK = {'nithiamaldonado':'Nithia'};
+    if(SQUASH_FALLBACK[squashed]) cleanKey = SQUASH_FALLBACK[squashed];
     // Only "Reagan" (exact) is ever a valid name here. Any other spelling
     // or suffix ("Raegan", "Reagan L", "Reagan Lee", trailing initials,
     // etc.) is dropped outright -- not merged, not aliased, gone -- no
