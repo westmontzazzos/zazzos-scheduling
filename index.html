@@ -5707,7 +5707,12 @@ const NAME_ALIASES = {
   'laura': 'Laura Z', 'laura z': 'Laura Z',
   'eddy': 'Eddie', 'eddie': 'Eddie',
   'matt': 'Matt', 'matt daniher': 'Matt', 'matt d': 'Matt',
-  'raul': 'Raul', 'lia': 'Lea', 'gonzo': 'Gonzalo', 'alexis': 'Alexis V'
+  'raul': 'Raul', 'lia': 'Lea', 'gonzo': 'Gonzalo', 'alexis': 'Alexis V',
+  'arturo': 'Arturo V', 'jesus': 'Jesus M', 'luis': 'Luis Perez',
+  'oscar': 'Oscar V', 'victor': 'Victor C', 'marco': 'Marco S'
+  // 'carlos' is deliberately NOT aliased -- Carlos M and Carlos Jr are two
+  // real, distinct people. Bare "Carlos" must be flagged for manual
+  // resolution, never auto-assigned to either one.
 };
 // Preserved copy of the built-in mappings above, taken before any custom
 // alias is ever added or removed. Removing a custom alias must only undo
@@ -5781,31 +5786,62 @@ const DISH = {
 // stops a person's name from persistently contaminating a section they
 // don't belong to, once and for all, rather than just catching it after
 // the fact every single time.
-const ROLE_MAP = {
-  'Arturo':['Kitchen','Pizza'],'Arturo V':['Kitchen','Pizza'],
-  'Carlos':['Kitchen','Pizza'],'Carlos M':['Kitchen','Pizza'],
-  'Jesus':['Kitchen','Pizza'],'Jesus M':['Kitchen','Pizza'],
-  'Derek':['Kitchen'],'Nithia Maldonado':['Kitchen'],'Nithia':['Kitchen'],
-  'Carlos Jr':['Pizza'],'Eddie':['Pizza'],'Eddie C':['Pizza'],'Eddy':['Pizza'],
-  'Gonzalo':['Pizza','Dish','Bus'],
-  'Luis':['Pizza'],'Luis Perez':['Pizza'],'Monico':['Pizza'],'Soto':['Pizza'],
-  'Oscar':['Pizza'],'Oscar V':['Pizza'],'Victor':['Pizza'],'Victor C':['Pizza'],
-  'Nick':['Prep'],'Nick U':['Prep'],'Sylvia':['Prep'],'Laura Z':['Kitchen','Pizza','Dish'],
-  'Marco':['Pizza','Dish','Bus'],'Marco S':['Pizza','Dish','Bus'],
-  'Armani':['Dish','Bus'],'Raul':['Dish','Bus'],
-  'Abby':['Servers','Cashiers','Hosts'],'Alexis V':['Servers'],'Bridget':['Servers'],
-  'Ava':['Cashiers'],'Maylen':['Cashiers'],
-  'Joan':['Servers'],'Kenzie':['Servers'],'Reagan':['Servers'],'Shiann':['Servers'],
-  'Claudia':['Servers'],'Dorris':['Servers','Cashiers'],
-  'Hannah M':['Servers'],'Hannah M.':['Servers'],'Hannah Z':['Servers','Cashiers'],'Hannah Z.':['Servers','Cashiers'],
-  'Jaime':['Servers','Bartenders'],'Kelly':['Servers','Bartenders'],
-  'Sio':['Servers','Cashiers','Bartenders'],
-  'Justin':['Servers','Bartenders'],'Brianna':['Servers'],'Erika':['Servers'],'Lindsay':['Bartenders'],'Brooke':['Bartenders'],'Cheeks':['Bartenders'],
-  'Danielle':['Bartenders'],'Mary':['Bartenders'],'Lea':['Bartenders'],'Carrie':['Bartenders'],
-  'Presley':['Cashiers','Hosts'],
-  'Tia':['Cashiers','Hosts'],
-  'Keegan':['Cashiers','Hosts'],'Molly':['Cashiers','Hosts'],'Charlie':['Cashiers','Hosts'],
-  };
+// SINGLE SOURCE OF TRUTH for role/section permissions. Computed fresh from
+// DEFAULT_ROSTER (the hardcoded baseline) + CUSTOM_ROSTER (Manage Roster
+// additions) + ROLE_OVERRIDES (Manage Roster role edits) -- the exact same
+// data the wage report (renderPrivate's roster engine) already trusts. This
+// replaced a separately hand-typed table that could silently drift out of
+// sync with the real roster (it still had Monico, Soto, Derek, Armani,
+// Carrie and Claudia long after all six were removed everywhere else) --
+// that drift is what caused Charlie to be incorrectly flagged as needing
+// approval for roles he already had. Bare short first names (e.g. "Carlos")
+// deliberately have NO entry here unless NAME_ALIASES maps them to exactly
+// one real person -- an ambiguous bare name must be flagged for manual
+// resolution, never silently assigned to one of several people who share it.
+function buildRoleMap() {
+  var map = {};
+  var removedSet = {};
+  (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).forEach(function(r){ removedSet[r.name] = true; });
+  var roleOverridesMap = (typeof ROLE_OVERRIDES !== 'undefined') ? ROLE_OVERRIDES : {};
+  var allNames = {};
+  Object.keys(DEFAULT_ROSTER).forEach(function(n){ allNames[n] = true; });
+  if(typeof CUSTOM_ROSTER !== 'undefined') {
+    CUSTOM_ROSTER.forEach(function(p){ if(!p.is_salaried) allNames[p.name] = true; });
+  }
+  Object.keys(allNames).forEach(function(name){
+    if(removedSet[name]) return;
+    var defaultRoles = DEFAULT_ROSTER[name];
+    var customEntry = (typeof CUSTOM_ROSTER !== 'undefined') ? CUSTOM_ROSTER.find(function(c){ return c.name === name; }) : null;
+    var secLabels;
+    if(defaultRoles) {
+      secLabels = defaultRoles.map(function(r){ return CUSTOM_ROLE_TO_SECLBL[r.role] || r.role; });
+    } else if(customEntry) {
+      try {
+        var roleLabels = JSON.parse(customEntry.roles_json || '[]');
+        secLabels = roleLabels.map(function(r){ return CUSTOM_ROLE_TO_SECLBL[r] || r; });
+      } catch(e) { secLabels = []; }
+    } else {
+      secLabels = [];
+    }
+    (roleOverridesMap[name] || []).forEach(function(secLbl){
+      if(secLabels.indexOf(secLbl) === -1) secLabels.push(secLbl);
+    });
+    if(secLabels.length) map[name] = secLabels;
+  });
+  return map;
+}
+// NOTE: buildRoleMap() cannot run yet -- it depends on CUSTOM_ROLE_TO_SECLBL,
+// CUSTOM_ROSTER, ROLE_OVERRIDES and DEFAULT_ROSTER, none of which are defined
+// this early in the file. ROLE_MAP starts empty (safe: every consumer already
+// treats "no entry" as "no restriction") and is populated by refreshRoleMap()
+// immediately after DEFAULT_ROSTER is defined below, then again whenever
+// Manage Roster data loads from Supabase.
+var ROLE_MAP = {};
+function refreshRoleMap() {
+  var fresh = buildRoleMap();
+  Object.keys(ROLE_MAP).forEach(function(k){ delete ROLE_MAP[k]; });
+  Object.keys(fresh).forEach(function(k){ ROLE_MAP[k] = fresh[k]; });
+}
 
 function filterByRole(names, sectionLabel) {
   return names.filter(function(n){
@@ -9592,6 +9628,7 @@ function loadCustomRosterThenRender() {
         try { ROLE_RATE_OVERRIDES[row.original_name] = JSON.parse(row.role_rates_json); } catch(e) {}
       }
     });
+    refreshRoleMap();
     applyNameAliasesToSections();
     seedCustomRosterIntoSections();
     if(document.getElementById('private-content').style.display !== 'none') renderPrivate();
@@ -10814,6 +10851,7 @@ const DEFAULT_ROSTER = {
   'Molly': [{role:'Cashier',rate:15.0,keys:['Molly']},{role:'Host',rate:15.0,keys:['Molly']}],
   'Lea': [{role:'Bartender',rate:9.0,keys:['Lea']}]
 };
+refreshRoleMap(); // first pass: hardcoded roster only. Refreshed again once Manage Roster data loads.
 
 // Never display a full last name anywhere in the app -- first name only,
 // except where two currently-active people genuinely share the same first
