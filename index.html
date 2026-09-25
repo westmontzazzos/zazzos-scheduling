@@ -5830,6 +5830,26 @@ function buildRoleMap() {
       if(secLabels.indexOf(secLbl) === -1) secLabels.push(secLbl);
     });
     if(secLabels.length) map[name] = secLabels;
+    // Also register every short-name "keys" variant with the same
+    // permissions -- e.g. Arturo V's DEFAULT_ROSTER entry lists 'Arturo' as
+    // a keys variant, and raw schedule data can genuinely still say
+    // "Arturo" (cleanNames only rewrites names that have an explicit,
+    // approved NAME_ALIASES entry -- it doesn't assume every short name
+    // means its one DEFAULT_ROSTER match, since some short names are
+    // deliberately ambiguous, like "Carlos"). Without this, a person
+    // scheduled under their old short name gets treated as having no
+    // roles at all, even though DEFAULT_ROSTER clearly grants them some.
+    if(defaultRoles) {
+      defaultRoles.forEach(function(r){
+        (r.keys || []).forEach(function(k){
+          if(k === name) return;
+          if(k.toLowerCase() === 'carlos') return; // deliberately ambiguous -- see NAME_ALIASES comment
+          var lbl = CUSTOM_ROLE_TO_SECLBL[r.role] || r.role;
+          if(!map[k]) map[k] = [];
+          if(map[k].indexOf(lbl) === -1) map[k].push(lbl);
+        });
+      });
+    }
   });
   return map;
 }
