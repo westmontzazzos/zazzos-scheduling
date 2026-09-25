@@ -5707,12 +5707,15 @@ const NAME_ALIASES = {
   'laura': 'Laura Z', 'laura z': 'Laura Z',
   'eddy': 'Eddie', 'eddie': 'Eddie',
   'matt': 'Matt', 'matt daniher': 'Matt', 'matt d': 'Matt',
-  'raul': 'Raul', 'lia': 'Lea', 'gonzo': 'Gonzalo', 'alexis': 'Alexis V',
-  'arturo': 'Arturo V', 'jesus': 'Jesus M', 'luis': 'Luis Perez',
-  'oscar': 'Oscar V', 'victor': 'Victor C', 'marco': 'Marco S'
-  // 'carlos' is deliberately NOT aliased -- Carlos M and Carlos Jr are two
-  // real, distinct people. Bare "Carlos" must be flagged for manual
-  // resolution, never auto-assigned to either one.
+  'raul': 'Raul', 'lia': 'Lea', 'gonzo': 'Gonzalo', 'alexis': 'Alexis V'
+  // Bare first-name aliases for Arturo/Jesus/Luis/Oscar/Victor/Marco were
+  // added and then reverted in the same night -- the wage report's hours
+  // lookup (renderPrivate's HLY src()) matches people by the OLD short-name
+  // "keys" field baked into DEFAULT_ROSTER before the initials rename, not
+  // by their current canonical name. Aliasing the short name here rewrites
+  // the stored key to the long form before that lookup ever runs, which
+  // silently breaks it. Do not re-add these without also updating every
+  // affected DEFAULT_ROSTER entry's keys field to match.
 };
 // Preserved copy of the built-in mappings above, taken before any custom
 // alias is ever added or removed. Removing a custom alias must only undo
@@ -7653,7 +7656,7 @@ function printWageRoster() {
   var sections=[
     {l:'Owners',r:[['Dom',true,60000],['Ely',true,100000],['Lisa Barraco',true,40000]]},
     {l:'Managers',r:[['Alex',true,60000],['Brett',true,10000],['Selena Gonzales',true,40292]]},
-    {l:'Pizza',r:[['Laura Z',false,19],['Arturo V',false,21],['Carlos Jr',false,17.5],['Carlos M',false,19.25],['Eddie C',false,19],['Jesus M',false,21],['Luis Perez',false,20],['Oscar V',false,19],['Victor C',false,20.5]]},
+    {l:'Pizza',r:[['Laura Z',false,19],['Arturo V',false,21],['Carlos Jr',false,17.5],['Carlos M',false,19.25],['Eddie C',false,19],['Jesus M',false,21],['Luis P',false,20],['Oscar V',false,19],['Victor C',false,20.5]]},
     {l:'Kitchen',r:[['Laura Z',false,19],['Nithia',false,18.50]]},
     {l:'Prep / Utility',r:[['Sylvia',false,15]]},
     {l:'Bus / Dish',r:[['Gonzalo',false,17],['Marco S',false,16],['Raul',false,15]]},
@@ -10812,7 +10815,7 @@ const DEFAULT_ROSTER = {
   'Jesus M': [{role:'Kitchen',rate:21.0,keys:['Jesus']},{role:'Pizza',rate:21.0,keys:['Jesus']}],
   'Carlos M': [{role:'Kitchen',rate:19.25,keys:['Carlos']},{role:'Pizza',rate:19.25,keys:['Carlos']}],
   'Nick U': [{role:'Prep',rate:20.0,keys:['Nick']}],
-  'Luis Perez': [{role:'Pizza',rate:20.0,keys:['Luis']}],
+  'Luis P': [{role:'Pizza',rate:20.0,keys:['Luis']}],
   'Victor C': [{role:'Pizza',rate:20.5,keys:['Victor']}],
   'Oscar V': [{role:'Pizza',rate:19.0,keys:['Oscar']}],
   'Carlos Jr': [{role:'Pizza',rate:17.5,keys:['Carlos Jr']}],
@@ -10909,7 +10912,7 @@ const RATES = {
   'Carlos':19.25,'Eddie':19,'Eddy':19,'Eddie C':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
   'Victor':20.50,'Arturo':21,'Nick':20,'Armani':16,'Marco':16,
   'Nithia':18.50,'Arturo V':21,'Jesus M':21,'Derek':19,
-  'Carlos M':19.25,'Nick U':20,'Luis Perez':20,'Victor C':20.50,
+  'Carlos M':19.25,'Nick U':20,'Luis P':20,'Victor C':20.50,
   'Oscar V':19,
   'Carlos Jr':17.50,'Sylvia':15,
   'Marco S':16,'Gonzalo':17,'Sio':17,
