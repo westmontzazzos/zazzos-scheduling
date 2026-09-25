@@ -4712,7 +4712,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div class="lock-sub">Enter PIN to access the app.</div>
     <div style="font-size:12px;color:#aaa;font-weight:700;margin-bottom:10px;">App version 1.7</div>
     <input type="text" class="pin-input" id="app-lock-input" placeholder="• • • •" maxlength="6"
-           inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off"
+           inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autocorrect="off"
            autocapitalize="off" spellcheck="false"
            style="-webkit-text-security:disc;text-security:disc;"
            onkeydown="if(event.key==='Enter')checkAppLock()">
@@ -4934,7 +4934,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="lock-icon">🔒</div>
       <div class="lock-title">Private Report</div>
       <div class="lock-sub">Confidential labor cost data.<br>Authorized personnel only.</div>
-      <input type="text" class="pin-input" id="pin-input" placeholder="• • • •" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="-webkit-text-security:disc;text-security:disc;" onkeydown="if(event.key==='Enter')checkPin()">
+      <input type="text" class="pin-input" id="pin-input" placeholder="• • • •" maxlength="6" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autocorrect="off" autocapitalize="off" spellcheck="false" style="-webkit-text-security:disc;text-security:disc;" onkeydown="if(event.key==='Enter')checkPin()">
       <button class="unlock-btn" onclick="checkPin()">UNLOCK</button>
       <div class="pin-error" id="pin-error">Incorrect PIN. Try again.</div>
       <div style="font-size:11px;color:#aaa;margin-top:16px;">App version 1.7</div>
@@ -5435,7 +5435,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div class="modal-handle"></div>
     <div class="modal-title" id="pin-modal-title">Enter PIN</div>
     <input type="text" class="pin-input" id="pin-modal-input" placeholder="• • • •" maxlength="6"
-           inputmode="numeric" pattern="[0-9]*" autocomplete="off" autocorrect="off"
+           inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autocorrect="off"
            autocapitalize="off" spellcheck="false"
            style="-webkit-text-security:disc;text-security:disc;margin-bottom:16px;"
            onkeydown="if(event.key==='Enter')pinModalResolve(this.value)">
@@ -12562,7 +12562,7 @@ function getAnthropicKey() {
     overlay.innerHTML = `<div style="background:#1a1a1a;border:1px solid #444;border-radius:12px;padding:28px;max-width:340px;width:90%;text-align:center;">
       <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:10px;">API Key Required</div>
       <div style="font-size:13px;color:#aaa;margin-bottom:18px;">Paste your Anthropic API key to enable schedule parsing. It will be saved on this device.</div>
-      <input id="zp_key_input" type="password" placeholder="sk-ant-..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #555;background:#2a2a2a;color:#fff;font-size:13px;box-sizing:border-box;margin-bottom:14px;">
+      <input id="zp_key_input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-..." style="width:100%;padding:10px;border-radius:8px;border:1px solid #555;background:#2a2a2a;color:#fff;font-size:13px;box-sizing:border-box;margin-bottom:14px;-webkit-text-security:disc;text-security:disc;">
       <button id="zp_key_save" style="background:#c0392b;color:#fff;border:none;border-radius:8px;padding:10px 24px;font-size:15px;font-weight:700;width:100%;cursor:pointer;">Save Key</button>
     </div>`;
     document.body.appendChild(overlay);
