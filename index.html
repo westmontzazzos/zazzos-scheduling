@@ -5698,11 +5698,10 @@ const DRIVER_ALIASES = { 'jeff z': 'Jeff Z', 'jeff zeggeben': 'Jeff Z', 'jeff ze
 // the one-time "Fix Stale Names in All Saved Weeks" migration in Private.
 // Add future corrections here in one place rather than duplicating logic.
 const STALE_NAME_MIGRATIONS = {
-  KITCHEN: { 'Nithia Maldonado': 'Nithia' }
+  KITCHEN: { }
 };
 const NAME_ALIASES = {
   'alex': 'Alex', 'alex a': 'Alex',
-  'nithia': 'Nithia', 'nithia maldonado': 'Nithia', 'lithia': 'Nithia',
   'nick': 'Nick', 'nicholas': 'Nick', 'nicholas urbana': 'Nick',
   'sio': 'Sio', 'sio mcavoy': 'Sio',
   'laura': 'Laura', 'laura z': 'Laura',
@@ -5721,10 +5720,9 @@ const NAME_ALIASES = {
 };
 // Preserved copy of the built-in mappings above, taken before any custom
 // alias is ever added or removed. Removing a custom alias must only undo
-// the custom part -- if the same key is also a built-in protection (e.g.
-// Nithia Maldonado -> Nithia), deleting it from NAME_ALIASES outright would
-// silently strip that protection until a full page reload, which is
-// exactly what caused her to show unmatched after tapping refresh.
+// the custom part -- if the same key is also a built-in protection,
+// deleting it from NAME_ALIASES outright would silently strip that
+// protection until a full page reload.
 const BASE_NAME_ALIASES = Object.assign({}, NAME_ALIASES);
 // Names that should never appear in these sections regardless of what a parse
 // returns — e.g. Rhett is a Driver and must never be planted into FOH sections.
@@ -5766,7 +5764,6 @@ const KITCHEN = {
   'Arturo': [null,null,null,null,null,null,null],
   'Carlos': [null,null,null,null,null,null,null],
   'Jesus': [null,null,null,null,null,null,null],
-  'Nithia': [null,null,null,null,null,null,null],
   'Laura Z': [null,null,null,null,null,null,null],
 };
 const PREP = {
@@ -7684,7 +7681,7 @@ function printWageRoster() {
     {l:'Owners',r:[['Dom',true,60000],['Ely',true,100000],['Lisa Barraco',true,40000]]},
     {l:'Managers',r:[['Alex',true,60000],['Brett',true,10000],['Selena',true,40292]]},
     {l:'Pizza',r:[['Laura',false,19],['Arturo',false,21],['Junior',false,17.5],['Carlos',false,19.25],['Eddie',false,19],['Jesus',false,21],['Luis',false,20],['Oscar',false,19],['Victor',false,20.5]]},
-    {l:'Kitchen',r:[['Laura',false,19],['Nithia',false,18.50]]},
+    {l:'Kitchen',r:[['Laura',false,19]]},
     {l:'Prep / Utility',r:[['Sylvia',false,15]]},
     {l:'Bus / Dish',r:[['Gonzalo',false,17],['Laura',false,19],['Marco',false,16],['Raul',false,15]]},
     {l:'Servers',r:[['Abby',false,9],['Alexis',false,9],['Bridget',false,9],['Dorris',false,9],['Hannah M',false,9],['Jaime',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9]]},
@@ -10842,7 +10839,6 @@ const SALARY_ROSTER = {
 // or roster_rates takes priority over what's here.
 const DEFAULT_ROSTER = {
   'Laura': [{role:'Pizza',rate:19.0,keys:['Laura']},{role:'Kitchen',rate:19.0,keys:['Laura']},{role:'Dish',rate:19.0,keys:['Laura']}],
-  'Nithia': [{role:'Kitchen',rate:18.5,keys:['Nithia']}],
   'Arturo': [{role:'Kitchen',rate:21.0,keys:['Arturo']},{role:'Pizza',rate:21.0,keys:['Arturo']}],
   'Jesus': [{role:'Kitchen',rate:21.0,keys:['Jesus']},{role:'Pizza',rate:21.0,keys:['Jesus']}],
   'Carlos': [{role:'Kitchen',rate:19.25,keys:['Carlos']},{role:'Pizza',rate:19.25,keys:['Carlos']}],
@@ -10943,7 +10939,7 @@ function getEffectiveHourlyRate(name) {
 const RATES = {
   'Carlos':19.25,'Eddie':19,'Eddy':19,'Jesus':21,'Luis':20,'Soto':19,'Monico':20,'Oscar':19,
   'Victor':20.50,'Arturo':21,'Nick':20,'Armani':16,'Marco':16,
-  'Nithia':18.50,'Derek':19,
+  'Derek':19,
   'Junior':17.50,'Sylvia':15,
   'Gonzalo':17,'Sio':17,
   'Raul':15,
@@ -12106,7 +12102,7 @@ function changeWeek(dir) {
 }
 
 // Strip phone numbers from employee names in any section object, resolve name
-// aliases universally (Nithia/Nick/Sio/Laura/Eddie, etc.), merge any resulting
+// aliases universally (Nick/Sio/Laura/Eddie, etc.), merge any resulting
 // duplicate keys by day (never silently drop real shifts), and remove anyone on
 // this section's blocklist (e.g. Rhett, a Driver, never belongs in FOH sections).
 // sectionType/sectionKey let 'alex' resolve to the manager only in Managers.
@@ -12138,7 +12134,7 @@ function cleanNames(obj, sectionType, sectionKey) {
     // removed too, so even an invisible character the strip above doesn't
     // catch, or a missing/extra space, can't defeat the match.
     var squashed = cleanKey.toLowerCase().replace(/\s+/g, '');
-    var SQUASH_FALLBACK = {'nithiamaldonado':'Nithia'};
+    var SQUASH_FALLBACK = {};
     if(SQUASH_FALLBACK[squashed]) cleanKey = SQUASH_FALLBACK[squashed];
     // Only "Reagan" (exact) is ever a valid name here. Any other spelling
     // or suffix ("Raegan", "Reagan L", "Reagan Lee", trailing initials,
@@ -13562,7 +13558,7 @@ function callVision(base64, mediaType, promptText){
 }
 
 // True if two normalized names are almost certainly the same person — one is a
-// clean word-boundary prefix of the other (e.g. "nithia" vs "nithia maldonado").
+// clean word-boundary prefix of the other.
 // Deliberately conservative: won't match unrelated names that happen to share letters.
 function namesLikelySame(a, b) {
   if(!a || !b) return false;
@@ -13702,7 +13698,7 @@ async function readScheduleImage(dataUrl, type) {
           }
         });
         // Normalize short names to full names
-        var kitchenAliases = {'nithia': 'Nithia', 'lithia': 'Nithia', 'nicholas': 'Nick', 'nicholas urbana': 'Nick', 'laura': 'Laura'};
+        var kitchenAliases = {'nicholas': 'Nick', 'nicholas urbana': 'Nick', 'laura': 'Laura'};
         Object.keys(sched.KITCHEN).forEach(function(name){
           var alias = kitchenAliases[name.toLowerCase()];
           if(alias && alias !== name) {
@@ -14484,7 +14480,7 @@ async function fixStaleNamesAllWeeks() {
   if(pin === null) return;
   if(String(pin).trim() !== PRIVATE_PIN) { alert('Incorrect PIN.'); return; }
 
-  if(!confirm('This will scan every saved week and correct any stale names found (e.g. Nithia Maldonado -> Nithia), writing the fix directly to each affected week. Continue?')) return;
+  if(!confirm('This will scan every saved week and correct any stale names found, writing the fix directly to each affected week. Continue?')) return;
 
   try {
     var resp = await fetch(SUPABASE_URL + '/rest/v1/schedules?select=id,boh_data', {
