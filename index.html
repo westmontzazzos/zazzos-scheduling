@@ -5700,7 +5700,7 @@ const STALE_NAME_MIGRATIONS = {
   KITCHEN: { 'Nithia Maldonado': 'Nithia' }
 };
 const NAME_ALIASES = {
-  'alex': 'Alexis A', 'alex a': 'Alexis A',
+  'alex': 'Alex', 'alex a': 'Alex',
   'nithia': 'Nithia', 'nithia maldonado': 'Nithia', 'lithia': 'Nithia',
   'nick': 'Nick', 'nicholas': 'Nick', 'nicholas urbana': 'Nick',
   'sio': 'Sio', 'sio mcavoy': 'Sio',
@@ -5738,7 +5738,7 @@ const SECTION_BLOCKLIST = {
 
 // DOM'S NOTES
 const MANAGERS = {
-  'Alexis A': [null,null,null,null,null,null,null],
+  'Alex': [null,null,null,null,null,null,null],
   'Brett': [null,null,null,null,null,null,null],
   'Dom': [null,null,null,null,null,null,null],
   'Ely': [null,null,null,null,null,null,null],
@@ -7338,7 +7338,7 @@ function acceptError(di, dept, msg, timeOffRequestId) {
   // Who buttons
   var whoRow = document.createElement('div');
   whoRow.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
-  ['Selena','Alexis A','Ely'].forEach(function(name){
+  ['Selena','Alex','Ely'].forEach(function(name){
     var b = document.createElement('button');
     b.className = 'zp-who-btn';
     b.style.cssText = 'flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
@@ -7651,8 +7651,8 @@ function printWageRoster() {
   }
   function subRow(lbl,ann){pb(rH+2);rect(p,M,y,PW-2*M,rH,[0.93,0.93,0.91]);text(p,M+4,y+10,lbl+' Subtotal',8,true,[0.35,0.35,0.35]);rtext(p,CA,y+10,'~$'+Math.round(ann).toLocaleString()+' / yr',8.5,true);y+=rH+3;}
   var sections=[
-    {l:'Owners',r:[['Dom',true,60000],['Ely Calero',true,100000],['Lisa Barraco',true,40000]]},
-    {l:'Managers',r:[['Alexis A',true,60000],['Brett',true,10000],['Selena Gonzales',true,40292]]},
+    {l:'Owners',r:[['Dom',true,60000],['Ely',true,100000],['Lisa Barraco',true,40000]]},
+    {l:'Managers',r:[['Alex',true,60000],['Brett',true,10000],['Selena Gonzales',true,40292]]},
     {l:'Pizza',r:[['Laura Z',false,19],['Arturo V',false,21],['Carlos Jr',false,17.5],['Carlos M',false,19.25],['Eddie C',false,19],['Jesus M',false,21],['Luis Perez',false,20],['Oscar V',false,19],['Victor C',false,20.5]]},
     {l:'Kitchen',r:[['Laura Z',false,19],['Nithia',false,18.50]]},
     {l:'Prep / Utility',r:[['Sylvia',false,15]]},
@@ -8332,7 +8332,7 @@ function setScheduleViewMode(showingCalendar) {
 // confirms it resolved, not when the recipient marks it fixed. Every send,
 // reply, mark-fixed, confirm, and reopen is its own row sharing one
 // thread_id, so the whole exchange logs together in the Schedule Log.
-var MSG_MANAGERS = ['Ely','Selena','Dom','Alexis A','Brett'];
+var MSG_MANAGERS = ['Ely','Selena','Dom','Alex','Brett'];
 var _selectedMsgRecipients = [];
 var _pendingMsgAction = null;
 
@@ -9490,7 +9490,7 @@ function setIdentity(name) {
   // casing used everywhere else (REQUIRED_ACK_MANAGERS, role checks, etc.) —
   // otherwise a lowercase or mistyped custom entry silently creates a
   // permanent mismatch where that manager's acknowledgment never registers.
-  var KNOWN_IDENTITIES = ['Ely','Selena','Dom','Brett','Alexis A'];
+  var KNOWN_IDENTITIES = ['Ely','Selena','Dom','Brett','Alex'];
   var trimmed = name.trim();
   var match = KNOWN_IDENTITIES.filter(function(k){ return k.toLowerCase() === trimmed.toLowerCase(); })[0];
   if(match) name = match; else name = trimmed;
@@ -10248,12 +10248,12 @@ function renderPrivate() {
   function fmtI$(n){return'$'+Math.round(n).toLocaleString();}
 
   var SAL=[
-    {n:'Ely Calero',s:100000,role:'Owner'},
+    {n:'Ely',s:100000,role:'Owner'},
     {n:'Lisa Barraco',s:40000,role:'Owner'},
     {n:'Dom',s:60000,role:'Owner'},
     {n:'Selena Gonzales',s:40292,role:'Manager'},
     {n:'Brett',s:10000,role:'Manager'},
-    {n:'Alexis A',s:60000,role:'Manager'}
+    {n:'Alex',s:60000,role:'Manager'}
   ];
   // Unified roster engine: every hourly person -- whether hardcoded in
   // DEFAULT_ROSTER or added later through Manage Roster -- goes through
@@ -10791,7 +10791,7 @@ function parseFOHHours(entry, di, role) {
 // This exists because two different hardcoded copies of this same list
 // (one here, one in the Private tab report) drifted out of sync and caused
 // a correctly-salaried employee to wrongly show as unmatched.
-const SALARIED_EMPLOYEES = {'Brett':1,'Dom':1,'Ely':1,'Selena':1,'Lisa':1,'Alexis A':1};
+const SALARIED_EMPLOYEES = {'Brett':1,'Dom':1,'Ely':1,'Selena':1,'Lisa':1,'Alex':1};
 
 // Single source of truth for hourly pay rates, promoted to global scope so
 // any feature that needs cost math (Heat Map, the calendar's per-day cost
@@ -10946,7 +10946,7 @@ function renderHitList() {
   var dayGrid = {};
   HOURS.forEach(function(h){ dayGrid[h] = {count:0, cost:0}; });
 
-  // Salaried staff — excluded from the hourly heat map (like drivers). Alexis A is hourly, so not here.
+  // Salaried staff — excluded from the hourly heat map (like drivers). Alex is hourly, so not here.
   var SALARIED = SALARIED_EMPLOYEES;
 
   var bohSections = [
@@ -13369,7 +13369,7 @@ async function processSingle(type) {
       var rejectedList = window._rejectedManagerNames.slice();
       window._rejectedManagerNames = null;
       setTimeout(function(){
-        alert('Heads up: "' + rejectedList.join('", "') + '" showed up under Managers in this photo but ' + (rejectedList.length===1?'isn\'t':'aren\'t') + ' one of the 5 approved managers (Selena, Dom, Ely, Alexis A, Brett), so ' + (rejectedList.length===1?'it was':'they were') + ' left off. If this was a typo for a real manager, fix it directly in the Schedule tab editor.');
+        alert('Heads up: "' + rejectedList.join('", "') + '" showed up under Managers in this photo but ' + (rejectedList.length===1?'isn\'t':'aren\'t') + ' one of the 5 approved managers (Selena, Dom, Ely, Alex, Brett), so ' + (rejectedList.length===1?'it was':'they were') + ' left off. If this was a typo for a real manager, fix it directly in the Schedule tab editor.');
       }, 400);
     }
     await loadAllWeeks();
@@ -13682,9 +13682,9 @@ async function readScheduleImage(dataUrl, type) {
       // resolving known nicknames/aliases) gets removed before anything is
       // saved, and reported so nothing silently vanishes without a trace.
       if(sched.MANAGERS) {
-        var MANAGER_ALLOWLIST = ['Selena','Dom','Ely','Alexis A','Brett'];
+        var MANAGER_ALLOWLIST = ['Selena','Dom','Ely','Alex','Brett'];
         var managerAliasResolve = {'selena':'Selena','dom':'Dom','dominic':'Dom','ely':'Ely','elly':'Ely',
-          'alexis a':'Alexis A','alex':'Alexis A','alex a':'Alexis A','alexis acosta':'Alexis A','alex acosta':'Alexis A',
+          'alexis a':'Alex','alex':'Alex','alex a':'Alex','alexis acosta':'Alex','alex acosta':'Alex',
           'brett':'Brett'};
         var rejectedManagers = [];
         Object.keys(sched.MANAGERS).forEach(function(name){
@@ -14731,7 +14731,7 @@ function handleLockIconTap() {
     <div style="display:flex;flex-direction:column;gap:10px;">
       <button onclick="setIdentity('Ely')" style="padding:14px;border:2px solid #e0e0e0;border-radius:10px;background:#fff;font-size:16px;font-weight:600;cursor:pointer;">Ely</button>
       <button onclick="setIdentity('Selena')" style="padding:14px;border:2px solid #e0e0e0;border-radius:10px;background:#fff;font-size:16px;font-weight:600;cursor:pointer;">Selena</button>
-      <button onclick="setIdentity('Alexis A')" style="padding:14px;border:2px solid #e0e0e0;border-radius:10px;background:#fff;font-size:16px;font-weight:600;cursor:pointer;">Alexis A</button>
+      <button onclick="setIdentity('Alex')" style="padding:14px;border:2px solid #e0e0e0;border-radius:10px;background:#fff;font-size:16px;font-weight:600;cursor:pointer;">Alex</button>
       <button onclick="setIdentity('Dom')" style="padding:14px;border:2px solid #e0e0e0;border-radius:10px;background:#fff;font-size:16px;font-weight:600;cursor:pointer;">Dom</button>
       <button onclick="setIdentity('Brett')" style="padding:14px;border:2px solid #e0e0e0;border-radius:10px;background:#fff;font-size:16px;font-weight:600;cursor:pointer;">Brett</button>
       <button onclick="showIdentityInput()" style="padding:14px;border:2px solid #e0e0e0;border-radius:10px;background:#fff;font-size:16px;font-weight:600;cursor:pointer;color:#888;">Add / Not Listed</button>
@@ -15130,13 +15130,13 @@ function showDomsAckModal(note) {
   var dismissCount = parseInt(localStorage.getItem('zp_doms_dismiss_count') || '0');
   var btnContainer = document.getElementById('doms-ack-buttons');
   btnContainer.innerHTML = '';
-  // Ely owns Drivers and Back of House scheduling; Alex (Alexis A) owns
+  // Ely owns Drivers and Back of House scheduling; Alex owns
   // Front of House. Only the person whose section actually has content in
   // this note needs to acknowledge it -- everyone else (Selena, and anyone
   // else with no scheduling responsibility here) just clears it, since
   // requiring them to "acknowledge" a driver or BOH issue they don't
   // control doesn't mean anything.
-  var isResponsible = (user === 'Ely' && (note.drivers || note.boh)) || (user === 'Alexis A' && note.foh);
+  var isResponsible = (user === 'Ely' && (note.drivers || note.boh)) || (user === 'Alex' && note.foh);
   if(!isResponsible) {
     var cb = document.createElement('button');
     cb.textContent = 'Clear';
