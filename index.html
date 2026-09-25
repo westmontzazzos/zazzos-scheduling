@@ -7694,14 +7694,14 @@ function printWageRoster() {
   function subRow(lbl,ann){pb(rH+2);rect(p,M,y,PW-2*M,rH,[0.93,0.93,0.91]);text(p,M+4,y+10,lbl+' Subtotal',8,true,[0.35,0.35,0.35]);rtext(p,CA,y+10,'~$'+Math.round(ann).toLocaleString()+' / yr',8.5,true);y+=rH+3;}
   var sections=[
     {l:'Owners',r:[['Dom',true,60000],['Ely',true,100000],['Lisa Barraco',true,40000]]},
-    {l:'Managers',r:[['Alex',true,60000],['Brett',true,10000],['Selena',true,40292]]},
+    {l:'Managers',r:[['Alex',true,60000],['Brett',true,0],['Selena',true,40292]]},
     {l:'Pizza',r:[['Laura',false,19],['Arturo',false,21],['Junior',false,17.5],['Carlos',false,19.25],['Eddie',false,19],['Jesus',false,21],['Luis',false,20],['Oscar',false,19],['Victor',false,20.5]]},
     {l:'Kitchen',r:[['Laura',false,19]]},
-    {l:'Prep / Utility',r:[['Sylvia',false,15]]},
+    {l:'Prep / Utility',r:[['Sylvia',false,15],['Nick',false,20]]},
     {l:'Bus / Dish',r:[['Gonzalo',false,17],['Laura',false,19],['Marco',false,16],['Raul',false,15]]},
-    {l:'Servers',r:[['Abby',false,9],['Alexis',false,9],['Bridget',false,9],['Dorris',false,9],['Hannah M',false,9],['Jaime',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9]]},
+    {l:'Servers',r:[['Abby',false,9],['Alexis',false,9],['Bridget',false,9],['Dorris',false,9],['Hannah M',false,9],['Hannah Z',false,9],['Jaime',false,9],['Justin',false,9],['Kelly',false,9],['Brianna',false,9],['Erika',false,9],['Joan',false,9],['Kenzie',false,9],['Reagan',false,9],['Shiann',false,9]]},
     {l:'Bartenders',r:[['Brooke',false,9],['Carrie',false,9],['Cheeks',false,9],['Danielle',false,9],['Justin',false,9],['Lea',false,9],['Lindsay',false,9],['Mary',false,9]]},
-    {l:'Cashiers / Hosts',r:[['Keegan',false,15],['Molly',false,15],['Presley',false,15],['Sio',false,17],['Tia',false,15]]}
+    {l:'Cashiers / Hosts',r:[['Ava',false,15],['Charlie',false,15],['Keegan',false,15],['Maylen',false,15],['Molly',false,15],['Presley',false,15],['Sio',false,17],['Tia',false,15]]}
   ];
   var grand=0;
   sections.forEach(function(sec){
@@ -10836,7 +10836,7 @@ const SALARY_ROSTER = {
   'Lisa':   {salary:40000,  role:'Owner',   fullName:'Lisa Barraco'},
   'Dom':    {salary:60000,  role:'Owner',   fullName:'Dom'},
   'Selena': {salary:40292,  role:'Manager', fullName:'Selena'},
-  'Brett':  {salary:10000,  role:'Manager', fullName:'Brett'},
+  'Brett':  {salary:0,      role:'Manager', fullName:'Brett'},
   'Alex':   {salary:60000,  role:'Manager', fullName:'Alex'}
 };
 
@@ -11081,7 +11081,7 @@ function renderHitList() {
 
   // Prorated daily salaried burden (wages + employer taxes, spread over 365 days)
   var SAL_DAILY = (function(){
-    var SAL_LIST = [100000,40000,60000,40292,10000]; // Ely, Lisa, Dom, Selena, Brett
+    var SAL_LIST = [100000,40000,60000,40292,0]; // Ely, Lisa, Dom, Selena, Brett (no longer paid)
     var total = 0;
     SAL_LIST.forEach(function(s){ total += (s*(1+HM_SS+HM_MED)+42+431)/365; });
     return total;
