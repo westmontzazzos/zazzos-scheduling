@@ -12590,6 +12590,14 @@ function getAnthropicKey() {
   }
   return k;
 }
+// Darien passes its own already-saved key along via ?key= when linking here
+// (the two apps are separate origins and can't share localStorage on their
+// own) -- this must run BEFORE getAnthropicKey() below, since that runs
+// immediately at parse time and would otherwise show its prompt first.
+(function(){
+  var passedKey = new URLSearchParams(window.location.search).get('key');
+  if(passedKey) localStorage.setItem('zp_anthropic_key', passedKey);
+})();
 const ANTHROPIC_KEY = getAnthropicKey();
 const SUPABASE_URL = 'https://bkrgefddyculihfdhjwb.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrcmdlZmRkeWN1bGloZmRoandiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNzM0ODEsImV4cCI6MjA5NTk0OTQ4MX0.YhIsgS3IkRyTSeVG011EPqhZvX0UbR-tXcCLGoOSMEI';
@@ -12606,6 +12614,14 @@ document.addEventListener('DOMContentLoaded', function(){
   });
   loadCustomAliasesIntoMap();
   loadCustomRosterEarly();
+  // Deep link support: a link ending in #schedule goes straight to the
+  // Schedule tab -- no PIN, no identity picker, nothing in the way.
+  if(window.location.hash === '#schedule') {
+    _appUnlocked = true;
+    var lockEl = document.getElementById('app-lock');
+    if(lockEl) lockEl.style.display = 'none';
+    showTab('schedule', null);
+  }
 });
 
 function snapToMonday(dateStr) {
