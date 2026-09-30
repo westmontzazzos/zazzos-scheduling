@@ -5246,7 +5246,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div class="card">
       <div class="card-header">🍽️ Bus / Dish Rules</div>
       <div style="font-size:13px;color:var(--gray-800);line-height:1.7;padding-top:4px;">
-        Dish must have a closer (C)<br>
+        Bus or Dish must have a closer (C) — either one covers it<br>
         <b>Both Dish and Bus:</b> must have someone starting between 3–5PM<br>
         AM shifts must have an end time
       </div>
@@ -12848,8 +12848,8 @@ function checkScheduleErrors() {
       errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'No Kitchen closer (nobody with C)'});
     if(!Object.entries(PIZZA).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'No Pizza closer (nobody with C)'});
-    if(!Object.entries(DISH).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
-      errors.BOH.push({di:di, day:day, name:'—', dept:'Dish', msg:'No Dish closer (nobody with C)'});
+    if(!Object.entries(DISH).concat(Object.entries(BUS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Bus / Dish', msg:'No Bus/Dish closer (nobody with C in either)'});
     if(!Object.entries(MANAGERS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Managers', msg:'No manager closer (nobody with C)'});
 
