@@ -13072,6 +13072,14 @@ function checkScheduleErrors() {
   ];
   var BOH_SECS = ['Kitchen','Pizza','Prep','Dish','Bus'];
   var _managerNames = Object.keys(MANAGERS);
+  // The raw name typed/read for a manager on a non-Managers row (e.g. "Alexis A"
+  // on Pizza) is often a known alternate spelling for someone already in
+  // MANAGERS (e.g. "Alex") rather than an exact match to it -- resolve those
+  // before checking, or the manager exemption below silently never fires for
+  // anyone whose Pizza/Kitchen/etc. name differs from their Managers-row name.
+  var _managerAliasResolve = {'selena':'Selena','dom':'Dom','dominic':'Dom','ely':'Ely','elly':'Ely',
+    'alexis a':'Alex','alex':'Alex','alex a':'Alex','alexis acosta':'Alex','alex acosta':'Alex',
+    'brett':'Brett'};
   // The roster controls the schedule: anyone added via the Private tab's
   // Manage Roster panel is just as recognized as a hardcoded ROLE_MAP entry.
   // Being on the roster with a real role is what makes someone allowed to
@@ -13093,7 +13101,8 @@ function checkScheduleErrors() {
   }
   ALL_SECS.forEach(function(sec) {
     Object.keys(sec.obj).forEach(function(name) {
-      if(_managerNames.indexOf(name) !== -1) return; // managers can work any section
+      var resolvedMgrName = _managerAliasResolve[name.toLowerCase()];
+      if(_managerNames.indexOf(name) !== -1 || (resolvedMgrName && _managerNames.indexOf(resolvedMgrName) !== -1)) return; // managers can work any section
       var allowed = getAllowedRoles(name, _customAllowedMap[name]);
       // No entry in ROLE_MAP means this person has no defined role at all —
       // that is not a pass, it's the strongest possible violation. Role
