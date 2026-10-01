@@ -15601,7 +15601,7 @@ function printSchedSection(range) {
   var colgroup = '<colgroup><col style="width:'+nameColPct+'%;">' + daysToShow.map(function(){ return '<col style="width:'+dayColPct+'%;">'; }).join('') + '</colgroup>';
 
   var html = '<!DOCTYPE html><html><head><title>'+title+' Schedule</title>'
-    + '<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@media print{@page{size:landscape;margin:6mm;}button{display:none;}}body{font-family:Arial,sans-serif;font-size:12px;padding:8px;}h1{font-size:17px;color:#c8102e;margin:0 0 1px;}table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:6px;}th,td{border:1px solid #ddd;padding:3px 5px;text-align:left;word-wrap:break-word;overflow-wrap:break-word;}th{background:#f5f5f5;}</style>'
+    + '<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@media print{@page{size:landscape;margin:6mm;}button{display:none;}}body{font-family:Arial,sans-serif;font-size:12px;padding:8px;}h1{font-size:17px;color:#c8102e;margin:0 0 1px;}table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:6px;}th,td{border:1px solid #ddd;padding:2px 3px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px;}th{background:#f5f5f5;}</style>'
     + '</head><body>'
     + '<div id="print-page1">'
     + '<h1>'+title+'</h1>'
