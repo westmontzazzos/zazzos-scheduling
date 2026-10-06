@@ -5595,7 +5595,7 @@ function parseHour(raw) {
   // Collapse all internal whitespace so spaced variants parse the same
   // as compact ones, e.g. "2pm - cl" -> "2pm-cl", "9am - 4pm" -> "9am-4pm"
   const s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
-  if(s==='' || s==='x' || s==='black') return null;
+  if(s==='' || !/\d/.test(s)) return null;
 
   // A single time token: hour, optional :MM or .M minutes, optional am/pm
   const T = '(\\d+(?:[:.]\\d+)?)(am|pm)?';
@@ -10311,7 +10311,7 @@ function renderPrivate() {
     if(!arr||!arr[di])return 0;
     var tf=extractTrainingFlag(arr[di]);
     var s=String(tf.clean).trim().toLowerCase().replace(/\s+/g,'');
-    if(!s||s==='x'||s==='darien'||['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s))return 0;
+    if(!s || !/\d/.test(s))return 0;
     var st=null,en=null;
     var cm=s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
     if(cm){st=toH(cm[1].trim());en=(di===4||di===5)?23.25:22.25;}
@@ -10492,7 +10492,7 @@ function renderPrivate() {
     if(!arr||!arr[di])return null;
     var tf=extractTrainingFlag(arr[di]);
     var s=String(tf.clean).trim().toLowerCase().replace(/\s+/g,'');
-    if(!s||s==='x'||s==='darien'||['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s))return null;
+    if(!s || !/\d/.test(s))return null;
     var cm=s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
     if(cm) return toH(cm[1].trim());
     var rm=s.match(/^([\d:]+(?:am|pm)?)\s*[-–*]\s*([\d:]+(?:am|pm)?)$/i);
@@ -10795,8 +10795,7 @@ function hitlistHour(t, di, isEnd) {
 function parseBOHHours(raw, di) {
   if(!raw) return null;
   var s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
-  if(!s || s === 'x' || s === 'darien' ||
-     ['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
+  if(!s || !/\d/.test(s)) return null;
   var closeEnd = (di===4||di===5) ? 23.25 : 22.25;
   var st, en;
   var closeM = s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
@@ -12718,7 +12717,7 @@ function snapToMonday(dateStr) {
 function _bohStartHour(raw, di) {
   if(!raw) return null;
   var s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
-  if(!s || s==='x' || ['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
+  if(!s || !/\d/.test(s)) return null;
   var cm = s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
   var startPart;
   if(cm) { startPart = cm[1].trim(); }
@@ -12829,7 +12828,7 @@ function checkScheduleErrors() {
   function parseBOHRaw(raw, di) {
     if(!raw) return null;
     var s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
-    if(!s || s==='x' || ['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
+    if(!s || !/\d/.test(s)) return null;
     var closeEnd = (di===4||di===5) ? 23.25 : 22.25;
     var hasClose = false, st = null, en = null;
     var cm = s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
@@ -13186,7 +13185,7 @@ function checkScheduleErrors() {
       // has no valid section anywhere and must always be flagged.
       if(allowed && allowed.indexOf(sec.lbl) !== -1) return;
       for(var d=0; d<7; d++) {
-        if(sec.obj[name][d] && ['x','off'].indexOf(String(sec.obj[name][d]).trim().toLowerCase()) === -1) {
+        if(sec.obj[name][d] && /\d/.test(String(sec.obj[name][d]))) {
           var msg = allowed
             ? name+' added to '+sec.lbl+' — approve this role addition?'
             : name+' is not a recognized employee and has no defined role — appearing in '+sec.lbl+'. Remove or add them to the roster with a real role first.';
@@ -13225,7 +13224,7 @@ function checkScheduleErrors() {
           var shift = sec.obj[personName][reqDayIdx];
           var hasShift = sec.lbl === 'Servers' || sec.lbl === 'Bartenders' || sec.lbl === 'Cashiers' || sec.lbl === 'Hosts'
             ? (shift && Array.isArray(shift) && shift[0])
-            : (shift && String(shift).trim().toLowerCase() !== 'x');
+            : (shift && /\d/.test(String(shift)));
           if(!hasShift) return;
           var shiftLabel = req.shift_type === 'full' ? 'Full Day' : req.shift_type === 'morning' ? 'Half Day — Morning' : 'Half Day — Night';
           var errObj = {di:reqDayIdx, day:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][reqDayIdx], name:personName, dept:sec.lbl,
@@ -13292,11 +13291,11 @@ function checkScheduleErrors() {
             var raw = kv[1][e.di];
             if(!raw) return;
             var rs = String(raw).trim();
-            if(!rs || rs.toLowerCase()==='x') return;
-            // Requested-off entries have no bearing on a staffing-count shortfall —
-            // they don't count toward the requirement and shouldn't be listed as if
-            // they're part of the problem.
-            if(/^r\/?o$/i.test(rs) || rs.toLowerCase()==='off') return;
+            // Only an actual time counts as a real assigned shift -- "OFF",
+            // "R/O", "DARIEN", or any other non-time annotation has no
+            // bearing on a staffing-count shortfall and shouldn't be listed
+            // as if it's part of the problem.
+            if(!rs || !/\d/.test(rs)) return;
             _staffList.push({name:kv[0], raw:rs});
           });
           // Sort by start time
@@ -15616,11 +15615,11 @@ function printSchedSection(range) {
     var secRows = '';
     Object.entries(secData).forEach(function(e){
       var name = shortName(e[0]), days = e[1];
-      var hasShift = daysToShow.some(function(di){ return days[di] && days[di] !== 'x' && days[di] !== 'X'; });
+      var hasShift = daysToShow.some(function(di){ return days[di] && /\d/.test(String(days[di])); });
       if(!hasShift) return;
       secRows += '<tr><td>'+name+'</td>' + daysToShow.map(function(di){
         var val = days[di];
-        if(!val || val === 'x' || val === 'X') return '<td style="color:#ccc;">-</td>';
+        if(!val || !/\d/.test(String(val))) return '<td style="color:#ccc;">-</td>';
         return '<td>'+fmtTimeForPrint(val)+'</td>';
       }).join('') + '</tr>';
     });
