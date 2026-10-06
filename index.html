@@ -4825,14 +4825,18 @@ document.addEventListener("DOMContentLoaded",function(){
 
 <!-- SCHEDULE -->
 <div id="tab-schedule" class="main" style="display:none">
-  <div class="report-header">
-    <div class="report-title" id="sched-edit-trigger" onclick="handleSchedTitleTap()" style="cursor:default;">SCHEDULE</div>
-    <div class="report-sub">Weekly staff schedule</div>
+  <div class="report-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <div>
+      <div class="report-title" id="sched-edit-trigger" onclick="handleSchedTitleTap()" style="cursor:default;">SCHEDULE</div>
+      <div class="report-sub">Weekly staff schedule</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+      <button class="btn btn-secondary" style="padding:6px 10px;font-size:16px;line-height:1;flex-shrink:0;" onclick="changeWeek(1)">‹</button>
+      <div id="sched-week-label" style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:0.06em;color:#fff;white-space:nowrap;flex-shrink:0;">Loading...</div>
+      <button class="btn btn-secondary" style="padding:6px 10px;font-size:16px;line-height:1;flex-shrink:0;" onclick="changeWeek(-1)">›</button>
+    </div>
   </div>
   <div id="sched-week-nav-row" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:2px;">
-    <button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeWeek(1)">‹</button>
-    <div id="sched-week-label" style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.08em;color:var(--black);white-space:nowrap;flex-shrink:0;">Loading...</div>
-    <button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;flex-shrink:0;" onclick="changeWeek(-1)">›</button>
     <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="backToScheduleCalendar()">🗓 Calendar</button>
     <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="toggleSchedEditMode()">✏️ Edit</button>
     <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="showSchedPrintMenu(this)">🖨 Print</button>
