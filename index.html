@@ -5904,7 +5904,7 @@ function parseBOH(raw, di) {
   if(['x','','darien','kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
   const closeM = s.match(/^(.+)[-–]c[l]?$/);
   if(closeM) { const a=fmtBOH(closeM[1].trim()); return a ? {a:a, p:'C'} : null; }
-  const rangeM = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
+  const rangeM = s.match(/^([\d:]+(?:am|pm)?)\s*[-–*]\s*([\d:]+(?:am|pm)?)$/i);
   if(rangeM) { const a=fmtBOH(rangeM[1]); return a ? {a:a, p:fmtBOH(rangeM[2], true)} : null; }
   const a=fmtBOH(s);
   return a ? {a:a, p:''} : null;
@@ -10249,7 +10249,7 @@ function renderPrivate() {
     var st=null,en=null;
     var cm=s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
     if(cm){st=toH(cm[1].trim());en=(di===4||di===5)?23.25:22.25;}
-    else{var rm=s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);if(rm){st=toH(rm[1]);en=toH(rm[2], true);}else{st=toH(s);if(st!==null)en=20;}}
+    else{var rm=s.match(/^([\d:]+(?:am|pm)?)\s*[-–*]\s*([\d:]+(?:am|pm)?)$/i);if(rm){st=toH(rm[1]);en=toH(rm[2], true);}else{st=toH(s);if(st!==null)en=20;}}
     if(st!==null&&en!==null&&en>st){var h=en-st;if(h>8)h-=0.5;return Math.max(0,h);}
     return 0;
   }
@@ -10429,7 +10429,7 @@ function renderPrivate() {
     if(!s||s==='x'||s==='darien'||['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s))return null;
     var cm=s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
     if(cm) return toH(cm[1].trim());
-    var rm=s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
+    var rm=s.match(/^([\d:]+(?:am|pm)?)\s*[-–*]\s*([\d:]+(?:am|pm)?)$/i);
     if(rm) return toH(rm[1]);
     return toH(s);
   }
@@ -10738,7 +10738,7 @@ function parseBOHHours(raw, di) {
     st = hitlistHour(closeM[1].trim(), di);
     en = closeEnd;
   } else {
-    var rangeM = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
+    var rangeM = s.match(/^([\d:]+(?:am|pm)?)\s*[-–*]\s*([\d:]+(?:am|pm)?)$/i);
     if(rangeM) {
       st = hitlistHour(rangeM[1], di);
       en = hitlistHour(rangeM[2], di, true);
@@ -12646,7 +12646,7 @@ function _bohStartHour(raw, di) {
   var startPart;
   if(cm) { startPart = cm[1].trim(); }
   else {
-    var rm = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
+    var rm = s.match(/^([\d:]+(?:am|pm)?)\s*[-–*]\s*([\d:]+(?:am|pm)?)$/i);
     startPart = rm ? rm[1] : s;
   }
   return hitlistHour(startPart, di);
@@ -12758,7 +12758,7 @@ function checkScheduleErrors() {
     var cm = s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
     if(cm) { st = hitlistHour(cm[1].trim(), di); en = closeEnd; hasClose = true; }
     else {
-      var rm = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
+      var rm = s.match(/^([\d:]+(?:am|pm)?)\s*[-–*]\s*([\d:]+(?:am|pm)?)$/i);
       if(rm) {
         st = hitlistHour(rm[1], di);
         var enRaw = rm[2].toLowerCase();
