@@ -5279,7 +5279,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="card-header">🍽️ Bus / Dish Rules</div>
       <div style="font-size:13px;color:var(--gray-800);line-height:1.7;padding-top:4px;">
         Bus or Dish must have a closer (C) — either one covers it<br>
-        <b>Both Dish and Bus:</b> must have someone starting between 3–5PM<br>
+        Bus or Dish must have someone starting between 3–5PM — either one covers it<br>
         AM shifts must have an end time
       </div>
     </div>
@@ -12925,11 +12925,10 @@ function checkScheduleErrors() {
     if(!Object.entries(MANAGERS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Managers', msg:'No manager closer (nobody with C)'});
 
-    // Dish and Bus must have someone starting between 3-5PM
-    if(!Object.entries(DISH).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p && p.st>=15 && p.st<=17; }))
-      errors.BOH.push({di:di, day:day, name:'—', dept:'Dish', msg:'No Dish staff starting between 3-5PM'});
-    if(!Object.entries(BUS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p && p.st>=15 && p.st<=17; }))
-      errors.BOH.push({di:di, day:day, name:'—', dept:'Bus', msg:'No Bus staff starting between 3-5PM'});
+    // Bus and Dish are interchangeable for this check too -- either section
+    // having someone start between 3-5PM satisfies it, not each separately.
+    if(!Object.entries(DISH).concat(Object.entries(BUS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p && p.st>=15 && p.st<=17; }))
+      errors.BOH.push({di:di, day:day, name:'—', dept:'Bus / Dish', msg:'No Bus/Dish staff starting between 3-5PM (in either)'});
 
     // Pizza staffing minimums
     var _pizzaAll = Object.values(PIZZA).concat(Object.values(MANAGERS));
