@@ -9536,11 +9536,12 @@ function finishAppUnlock() {
 function checkAppLock() {
   var pin = document.getElementById('app-lock-input').value;
   // A deliberately undocumented, invisible extension of the normal PIN:
-  // typing it with one extra trailing digit unlocks exactly like the plain
+  // typing it with two specific trailing digits (chosen to not be a
+  // plausible accidental extra keystroke) unlocks exactly like the plain
   // PIN always has, but also silently marks this one device as trusted so
   // it never prompts again. No UI hint this exists anywhere on screen --
   // entering the plain PIN behaves identically to how it always has.
-  if(pin === APP_PIN + '7') {
+  if(pin === APP_PIN + '59') {
     localStorage.setItem('zp_trusted_device', '1');
     finishAppUnlock();
     return;
