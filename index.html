@@ -13186,7 +13186,7 @@ function checkScheduleErrors() {
       // has no valid section anywhere and must always be flagged.
       if(allowed && allowed.indexOf(sec.lbl) !== -1) return;
       for(var d=0; d<7; d++) {
-        if(sec.obj[name][d] && String(sec.obj[name][d]).trim().toLowerCase() !== 'x') {
+        if(sec.obj[name][d] && ['x','off'].indexOf(String(sec.obj[name][d]).trim().toLowerCase()) === -1) {
           var msg = allowed
             ? name+' added to '+sec.lbl+' — approve this role addition?'
             : name+' is not a recognized employee and has no defined role — appearing in '+sec.lbl+'. Remove or add them to the roster with a real role first.';
