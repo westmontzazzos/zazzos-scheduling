@@ -5717,6 +5717,7 @@ const STALE_NAME_MIGRATIONS = {
 };
 const NAME_ALIASES = {
   'alex': 'Alex', 'alex a': 'Alex',
+  'og r': 'Raul', 'ogr': 'Raul',
   'nick': 'Nick', 'nicholas': 'Nick', 'nicholas urbana': 'Nick',
   'sio': 'Sio', 'sio mcavoy': 'Sio',
   'laura': 'Laura', 'laura z': 'Laura',
@@ -10878,7 +10879,7 @@ const DEFAULT_ROSTER = {
   'Sylvia': [{role:'Prep',rate:15.0,keys:['Sylvia']}],
   'Marco': [{role:'Dish',rate:16.0,keys:['Marco']},{role:'Pizza',rate:16.0,keys:['Marco']},{role:'Bus',rate:16.0,keys:['Marco']}],
   'Gonzalo': [{role:'Dish',rate:17.0,keys:['Gonzalo','Gonzo']},{role:'Pizza',rate:17.0,keys:['Gonzalo','Gonzo']},{role:'Bus',rate:17.0,keys:['Gonzalo','Gonzo']}],
-  'Raul': [{role:'Dish',rate:15.0,keys:['Raul']},{role:'Bus',rate:15.0,keys:['Raul']}],
+  'Raul': [{role:'Dish',rate:15.0,keys:['Raul','OG R']},{role:'Bus',rate:15.0,keys:['Raul','OG R']}],
   'Sio': [{role:'Cashier',rate:17.0,keys:['Sio','Sio McAvoy']},{role:'Server',rate:9.0,keys:['Sio','Sio McAvoy']},{role:'Bartender',rate:9.0,keys:['Sio','Sio McAvoy']}],
   'Brianna': [{role:'Server',rate:9.0,keys:['Brianna']}],
   'Erika': [{role:'Server',rate:9.0,keys:['Erika']}],
@@ -10909,6 +10910,11 @@ const DEFAULT_ROSTER = {
   'Molly': [{role:'Cashier',rate:15.0,keys:['Molly']},{role:'Host',rate:15.0,keys:['Molly']}],
   'Lea': [{role:'Bartender',rate:9.0,keys:['Lea']}]
 };
+// Lets cleanNames() recognize a known person even when a schedule photo
+// renders their name in different case (e.g. "VICTOR" instead of "Victor"),
+// instead of treating the all-caps version as a brand-new, unmatched person.
+var _DEFAULT_ROSTER_CANON_BY_LOWER = {};
+Object.keys(DEFAULT_ROSTER).forEach(function(k){ _DEFAULT_ROSTER_CANON_BY_LOWER[k.toLowerCase()] = k; });
 refreshRoleMap(); // first pass: hardcoded roster only. Refreshed again once Manage Roster data loads.
 
 // Never display a full last name anywhere in the app -- first name only,
@@ -12179,6 +12185,12 @@ function cleanNames(obj, sectionType, sectionKey) {
       if(sectionType === 'managers') cleanKey = NAME_ALIASES[lower];
     } else if(NAME_ALIASES[lower]) {
       cleanKey = NAME_ALIASES[lower];
+    } else if(_DEFAULT_ROSTER_CANON_BY_LOWER[lower] && _DEFAULT_ROSTER_CANON_BY_LOWER[lower] !== cleanKey) {
+      // A schedule photo sometimes renders a known person's name in a
+      // different case (e.g. "VICTOR" instead of "Victor") -- without this,
+      // that's treated as a brand-new, unmatched person every time, instead
+      // of recognized as the same existing roster entry.
+      cleanKey = _DEFAULT_ROSTER_CANON_BY_LOWER[lower];
     }
     var incoming = obj[rawName];
     if(cleaned[cleanKey] === undefined) {
