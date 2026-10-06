@@ -371,6 +371,19 @@ body {
   transition: border-color 0.15s;
 }
 .pin-input:focus { border-color: var(--red); }
+.keypad-key {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  border: none;
+  background: var(--gray-100, #eee);
+  color: var(--black);
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.keypad-key:active { background: var(--gray-200, #ddd); }
 .unlock-btn {
   width: 160px;
   padding: 13px;
@@ -4721,21 +4734,21 @@ document.addEventListener("DOMContentLoaded",function(){
            readonly autocomplete="off" autocorrect="off"
            autocapitalize="off" spellcheck="false"
            style="-webkit-text-security:disc;text-security:disc;caret-color:transparent;">
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:220px;margin:12px auto 0;">
-      <button type="button" onclick="appLockKeyPress('1')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">1</button>
-      <button type="button" onclick="appLockKeyPress('2')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">2</button>
-      <button type="button" onclick="appLockKeyPress('3')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">3</button>
-      <button type="button" onclick="appLockKeyPress('4')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">4</button>
-      <button type="button" onclick="appLockKeyPress('5')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">5</button>
-      <button type="button" onclick="appLockKeyPress('6')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">6</button>
-      <button type="button" onclick="appLockKeyPress('7')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">7</button>
-      <button type="button" onclick="appLockKeyPress('8')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">8</button>
-      <button type="button" onclick="appLockKeyPress('9')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">9</button>
-      <button type="button" onclick="appLockKeyPress('*')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">*</button>
-      <button type="button" onclick="appLockKeyPress('0')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">0</button>
-      <button type="button" onclick="appLockBackspace()" class="btn btn-secondary" style="padding:14px 0;font-size:16px;">⌫</button>
+    <div style="display:grid;grid-template-columns:repeat(3,64px);justify-content:center;gap:14px;margin:16px auto 0;">
+      <button type="button" onclick="appLockKeyPress('1')" class="keypad-key">1</button>
+      <button type="button" onclick="appLockKeyPress('2')" class="keypad-key">2</button>
+      <button type="button" onclick="appLockKeyPress('3')" class="keypad-key">3</button>
+      <button type="button" onclick="appLockKeyPress('4')" class="keypad-key">4</button>
+      <button type="button" onclick="appLockKeyPress('5')" class="keypad-key">5</button>
+      <button type="button" onclick="appLockKeyPress('6')" class="keypad-key">6</button>
+      <button type="button" onclick="appLockKeyPress('7')" class="keypad-key">7</button>
+      <button type="button" onclick="appLockKeyPress('8')" class="keypad-key">8</button>
+      <button type="button" onclick="appLockKeyPress('9')" class="keypad-key">9</button>
+      <button type="button" onclick="appLockKeyPress('*')" class="keypad-key">*</button>
+      <button type="button" onclick="appLockKeyPress('0')" class="keypad-key">0</button>
+      <button type="button" onclick="appLockBackspace()" class="keypad-key" style="font-size:18px;">⌫</button>
     </div>
-    <button class="unlock-btn" style="margin-top:12px;" onclick="checkAppLock()">UNLOCK</button>
+    <button class="unlock-btn" style="margin-top:18px;" onclick="checkAppLock()">UNLOCK</button>
     <div class="pin-error" id="app-lock-error">Incorrect PIN. Try again.</div>
   </div>
 </div>
