@@ -5902,7 +5902,7 @@ function parseBOH(raw, di) {
   // e.g. "2pm - cl" -> "2pm-cl" (matches the driver parser's behavior)
   const s = raw.trim().toLowerCase().replace(/\s+/g, '');
   if(['x','','darien','kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
-  const closeM = s.match(/^(.+)-c[l]?$/);
+  const closeM = s.match(/^(.+)[-–]c[l]?$/);
   if(closeM) { const a=fmtBOH(closeM[1].trim()); return a ? {a:a, p:'C'} : null; }
   const rangeM = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
   if(rangeM) { const a=fmtBOH(rangeM[1]); return a ? {a:a, p:fmtBOH(rangeM[2], true)} : null; }
@@ -10247,9 +10247,9 @@ function renderPrivate() {
     var s=String(tf.clean).trim().toLowerCase().replace(/\s+/g,'');
     if(!s||s==='x'||s==='darien'||['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s))return 0;
     var st=null,en=null;
-    var cm=s.match(/^(.+)-c(?:l(?:ose)?)?$/);
+    var cm=s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
     if(cm){st=toH(cm[1].trim());en=(di===4||di===5)?23.25:22.25;}
-    else{var rm=s.match(/^([\d:]+(?:am|pm)?)\s*-\s*([\d:]+(?:am|pm)?)$/i);if(rm){st=toH(rm[1]);en=toH(rm[2], true);}else{st=toH(s);if(st!==null)en=20;}}
+    else{var rm=s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);if(rm){st=toH(rm[1]);en=toH(rm[2], true);}else{st=toH(s);if(st!==null)en=20;}}
     if(st!==null&&en!==null&&en>st){var h=en-st;if(h>8)h-=0.5;return Math.max(0,h);}
     return 0;
   }
@@ -10427,9 +10427,9 @@ function renderPrivate() {
     var tf=extractTrainingFlag(arr[di]);
     var s=String(tf.clean).trim().toLowerCase().replace(/\s+/g,'');
     if(!s||s==='x'||s==='darien'||['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s))return null;
-    var cm=s.match(/^(.+)-c(?:l(?:ose)?)?$/);
+    var cm=s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
     if(cm) return toH(cm[1].trim());
-    var rm=s.match(/^([\d:]+(?:am|pm)?)\s*-\s*([\d:]+(?:am|pm)?)$/i);
+    var rm=s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
     if(rm) return toH(rm[1]);
     return toH(s);
   }
@@ -10733,7 +10733,7 @@ function parseBOHHours(raw, di) {
      ['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
   var closeEnd = (di===4||di===5) ? 23.25 : 22.25;
   var st, en;
-  var closeM = s.match(/^(.+)-c(?:l(?:ose)?)?$/);
+  var closeM = s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
   if(closeM) {
     st = hitlistHour(closeM[1].trim(), di);
     en = closeEnd;
@@ -12642,7 +12642,7 @@ function _bohStartHour(raw, di) {
   if(!raw) return null;
   var s = String(raw).trim().toLowerCase().replace(/\s+/g, '');
   if(!s || s==='x' || ['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
-  var cm = s.match(/^(.+)-c(?:l(?:ose)?)?$/);
+  var cm = s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
   var startPart;
   if(cm) { startPart = cm[1].trim(); }
   else {
@@ -12755,7 +12755,7 @@ function checkScheduleErrors() {
     if(!s || s==='x' || ['kitchen','pizza','dish','bus','prep','serve','bar','host'].includes(s)) return null;
     var closeEnd = (di===4||di===5) ? 23.25 : 22.25;
     var hasClose = false, st = null, en = null;
-    var cm = s.match(/^(.+)-c(?:l(?:ose)?)?$/);
+    var cm = s.match(/^(.+)[-–]c(?:l(?:ose)?)?$/);
     if(cm) { st = hitlistHour(cm[1].trim(), di); en = closeEnd; hasClose = true; }
     else {
       var rm = s.match(/^([\d:]+(?:am|pm)?)\s*[-–]\s*([\d:]+(?:am|pm)?)$/i);
