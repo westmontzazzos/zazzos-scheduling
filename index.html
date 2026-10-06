@@ -4847,7 +4847,6 @@ document.addEventListener("DOMContentLoaded",function(){
     <button class="sub-btn" onclick="switchSched('foh',this)">Front of House</button>
     <button class="sub-btn" onclick="switchSched('boh',this)">Back of House</button>
     <button class="sub-btn" onclick="openSendMessageModal()">✉️ Send Message</button>
-    <button class="sub-btn" onclick="copyWeekToNext()">📋 Copy Schedule</button>
     <button class="sub-btn" onclick="showDomsNotes()" style="margin-left:auto;">📝 Manager Notes</button>
   </div>
   <div class="sched-wrap" id="schedule-content"></div>
@@ -9359,6 +9358,22 @@ function buildNotesFooterRows(section, namesInView) {
   return out;
 }
 
+// Small "Off: Fri" badge shown directly under a person's name in the
+// Schedule grid, for any day in the currently-viewed week they have a
+// time-off request logged -- so it's visible right where you're looking,
+// not just buried in the separate Schedule Errors report.
+function timeOffBadgeHtml(name) {
+  if(!window._timeOffForErrorCheck || !allWeeks || !allWeeks[currentWeekIdx] || !allWeeks[currentWeekIdx].week_start) return '';
+  var wkStart = new Date(allWeeks[currentWeekIdx].week_start + 'T00:00:00');
+  var dateForDay = [];
+  for(var i=0;i<7;i++){ var dd=new Date(wkStart); dd.setDate(wkStart.getDate()+i); dateForDay.push(dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0')); }
+  var DAYS_SHORT=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var matches = window._timeOffForErrorCheck.filter(function(r){ return r.name===name && dateForDay.indexOf(r.request_date)!==-1; });
+  if(!matches.length) return '';
+  var days = matches.map(function(r){ return DAYS_SHORT[dateForDay.indexOf(r.request_date)]; });
+  return '<div style="font-size:9px;font-weight:700;color:#2E9E4F;margin-top:2px;white-space:nowrap;">✅ Time Off Approved ('+days.join(', ')+')</div>';
+}
+
 function renderSchedule() {
   syncInlineEditsToMemory(); // must run before rebuilding the table below, or any unsaved keystroke gets silently discarded
   if(typeof setScheduleViewMode === 'function') setScheduleViewMode(false);
@@ -9410,7 +9425,7 @@ function renderSchedule() {
     html+='</tr>';
     schedSort(Object.entries(DRIVERS),'drv')
       .forEach(([name,days])=>{
-        html+=`<tr><td>${shortName(name)}</td>`;
+        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}</td>`;
         days.forEach((raw,di)=>{
           if(window._schedEditMode){
             var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="DRIVERS" data-name="${name}" data-di="${di}" value="${getShiftDisplay('DRIVERS', raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;">`;
@@ -9440,7 +9455,7 @@ function renderSchedule() {
         // removed directly -- only the normal read view hides it.
         if(!window._schedEditMode && !isNameAllowedInSection(name, _secLblMap[l])) return;
         fohAllNames.push(name);
-        html+=`<tr><td>${shortName(name)}</td>`;
+        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}</td>`;
         days.forEach((e,di)=>{
           if(window._schedEditMode){
             var rawVal = getShiftDisplay(l, e);
@@ -9467,7 +9482,7 @@ function renderSchedule() {
         // definition); everyone else follows the same rule as FOH above.
         if(l!=='MANAGERS' && !window._schedEditMode && !isNameAllowedInSection(name, _secLblMapBOH[l])) return;
         bohAllNames.push(name);
-        html+=`<tr><td>${shortName(name)}</td>`;
+        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}</td>`;
         days.forEach((raw,di)=>{
           if(window._schedEditMode){
             var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="${l}" data-name="${name}" data-di="${di}" value="${getShiftDisplay(l, raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;">`;
@@ -13197,47 +13212,10 @@ function checkScheduleErrors() {
     });
   });
 
-  // Anyone scheduled to work on a day they have an approved time off
-  // request for is a real scheduling conflict -- checked the same way as
-  // every other rule here, using the exact calendar date for each day of
-  // the currently-loaded week (not just day-of-week, since the same
-  // person/day-of-week combination is a different actual date every week).
-  if(allWeeks && allWeeks[currentWeekIdx] && allWeeks[currentWeekIdx].week_start && window._timeOffForErrorCheck) {
-    var wkStartForTO = new Date(allWeeks[currentWeekIdx].week_start + 'T00:00:00');
-    var dateForDay = [];
-    for(var tdi=0; tdi<7; tdi++) {
-      var dd = new Date(wkStartForTO); dd.setDate(wkStartForTO.getDate() + tdi);
-      dateForDay.push(dd.getFullYear()+'-'+String(dd.getMonth()+1).padStart(2,'0')+'-'+String(dd.getDate()).padStart(2,'0'));
-    }
-    var toBySectionCheck = [
-      {obj:MANAGERS,lbl:'Managers'},{obj:PIZZA,lbl:'Pizza'},{obj:KITCHEN,lbl:'Kitchen'},{obj:PREP,lbl:'Prep'},
-      {obj:BUS,lbl:'Bus'},{obj:DISH,lbl:'Dish'},{obj:SERVERS,lbl:'Servers'},{obj:BARTENDERS,lbl:'Bartenders'},
-      {obj:CASHIERS,lbl:'Cashiers'},{obj:HOSTS,lbl:'Hosts'},{obj:DRIVERS,lbl:'Drivers'}
-    ];
-    window._timeOffForErrorCheck.forEach(function(req){
-      if(req.conflict_acknowledged) return; // permanently acknowledged -- this exact request is done, period
-      var reqDayIdx = dateForDay.indexOf(req.request_date);
-      if(reqDayIdx === -1) return; // this request isn't in the currently-loaded week at all
-      toBySectionCheck.forEach(function(sec){
-        Object.keys(sec.obj).forEach(function(personName){
-          if(personName !== req.name) return;
-          var shift = sec.obj[personName][reqDayIdx];
-          var hasShift = sec.lbl === 'Servers' || sec.lbl === 'Bartenders' || sec.lbl === 'Cashiers' || sec.lbl === 'Hosts'
-            ? (shift && Array.isArray(shift) && shift[0])
-            : (shift && /\d/.test(String(shift)));
-          if(!hasShift) return;
-          var shiftLabel = req.shift_type === 'full' ? 'Full Day' : req.shift_type === 'morning' ? 'Half Day — Morning' : 'Half Day — Night';
-          var errObj = {di:reqDayIdx, day:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][reqDayIdx], name:personName, dept:sec.lbl,
-            msg:personName+' is scheduled but has an approved Time Off request ('+shiftLabel+')', timeOffRequestId:req.id};
-          var isDriverErr = sec.lbl === 'Drivers';
-          var isBOHErr = ['Managers','Pizza','Kitchen','Prep','Bus','Dish'].indexOf(sec.lbl) !== -1;
-          if(isDriverErr) errors.Drivers.push(errObj);
-          else if(isBOHErr) errors.BOH.push(errObj);
-          else errors.FOH.push(errObj);
-        });
-      });
-    });
-  }
+  // Someone working on a day they also have a time-off request for is not
+  // treated as an error needing review/override -- it's shown directly on
+  // the schedule grid instead (see timeOffBadgeHtml), which takes priority
+  // over flagging it here at all.
 
     // Filter out bypassed errors
   if(window._bypassedErrors) {
