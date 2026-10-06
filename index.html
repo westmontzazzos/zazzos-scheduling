@@ -12801,7 +12801,51 @@ function confirmEarlyBOHStarts() {
   window._pendingEarlyBOH = null;
 }
 
-function checkScheduleErrors() {
+// Staff who work BOTH Westmont and Darien -- if either location adds or
+// removes someone from this short list, update it here; it's intentionally
+// a short, explicit list rather than something auto-detected, since "works
+// both locations" is a real-world fact only a manager would know for sure.
+var SHARED_STAFF_WITH_DARIEN = ['Laura', 'Junior', 'Jesus', 'Arturo'];
+
+function findShiftAcrossSections(sectionObjs, name, di) {
+  for(var i=0; i<sectionObjs.length; i++) {
+    var obj = sectionObjs[i];
+    if(obj && obj[name] && obj[name][di] && /\d/.test(String(obj[name][di]))) return obj[name][di];
+  }
+  return null;
+}
+
+async function checkCrossLocationConflicts(errors, weekStart) {
+  if(!weekStart) return;
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/darien_schedules?week_start=eq.' + weekStart + '&select=boh_data', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(!r.ok) return; // Darien has no schedule for this week yet, or the request failed -- nothing to compare against
+    var rows = await r.json();
+    if(!rows || !rows[0] || !rows[0].boh_data) return;
+    var dBoh = JSON.parse(rows[0].boh_data);
+    var westmontSections = [MANAGERS, PIZZA, KITCHEN, PREP, BUS, DISH];
+    var darienSections = [dBoh.MANAGERS, dBoh.PIZZA, dBoh.KITCHEN, dBoh.PREP, dBoh.BUS, dBoh.DISH];
+    var days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    SHARED_STAFF_WITH_DARIEN.forEach(function(name) {
+      for(var di=0; di<7; di++) {
+        var wShift = findShiftAcrossSections(westmontSections, name, di);
+        var dShift = findShiftAcrossSections(darienSections, name, di);
+        if(!wShift || !dShift) continue;
+        var wHrs = parseBOHHours(wShift, di), dHrs = parseBOHHours(dShift, di);
+        if(!wHrs || !dHrs) continue;
+        var overlaps = wHrs.st < dHrs.en && dHrs.st < wHrs.en;
+        if(overlaps) {
+          errors.BOH.push({di:di, day:days[di], name:name, dept:'Cross-Location',
+            msg:name+' is scheduled at both Westmont ('+wShift+') and Darien ('+dShift+') with overlapping hours'});
+        }
+      }
+    });
+  } catch(e) { /* Darien check is best-effort -- never block Westmont's own error report over it */ }
+}
+
+async function checkScheduleErrors() {
   // Never show anything -- not even silently compute -- before the app is
   // actually unlocked. This function gets triggered from loadAllWeeks(),
   // which runs the instant the page loads, completely independent of the
@@ -13252,6 +13296,10 @@ function checkScheduleErrors() {
         });
       });
     });
+  }
+
+  if(allWeeks && allWeeks[currentWeekIdx] && allWeeks[currentWeekIdx].week_start) {
+    await checkCrossLocationConflicts(errors, allWeeks[currentWeekIdx].week_start);
   }
 
     // Filter out bypassed errors
