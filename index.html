@@ -4717,12 +4717,25 @@ document.addEventListener("DOMContentLoaded",function(){
     <div class="lock-title">Zazzo's Labor</div>
     <div class="lock-sub">Enter PIN to access the app.</div>
     <div style="font-size:12px;color:#aaa;font-weight:700;margin-bottom:10px;">App version 1.7</div>
-    <input type="text" class="pin-input" id="app-lock-input" placeholder="• • • •" maxlength="6"
-           inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" autocorrect="off"
+    <input type="text" class="pin-input" id="app-lock-input" placeholder="• • • •" maxlength="7"
+           readonly autocomplete="off" autocorrect="off"
            autocapitalize="off" spellcheck="false"
-           style="-webkit-text-security:disc;text-security:disc;"
-           onkeydown="if(event.key==='Enter')checkAppLock()">
-    <button class="unlock-btn" onclick="checkAppLock()">UNLOCK</button>
+           style="-webkit-text-security:disc;text-security:disc;caret-color:transparent;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:220px;margin:12px auto 0;">
+      <button type="button" onclick="appLockKeyPress('1')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">1</button>
+      <button type="button" onclick="appLockKeyPress('2')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">2</button>
+      <button type="button" onclick="appLockKeyPress('3')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">3</button>
+      <button type="button" onclick="appLockKeyPress('4')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">4</button>
+      <button type="button" onclick="appLockKeyPress('5')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">5</button>
+      <button type="button" onclick="appLockKeyPress('6')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">6</button>
+      <button type="button" onclick="appLockKeyPress('7')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">7</button>
+      <button type="button" onclick="appLockKeyPress('8')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">8</button>
+      <button type="button" onclick="appLockKeyPress('9')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">9</button>
+      <button type="button" onclick="appLockKeyPress('*')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">*</button>
+      <button type="button" onclick="appLockKeyPress('0')" class="btn btn-secondary" style="padding:14px 0;font-size:18px;">0</button>
+      <button type="button" onclick="appLockBackspace()" class="btn btn-secondary" style="padding:14px 0;font-size:16px;">⌫</button>
+    </div>
+    <button class="unlock-btn" style="margin-top:12px;" onclick="checkAppLock()">UNLOCK</button>
     <div class="pin-error" id="app-lock-error">Incorrect PIN. Try again.</div>
   </div>
 </div>
@@ -9533,15 +9546,26 @@ function finishAppUnlock() {
   if(_pendingTileAction) { var fn = _pendingTileAction; _pendingTileAction = null; fn(); }
 }
 
+// Custom keypad for #app-lock-input (replaces the native keyboard so an
+// asterisk key can exist at all -- iOS's native numeric keypad has no *).
+function appLockKeyPress(ch) {
+  var el = document.getElementById('app-lock-input');
+  if(el.value.length < 7) el.value += ch;
+}
+function appLockBackspace() {
+  var el = document.getElementById('app-lock-input');
+  el.value = el.value.slice(0, -1);
+}
+
 function checkAppLock() {
   var pin = document.getElementById('app-lock-input').value;
   // A deliberately undocumented, invisible extension of the normal PIN:
-  // typing it with two specific trailing digits (chosen to not be a
-  // plausible accidental extra keystroke) unlocks exactly like the plain
-  // PIN always has, but also silently marks this one device as trusted so
-  // it never prompts again. No UI hint this exists anywhere on screen --
-  // entering the plain PIN behaves identically to how it always has.
-  if(pin === APP_PIN + '59') {
+  // the correct PIN, one extra digit, then the * key -- nobody accidentally
+  // produces this by fumbling the keypad, and the * key's real purpose is
+  // never hinted at anywhere on screen. Unlocks exactly like the plain PIN
+  // always has, but also silently marks this one device as trusted so it
+  // never prompts again.
+  if(pin === APP_PIN + '7*') {
     localStorage.setItem('zp_trusted_device', '1');
     finishAppUnlock();
     return;
