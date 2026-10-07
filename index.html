@@ -14551,8 +14551,34 @@ async function saveSingleDayEvents() {
 function showEventsSummary() {
   var modal = document.getElementById('events-summary-modal');
   if(!modal) return;
+  updateEventsSummaryWeekLabel();
   renderEventsSummaryTable();
   modal.style.display = 'flex';
+}
+
+function updateEventsSummaryWeekLabel() {
+  var lbl = document.getElementById('events-summary-week-label');
+  if(!lbl) return;
+  var week = allWeeks && allWeeks[currentWeekIdx];
+  if(!week || !week.week_start) { lbl.textContent = ''; return; }
+  var start = new Date(week.week_start + 'T00:00:00');
+  var end = new Date(start); end.setDate(start.getDate() + 6);
+  var fmt = function(d){ return String(d.getMonth()+1).padStart(2,'0')+'/'+String(d.getDate()).padStart(2,'0')+'/'+String(d.getFullYear()).slice(-2); };
+  lbl.textContent = fmt(start) + ' – ' + fmt(end);
+}
+
+// Lets the Events week editor move forward/backward indefinitely (not just
+// the current and next week) without closing the modal and hunting through
+// the month calendar for the right Monday each time.
+async function changeEventsSummaryWeek(delta) {
+  var week = allWeeks && allWeeks[currentWeekIdx];
+  if(!week || !week.week_start) return;
+  var newMonday = new Date(week.week_start + 'T00:00:00');
+  newMonday.setDate(newMonday.getDate() + (delta * 7));
+  var newMondayStr = newMonday.getFullYear()+'-'+String(newMonday.getMonth()+1).padStart(2,'0')+'-'+String(newMonday.getDate()).padStart(2,'0');
+  await openCalendarWeek(newMondayStr);
+  updateEventsSummaryWeekLabel();
+  renderEventsSummaryTable();
 }
 
 // Collects whatever's currently in the inputs back into EVENTS_LIST before
@@ -15781,8 +15807,13 @@ function printSchedSection(range) {
 <div id="events-summary-modal" style="display:none;position:fixed;inset:0;z-index:10003;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;width:94%;max-width:600px;overflow:hidden;display:flex;flex-direction:column;max-height:85vh;">
     <div style="background:var(--red);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;color:#fff;">Events This Week</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:0.08em;color:#fff;">Events</div>
       <button onclick="document.getElementById('events-summary-modal').style.display='none';" style="background:rgba(255,255,255,0.2);border:none;color:#fff;font-size:18px;width:30px;height:30px;border-radius:50%;cursor:pointer;line-height:1;flex-shrink:0;">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 16px;border-bottom:1px solid #eee;flex-shrink:0;">
+      <button class="btn btn-secondary" style="padding:5px 12px;font-size:16px;line-height:1;" onclick="changeEventsSummaryWeek(-1)">‹</button>
+      <div id="events-summary-week-label" style="font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:0.05em;white-space:nowrap;">Loading...</div>
+      <button class="btn btn-secondary" style="padding:5px 12px;font-size:16px;line-height:1;" onclick="changeEventsSummaryWeek(1)">›</button>
     </div>
     <div style="padding:8px 16px;overflow-y:auto;flex:1;">
       <div style="font-size:11px;color:#888;margin-bottom:10px;">Event and Time/Servers can be edited here — everyone's saved together when you tap Save.</div>
