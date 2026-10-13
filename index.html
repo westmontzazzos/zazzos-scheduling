@@ -6133,6 +6133,29 @@ function getFOHSection(sectionData, di) {
 
 // DOM'S NOTES
 
+// Opener/closer highlighting -- edit mode only, per request. Closer uses the
+// same -c/-cl/-close marker the app already recognizes. Opener here is a
+// real time comparison (9am OR EARLIER), not a fixed "9am" string match --
+// Westmont sometimes has early starts (7am, 8am), and those should count
+// too. Explicit PM is always excluded first, since that's never an opener
+// regardless of the hour number. (Modified from Darien's fixed-9am rule.)
+function getOpenerCloserBg(rawVal) {
+  if(!rawVal) return '';
+  var s = String(rawVal).trim().toLowerCase().replace(/\s+/g,'');
+  if(/[-\/](c|cl|close)$/.test(s)) return 'background:#cde8f5;'; // light baby blue
+  var startPart = s.split(/[-\/]/)[0];
+  var m = startPart.match(/^(\d+)(?:[:.](\d+))?(am|pm)?$/);
+  if(!m) return '';
+  if(m[3] === 'pm') return ''; // explicit PM is never an opener
+  var hour = parseInt(m[1], 10);
+  var mins = m[2] ? parseInt(m[2], 10) : 0;
+  if(m[2] && m[2].length === 1) mins = mins * 10; // ".3" means 30 min, matching this app's own time-parsing convention
+  if(hour === 12) hour = 0; // bare "12" with no am/pm -- treat as midnight, not noon
+  var totalMinutes = hour * 60 + mins;
+  if(totalMinutes <= 540) return 'background:#fff3b0;'; // yellow -- 9:00am or earlier
+  return '';
+}
+
 function schedSort(entries, typ) {
   // Sort entries alphabetically by name (case-insensitive, natural number order)
   return entries.sort(function(a, b) {
@@ -9502,7 +9525,7 @@ function renderSchedule() {
         html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}</td>`;
         days.forEach((raw,di)=>{
           if(window._schedEditMode){
-            var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="DRIVERS" data-name="${name}" data-di="${di}" value="${getShiftDisplay('DRIVERS', raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;">`;
+            var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="DRIVERS" data-name="${name}" data-di="${di}" value="${getShiftDisplay('DRIVERS', raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;${getOpenerCloserBg(raw)}">`;
             html += buildDayCell('DRIVERS', name, di, inputHtml);
             return;
           }
@@ -9533,7 +9556,7 @@ function renderSchedule() {
         days.forEach((e,di)=>{
           if(window._schedEditMode){
             var rawVal = getShiftDisplay(l, e);
-            var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="${l}" data-name="${name}" data-di="${di}" value="${rawVal}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;">`;
+            var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="${l}" data-name="${name}" data-di="${di}" value="${rawVal}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;${getOpenerCloserBg(rawVal)}">`;
             html += buildDayCell('FOH', name, di, inputHtml);
             return;
           }
@@ -9559,7 +9582,7 @@ function renderSchedule() {
         html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}</td>`;
         days.forEach((raw,di)=>{
           if(window._schedEditMode){
-            var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="${l}" data-name="${name}" data-di="${di}" value="${getShiftDisplay(l, raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;">`;
+            var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="${l}" data-name="${name}" data-di="${di}" value="${getShiftDisplay(l, raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;${getOpenerCloserBg(raw)}">`;
             html += buildDayCell('BOH', name, di, inputHtml);
             return;
           }
