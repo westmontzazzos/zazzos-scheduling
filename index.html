@@ -10226,6 +10226,28 @@ function editRosterEmployee(origName) {
 
 var _editAliasesTarget = null;
 var _otDetailCurrent = null;
+function buildOTScreenTable(person){
+  var weekRegTotal = 0, weekOtTotal = 0;
+  var rows = '';
+  (person.dayBreakdown || []).forEach(function(d, di){
+    weekRegTotal += d.reg; weekOtTotal += d.ot;
+    var isOff = d.reg < 0.01 && d.ot < 0.01;
+    var dayTotal = d.reg + d.ot;
+    rows += '<tr>'
+      + '<td style="padding:6px 4px;font-weight:700;font-size:12px;">' + DAYS[di].slice(0,3) + '</td>'
+      + '<td style="padding:6px 4px;text-align:right;color:#1a7a3c;font-weight:700;font-size:12px;">' + (isOff ? '—' : d.reg.toFixed(1)) + '</td>'
+      + '<td style="padding:6px 4px;text-align:right;color:#c8102e;font-weight:700;font-size:12px;">' + (isOff || d.ot < 0.01 ? '—' : d.ot.toFixed(1)) + '</td>'
+      + '<td style="padding:6px 4px;text-align:right;font-weight:700;font-size:12px;">' + (isOff ? '—' : dayTotal.toFixed(1)) + '</td>'
+      + '</tr>';
+  });
+  rows += '<tr style="border-top:2px solid #222;">'
+    + '<td style="padding:6px 4px;font-weight:700;font-size:12px;">Total</td>'
+    + '<td style="padding:6px 4px;text-align:right;color:#1a7a3c;font-weight:700;font-size:12px;">' + weekRegTotal.toFixed(1) + '</td>'
+    + '<td style="padding:6px 4px;text-align:right;color:#c8102e;font-weight:700;font-size:12px;">' + weekOtTotal.toFixed(1) + '</td>'
+    + '<td style="padding:6px 4px;text-align:right;font-weight:700;font-size:12px;">' + (weekRegTotal+weekOtTotal).toFixed(1) + '</td>'
+    + '</tr>';
+  return rows;
+}
 function openOTBreakdownModal() {
   renderPrivate(); // guarantees window._otEmpsForModal is freshly computed right now
   var people = window._otEmpsForModal || [];
@@ -10236,30 +10258,17 @@ function openOTBreakdownModal() {
     document.getElementById('ot-detail-modal').style.display = 'flex';
     return;
   }
+  var tableHeader = '<tr style="border-bottom:2px solid #222;">'
+    + '<th style="text-align:left;padding:4px;font-size:10px;color:#888;text-transform:uppercase;">Day</th>'
+    + '<th style="text-align:right;padding:4px;font-size:10px;color:#888;text-transform:uppercase;">Regular</th>'
+    + '<th style="text-align:right;padding:4px;font-size:10px;color:#888;text-transform:uppercase;">OT</th>'
+    + '<th style="text-align:right;padding:4px;font-size:10px;color:#888;text-transform:uppercase;">Total</th>'
+    + '</tr>';
   var html = '';
   people.forEach(function(person, pi){
-    if(pi > 0) html += '<div style="height:1px;background:#e5e3de;margin:14px 0;"></div>';
-    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:0.04em;color:#222;margin-bottom:4px;">' + person.n + ' <span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#999;font-weight:400;">' + person.role + '</span></div>';
-    var weekRegTotal = 0, weekOtTotal = 0;
-    (person.dayBreakdown || []).forEach(function(d, di){
-      weekRegTotal += d.reg; weekOtTotal += d.ot;
-      if(d.reg < 0.01 && d.ot < 0.01) {
-        html += '<div style="padding:7px 0;border-bottom:1px solid #f0efec;display:flex;justify-content:space-between;">'
-          + '<span style="font-weight:700;font-size:12.5px;">' + DAYS[di] + '</span>'
-          + '<span style="color:#bbb;font-size:12.5px;">Off</span></div>';
-        return;
-      }
-      html += '<div style="padding:7px 0;border-bottom:1px solid #f0efec;">'
-        + '<div style="font-weight:700;font-size:12.5px;margin-bottom:2px;">' + DAYS[di] + ' <span style="font-weight:400;color:#999;font-size:10.5px;">' + (FULL_DATES[di]||'') + '</span></div>'
-        + '<div style="display:flex;gap:14px;">'
-        + (d.reg >= 0.01 ? '<span style="color:#1a7a3c;font-weight:700;font-size:13px;">' + d.reg.toFixed(1) + 'h regular</span>' : '')
-        + (d.ot >= 0.01 ? '<span style="color:#c8102e;font-weight:700;font-size:13px;">' + d.ot.toFixed(1) + 'h OT</span>' : '')
-        + '</div></div>';
-    });
-    html += '<div style="padding:8px 0 0;display:flex;justify-content:space-between;font-weight:700;font-size:12.5px;">'
-      + '<span>Total</span>'
-      + '<span><span style="color:#1a7a3c;">' + weekRegTotal.toFixed(1) + 'h reg</span> &nbsp; <span style="color:#c8102e;">' + weekOtTotal.toFixed(1) + 'h OT</span></span>'
-      + '</div>';
+    if(pi > 0) html += '<div style="height:1px;background:#e5e3de;margin:16px 0;"></div>';
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:0.04em;color:#222;margin-bottom:6px;">' + person.n + ' <span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#999;font-weight:400;">' + person.role + '</span></div>';
+    html += '<table style="width:100%;border-collapse:collapse;">' + tableHeader + buildOTScreenTable(person) + '</table>';
   });
   body.innerHTML = html;
   _otDetailCurrent = {n: 'All OT Employees', dayBreakdown: null, multiPerson: people};
@@ -10271,11 +10280,13 @@ function buildOTTableRows(person){
   (person.dayBreakdown||[]).forEach(function(d, di){
     weekRegTotal += d.reg; weekOtTotal += d.ot;
     var isOff = d.reg < 0.01 && d.ot < 0.01;
+    var dayTotal = d.reg + d.ot;
     rows += '<tr><td>' + DAYS[di] + '</td><td>' + (FULL_DATES[di]||'') + '</td>'
       + '<td class="reg">' + (isOff ? '—' : d.reg.toFixed(1) + 'h') + '</td>'
-      + '<td class="ot">' + (isOff || d.ot < 0.01 ? '—' : d.ot.toFixed(1) + 'h') + '</td></tr>';
+      + '<td class="ot">' + (isOff || d.ot < 0.01 ? '—' : d.ot.toFixed(1) + 'h') + '</td>'
+      + '<td>' + (isOff ? '—' : dayTotal.toFixed(1) + 'h') + '</td></tr>';
   });
-  rows += '<tr class="total-row"><td colspan="2">Week Total</td><td class="reg">' + weekRegTotal.toFixed(1) + 'h</td><td class="ot">' + weekOtTotal.toFixed(1) + 'h</td></tr>';
+  rows += '<tr class="total-row"><td colspan="2">Week Total</td><td class="reg">' + weekRegTotal.toFixed(1) + 'h</td><td class="ot">' + weekOtTotal.toFixed(1) + 'h</td><td>' + (weekRegTotal+weekOtTotal).toFixed(1) + 'h</td></tr>';
   return rows;
 }
 function printOTDetail() {
@@ -10299,13 +10310,13 @@ function printOTDetail() {
     person.multiPerson.forEach(function(p, pi){
       if(pi > 0) html += '<div style="height:1px;background:#ddd;margin:22px 0;"></div>';
       html += '<h2 style="font-size:15px;margin:0 0 10px;">' + p.n + (p.role ? ' <span style="font-weight:400;color:#888;font-size:12px;">' + p.role + '</span>' : '') + '</h2>'
-        + '<table><thead><tr><th>Day</th><th>Date</th><th>Regular</th><th>Overtime</th></tr></thead><tbody>'
+        + '<table><thead><tr><th>Day</th><th>Date</th><th>Regular</th><th>Overtime</th><th>Total</th></tr></thead><tbody>'
         + buildOTTableRows(p) + '</tbody></table>';
     });
   } else {
     html += '<h1>' + person.n + '</h1>'
       + '<div class="sub">Weekly Hours Breakdown — Regular vs Overtime</div>'
-      + '<table><thead><tr><th>Day</th><th>Date</th><th>Regular</th><th>Overtime</th></tr></thead><tbody>'
+      + '<table><thead><tr><th>Day</th><th>Date</th><th>Regular</th><th>Overtime</th><th>Total</th></tr></thead><tbody>'
       + buildOTTableRows(person) + '</tbody></table>';
   }
   html += '<script>window.print();<\/script></body></html>';
