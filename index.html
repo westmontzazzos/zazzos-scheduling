@@ -4850,6 +4850,22 @@ document.addEventListener("DOMContentLoaded",function(){
     <button class="sub-btn" onclick="showDomsNotes()" style="margin-left:auto;">📝 Manager Notes</button>
   </div>
   <div class="sched-wrap" id="schedule-content"></div>
+
+  <!-- Desktop Focused Edit: full-screen, single-view editing. Only the
+       table body scrolls internally -- the page itself never scrolls or
+       jumps, and none of the normal nav/header/sub-nav buttons are shown
+       while this is open. Automatically used instead of the normal inline
+       edit whenever the screen is desktop-width. (Ported from Darien.) -->
+  <div id="desktop-edit-modal" style="display:none;position:fixed;inset:0;z-index:9500;background:#fff;flex-direction:column;">
+    <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:2px solid var(--red);">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.06em;color:var(--black);" id="desktop-edit-week-label">Week</div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" onclick="closeDesktopEditMode(false)">Cancel</button>
+        <button class="btn btn-primary" style="background:var(--red);" onclick="closeDesktopEditMode(true)">💾 Save Schedule</button>
+      </div>
+    </div>
+    <div id="desktop-edit-body" style="flex:1;overflow-y:auto;padding:16px 20px;"></div>
+  </div>
   <!-- Schedule Log Modal -->
   <div id="change-pin-modal" style="display:none;position:fixed;inset:0;z-index:10005;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
     <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:20px 18px calc(90px + env(safe-area-inset-bottom, 0px));max-height:85vh;overflow-y:auto;box-sizing:border-box;">
@@ -8268,6 +8284,12 @@ async function showUploadHistoryLog() {
   }
 }
 
+// Desktop gets a full-screen, single-view editor instead of inline editing
+// inside the normal page -- on a wide screen, the regular layout (title,
+// week nav, sub-nav row) pushes the actual table far down and causes
+// jumping/bouncing that makes editing hard to follow. (Ported from Darien.)
+function isDesktopWidth() { return window.innerWidth > 900; }
+
 async function toggleSchedEditMode() {
   if(!window._schedEditMode) {
     // Ask PIN
@@ -8281,10 +8303,47 @@ async function toggleSchedEditMode() {
     // Show save button
     var saveBtn = document.getElementById('sched-inline-save');
     if(saveBtn) saveBtn.style.display = 'inline-block';
-  } else {
-    await saveSchedInlineEdits();
+    renderSchedule();
+    if(isDesktopWidth()) openDesktopEditMode();
+    return;
   }
+  await saveSchedInlineEdits();
   renderSchedule();
+}
+
+// Moves the already-rendered editable table (built by the normal
+// renderSchedule() call above) into the full-screen overlay, rather than
+// building it a second time -- the inputs are the exact same elements,
+// just relocated, so saving still reads them identically either way.
+function openDesktopEditMode() {
+  var src = document.getElementById('schedule-content');
+  var modal = document.getElementById('desktop-edit-modal');
+  var body = document.getElementById('desktop-edit-body');
+  var weekLabelSrc = document.getElementById('sched-week-label');
+  document.getElementById('desktop-edit-week-label').textContent = weekLabelSrc ? weekLabelSrc.textContent : 'Edit Schedule';
+  while(src.firstChild) body.appendChild(src.firstChild);
+  modal.style.display = 'flex';
+}
+
+async function closeDesktopEditMode(shouldSave) {
+  var modal = document.getElementById('desktop-edit-modal');
+  var body = document.getElementById('desktop-edit-body');
+  if(shouldSave) {
+    // saveSchedInlineEdits() reads the inputs (wherever they currently live
+    // -- inside the modal, in this case) and, on success, already calls
+    // renderSchedule() itself, which freshly rebuilds #schedule-content in
+    // its normal place. So there's nothing to move back here -- doing so
+    // would overwrite that fresh render with the old edit-mode content.
+    await saveSchedInlineEdits();
+  } else {
+    window._schedEditMode = false;
+    document.getElementById('sched-edit-trigger').style.color = '';
+    var saveBtn = document.getElementById('sched-inline-save');
+    if(saveBtn) saveBtn.style.display = 'none';
+    renderSchedule();
+  }
+  body.innerHTML = ''; // clear the modal's now-stale content, ready for next time
+  modal.style.display = 'none';
 }
 
 // Arrow-key navigation between schedule cells while in Edit mode. Right/
