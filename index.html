@@ -4984,8 +4984,9 @@ document.addEventListener("DOMContentLoaded",function(){
         <button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;" onclick="changeWeek(-1);if(document.getElementById('private-content').style.display!=='none')renderPrivate();">›</button>
       </div>
     </div>
-    <div style="padding:0 16px 8px;">
-      <button onclick="printPayrollSummary()" class="btn btn-primary" style="width:100%;">Print Weekly Labor Cost -- By Employee</button>
+    <div style="padding:0 16px 8px;display:flex;gap:8px;">
+      <button onclick="openOTBreakdownModal()" class="btn btn-secondary" style="flex:1;">⏱ OT Breakdown</button>
+      <button onclick="printPayrollSummary()" class="btn btn-primary" style="flex:1;">Print Weekly Labor Cost</button>
     </div>
     <div style="padding:0 16px 8px;">
       <button onclick="gatedShowOverrideLog(this)" class="btn btn-secondary" style="width:100%;">📋 Schedule Log</button>
@@ -5034,6 +5035,20 @@ document.addEventListener("DOMContentLoaded",function(){
 </div>
 
 <!-- MANAGE ROSTER MODAL -->
+<div id="ot-detail-modal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;width:92%;max-width:420px;max-height:85vh;overflow-y:auto;">
+    <div style="background:var(--red);padding:14px 16px;display:flex;justify-content:space-between;align-items:center;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:19px;letter-spacing:0.06em;color:#fff;" id="ot-detail-name">Hours Breakdown</div>
+      <button onclick="document.getElementById('ot-detail-modal').style.display='none';" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <div id="ot-detail-body" style="padding:16px;"></div>
+    <div style="padding:0 16px 16px;display:flex;gap:8px;">
+      <button class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('ot-detail-modal').style.display='none';">Close</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="printOTDetail()">🖨 Print</button>
+    </div>
+  </div>
+</div>
+
 <div id="edit-aliases-modal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;width:90%;max-width:400px;overflow:hidden;">
     <div style="background:var(--red);padding:14px 16px;">
@@ -10210,6 +10225,95 @@ function editRosterEmployee(origName) {
 }
 
 var _editAliasesTarget = null;
+var _otDetailCurrent = null;
+function openOTBreakdownModal() {
+  renderPrivate(); // guarantees window._otEmpsForModal is freshly computed right now
+  var people = window._otEmpsForModal || [];
+  document.getElementById('ot-detail-name').textContent = 'OT Breakdown — This Week';
+  var body = document.getElementById('ot-detail-body');
+  if(!people.length) {
+    body.innerHTML = '<div style="padding:12px 0;color:#999;font-size:13px;">No one is in overtime this week.</div>';
+    document.getElementById('ot-detail-modal').style.display = 'flex';
+    return;
+  }
+  var html = '';
+  people.forEach(function(person, pi){
+    if(pi > 0) html += '<div style="height:1px;background:#e5e3de;margin:14px 0;"></div>';
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:0.04em;color:#222;margin-bottom:4px;">' + person.n + ' <span style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#999;font-weight:400;">' + person.role + '</span></div>';
+    var weekRegTotal = 0, weekOtTotal = 0;
+    (person.dayBreakdown || []).forEach(function(d, di){
+      weekRegTotal += d.reg; weekOtTotal += d.ot;
+      if(d.reg < 0.01 && d.ot < 0.01) {
+        html += '<div style="padding:7px 0;border-bottom:1px solid #f0efec;display:flex;justify-content:space-between;">'
+          + '<span style="font-weight:700;font-size:12.5px;">' + DAYS[di] + '</span>'
+          + '<span style="color:#bbb;font-size:12.5px;">Off</span></div>';
+        return;
+      }
+      html += '<div style="padding:7px 0;border-bottom:1px solid #f0efec;">'
+        + '<div style="font-weight:700;font-size:12.5px;margin-bottom:2px;">' + DAYS[di] + ' <span style="font-weight:400;color:#999;font-size:10.5px;">' + (FULL_DATES[di]||'') + '</span></div>'
+        + '<div style="display:flex;gap:14px;">'
+        + (d.reg >= 0.01 ? '<span style="color:#1a7a3c;font-weight:700;font-size:13px;">' + d.reg.toFixed(1) + 'h regular</span>' : '')
+        + (d.ot >= 0.01 ? '<span style="color:#c8102e;font-weight:700;font-size:13px;">' + d.ot.toFixed(1) + 'h OT</span>' : '')
+        + '</div></div>';
+    });
+    html += '<div style="padding:8px 0 0;display:flex;justify-content:space-between;font-weight:700;font-size:12.5px;">'
+      + '<span>Total</span>'
+      + '<span><span style="color:#1a7a3c;">' + weekRegTotal.toFixed(1) + 'h reg</span> &nbsp; <span style="color:#c8102e;">' + weekOtTotal.toFixed(1) + 'h OT</span></span>'
+      + '</div>';
+  });
+  body.innerHTML = html;
+  _otDetailCurrent = {n: 'All OT Employees', dayBreakdown: null, multiPerson: people};
+  document.getElementById('ot-detail-modal').style.display = 'flex';
+}
+function buildOTTableRows(person){
+  var weekRegTotal = 0, weekOtTotal = 0;
+  var rows = '';
+  (person.dayBreakdown||[]).forEach(function(d, di){
+    weekRegTotal += d.reg; weekOtTotal += d.ot;
+    var isOff = d.reg < 0.01 && d.ot < 0.01;
+    rows += '<tr><td>' + DAYS[di] + '</td><td>' + (FULL_DATES[di]||'') + '</td>'
+      + '<td class="reg">' + (isOff ? '—' : d.reg.toFixed(1) + 'h') + '</td>'
+      + '<td class="ot">' + (isOff || d.ot < 0.01 ? '—' : d.ot.toFixed(1) + 'h') + '</td></tr>';
+  });
+  rows += '<tr class="total-row"><td colspan="2">Week Total</td><td class="reg">' + weekRegTotal.toFixed(1) + 'h</td><td class="ot">' + weekOtTotal.toFixed(1) + 'h</td></tr>';
+  return rows;
+}
+function printOTDetail() {
+  if(!_otDetailCurrent) return;
+  var person = _otDetailCurrent;
+  var pageTitle = person.multiPerson ? 'OT Breakdown — This Week' : person.n + ' — Hours Breakdown';
+  var html = '<!DOCTYPE html><html><head><title>' + pageTitle + '</title><style>'
+    + 'body{font-family:Arial,sans-serif;padding:28px;font-size:13px;color:#222;}'
+    + 'h1{font-size:20px;color:#c8102e;margin:0 0 2px;}'
+    + '.sub{color:#888;font-size:12px;margin-bottom:18px;}'
+    + 'table{width:100%;border-collapse:collapse;}'
+    + 'th{text-align:left;font-size:10px;color:#888;text-transform:uppercase;border-bottom:2px solid #222;padding:6px 4px;}'
+    + 'td{padding:8px 4px;border-bottom:1px solid #eee;}'
+    + '.reg{color:#1a7a3c;font-weight:700;}'
+    + '.ot{color:#c8102e;font-weight:700;}'
+    + '.total-row td{border-top:2px solid #222;border-bottom:none;font-weight:700;padding-top:10px;}'
+    + '@media print{button{display:none;}}'
+    + '</style></head><body>';
+  if(person.multiPerson) {
+    html += '<h1>OT Breakdown — This Week</h1><div class="sub">Everyone currently in overtime</div>';
+    person.multiPerson.forEach(function(p, pi){
+      if(pi > 0) html += '<div style="height:1px;background:#ddd;margin:22px 0;"></div>';
+      html += '<h2 style="font-size:15px;margin:0 0 10px;">' + p.n + (p.role ? ' <span style="font-weight:400;color:#888;font-size:12px;">' + p.role + '</span>' : '') + '</h2>'
+        + '<table><thead><tr><th>Day</th><th>Date</th><th>Regular</th><th>Overtime</th></tr></thead><tbody>'
+        + buildOTTableRows(p) + '</tbody></table>';
+    });
+  } else {
+    html += '<h1>' + person.n + '</h1>'
+      + '<div class="sub">Weekly Hours Breakdown — Regular vs Overtime</div>'
+      + '<table><thead><tr><th>Day</th><th>Date</th><th>Regular</th><th>Overtime</th></tr></thead><tbody>'
+      + buildOTTableRows(person) + '</tbody></table>';
+  }
+  html += '<script>window.print();<\/script></body></html>';
+  var w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
 function openEditAliasesModal(origName, displayName) {
   _editAliasesTarget = origName;
   document.getElementById('edit-aliases-name').textContent = displayName;
@@ -10545,7 +10649,13 @@ function renderPrivate() {
   }
   HLY.forEach(function(e){
     var cum = 0, regPay = 0, otPay = 0, trainingHrs = 0;
+    // Per-day regular vs OT hours, built fresh from this same chronological
+    // walk -- so the OT Breakdown view is never a separate, potentially-
+    // inconsistent calculation, just a window into the exact math that
+    // already decides what everyone's paid. (Ported from Darien.)
+    e._dayBreakdown = [];
     for(var di=0; di<7; di++){
+      var dayReg = 0, dayOt = 0;
       buildDaySegments(e, di).forEach(function(seg){
         var before = cum, after = cum + seg.hours;
         var regPortion, otPortion;
@@ -10554,9 +10664,12 @@ function renderPrivate() {
         else { regPortion = 40 - before; otPortion = seg.hours - regPortion; }
         regPay += regPortion*seg.rate;
         otPay += otPortion*seg.rate*1.5;
+        dayReg += regPortion;
+        dayOt += otPortion;
         cum = after;
         if(seg.isTrain) trainingHrs += seg.hours;
       });
+      e._dayBreakdown.push({reg: dayReg, ot: dayOt});
     }
     e.wh = cum;
     e._regPay = regPay;
@@ -10676,6 +10789,11 @@ function renderPrivate() {
 
   // DOM'S NOTES
   var otEmps = HLY.filter(function(e){return Math.max(0,e.wh-40)>0;}).sort(function(a,b){return b.wh-a.wh;});
+  // Stored globally, freshly, every single time this function runs, so the
+  // standalone OT Breakdown button always has exactly-current data -- it
+  // calls renderPrivate() itself right before reading this, so there is no
+  // gap in which this could be stale. (Ported from Darien.)
+  window._otEmpsForModal = otEmps.map(function(e){ return {n:e.n, role:e.role, dayBreakdown:e._dayBreakdown}; });
   html+='<div class="section-title">Overtime This Week</div><div class="report-table-wrap">';
   if(otEmps.length===0){
     html+='<div style="padding:12px;font-size:13px;color:var(--gray-400)">No overtime this week.</div>';
