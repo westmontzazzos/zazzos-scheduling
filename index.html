@@ -10248,6 +10248,26 @@ function buildOTScreenTable(person){
     + '</tr>';
   return rows;
 }
+function showOTDetailFromBtn(btn) {
+  var name = btn.getAttribute('data-name');
+  var breakdown;
+  try { breakdown = JSON.parse(btn.getAttribute('data-breakdown')); } catch(e) { breakdown = null; }
+  showOTDetail(name, breakdown);
+}
+function showOTDetail(name, dayBreakdown) {
+  if(!dayBreakdown || !dayBreakdown.length) { alert('No hour breakdown available for ' + name + '.'); return; }
+  _otDetailCurrent = {n: name, dayBreakdown: dayBreakdown};
+  document.getElementById('ot-detail-name').textContent = name + ' — Hours This Week';
+  var body = document.getElementById('ot-detail-body');
+  var tableHeader = '<tr style="border-bottom:2px solid #222;">'
+    + '<th style="text-align:left;padding:4px;font-size:10px;color:#888;text-transform:uppercase;">Day</th>'
+    + '<th style="text-align:right;padding:4px;font-size:10px;color:#888;text-transform:uppercase;">Regular</th>'
+    + '<th style="text-align:right;padding:4px;font-size:10px;color:#888;text-transform:uppercase;">OT</th>'
+    + '<th style="text-align:right;padding:4px;font-size:10px;color:#888;text-transform:uppercase;">Total</th>'
+    + '</tr>';
+  body.innerHTML = '<table style="width:100%;border-collapse:collapse;">' + tableHeader + buildOTScreenTable({dayBreakdown: dayBreakdown}) + '</table>';
+  document.getElementById('ot-detail-modal').style.display = 'flex';
+}
 function openOTBreakdownModal() {
   renderPrivate(); // guarantees window._otEmpsForModal is freshly computed right now
   var people = window._otEmpsForModal || [];
@@ -10815,7 +10835,7 @@ function renderPrivate() {
       var w=wageFor(e);
       var oH=w.oH, otCost=w.oP;
       gtOT+=otCost;
-      html+='<tr><td><strong>'+e.n+'</strong></td><td>'+e.role+'</td><td>'+e.wh.toFixed(1)+'h</td>';
+      html+='<tr><td><strong><a href="#" data-name="'+e.n.replace(/"/g,'&quot;')+'" data-breakdown=\''+JSON.stringify(e._dayBreakdown||[]).replace(/'/g,'&apos;')+'\' onclick="showOTDetailFromBtn(this);return false;" style="color:var(--red);text-decoration:underline;">'+e.n+'</a></strong></td><td>'+e.role+'</td><td>'+e.wh.toFixed(1)+'h</td>';
       html+='<td style="color:var(--red);font-weight:700">'+oH.toFixed(1)+'h</td>';
       html+='<td>$'+w.avgRate.toFixed(2)+' avg × 1.5 = $'+(w.avgRate*1.5).toFixed(2)+'/hr</td>';
       html+='<td style="color:var(--red);font-weight:700">'+fmt$(otCost)+'</td></tr>';
