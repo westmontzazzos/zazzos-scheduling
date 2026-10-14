@@ -13168,6 +13168,12 @@ async function checkScheduleErrors() {
   // Fire single "not uploaded" error if section missing
   if(!hasBOHData) errors.BOH.push({di:0, day:'', name:'—', dept:'BOH', msg:'Back of House schedule for '+weekLbl+' has not been uploaded'});
   if(!hasFOHData) errors.FOH.push({di:0, day:'', name:'—', dept:'FOH', msg:'Front of House schedule for '+weekLbl+' has not been uploaded'});
+  if(!hasDriverData) errors.Drivers.push({di:0, day:'', name:'—', dept:'Drivers', msg:'Driver schedule for '+weekLbl+' has not been uploaded'});
+  // Staffing/opener/closer rules only mean anything once the whole week is
+  // in. With any of the three missing they'd all fire against empty data,
+  // so until all three are uploaded only the "has not been uploaded"
+  // notices are shown (see the filter just before the Darien check below).
+  var allThreeUploaded = hasBOHData && hasFOHData && hasDriverData;
 
   if(hasBOHData || hasFOHData || hasDriverData)
   for(var di = 0; di < 7; di++) {
@@ -13529,7 +13535,12 @@ async function checkScheduleErrors() {
     });
   }
 
-  if(allWeeks && allWeeks[currentWeekIdx] && allWeeks[currentWeekIdx].week_start) {
+  if(!allThreeUploaded) {
+    var onlyUploadNotices = function(e){ return /has not been uploaded$/.test(e.msg); };
+    errors.BOH = errors.BOH.filter(onlyUploadNotices);
+    errors.FOH = errors.FOH.filter(onlyUploadNotices);
+    errors.Drivers = errors.Drivers.filter(onlyUploadNotices);
+  } else if(allWeeks && allWeeks[currentWeekIdx] && allWeeks[currentWeekIdx].week_start) {
     await checkCrossLocationConflicts(errors, allWeeks[currentWeekIdx].week_start);
   }
 
