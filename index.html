@@ -5900,6 +5900,16 @@ function buildRoleMap() {
     var secLabels;
     if(defaultRoles) {
       secLabels = defaultRoles.map(function(r){ return CUSTOM_ROLE_TO_SECLBL[r.role] || r.role; });
+      // Same precedence fix as the wage report: roles added through Manage
+      // Roster must not be hidden just because the code roster has the person.
+      if(customEntry) {
+        try {
+          JSON.parse(customEntry.roles_json || '[]').forEach(function(r){
+            var l = CUSTOM_ROLE_TO_SECLBL[r] || r;
+            if(secLabels.indexOf(l) === -1) secLabels.push(l);
+          });
+        } catch(e) {}
+      }
     } else if(customEntry) {
       try {
         var roleLabels = JSON.parse(customEntry.roles_json || '[]');
@@ -10634,6 +10644,18 @@ function renderPrivate() {
       effectiveRoleLabels = roleOverridesMap[name];
     } else if(defaultRoles) {
       effectiveRoleLabels = defaultRoles.map(function(r){ return r.role; });
+      // Someone can exist BOTH in the code roster and as a Manage Roster
+      // entry. The Roles dialog already reads the Manage Roster roles, so
+      // a role added there showed as checked while the wage report ignored
+      // it (code roles won) -- those hours then landed in "Not in wage
+      // roster". Add any Manage Roster role the code doesn't define.
+      if(customEntry) {
+        try {
+          JSON.parse(customEntry.roles_json || '[]').forEach(function(r){
+            if(effectiveRoleLabels.indexOf(r) === -1) effectiveRoleLabels.push(r);
+          });
+        } catch(e) {}
+      }
     } else if(customEntry) {
       try { effectiveRoleLabels = JSON.parse(customEntry.roles_json || '[]'); } catch(e) { effectiveRoleLabels = []; }
     } else {
@@ -11199,7 +11221,7 @@ const DEFAULT_ROSTER = {
   'Maylen': [{role:'Cashier',rate:15.0,keys:['Maylen']}],
   'Joan': [{role:'Server',rate:9.0,keys:['Joan']}],
   'Kenzie': [{role:'Server',rate:9.0,keys:['Kenzie']}],
-  'Reagan': [{role:'Server',rate:9.0,keys:['Reagan']}],
+  'Reagan': [{role:'Server',rate:9.0,keys:['Reagan']},{role:'Cashier',rate:15.0,keys:['Reagan']}],
   'Shiann': [{role:'Server',rate:9.0,keys:['Shiann']}],
   'Alexis': [{role:'Server',rate:9.0,keys:['Alexis']}],
   'Bridget': [{role:'Server',rate:9.0,keys:['Bridget']}],
