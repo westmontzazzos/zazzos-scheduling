@@ -9870,6 +9870,7 @@ function loadCustomRosterThenRender() {
         try { ROLE_RATE_OVERRIDES[row.original_name] = JSON.parse(row.role_rates_json); } catch(e) {}
       }
     });
+    mergeCustomSalariedIntoSalaryRoster();
     refreshRoleMap();
     applyNameAliasesToSections();
     seedCustomRosterIntoSections();
@@ -9914,9 +9915,28 @@ function applyNameAliasesToSections() {
   });
 }
 
+// Salaried people added through Manage Roster (e.g. a new manager) were
+// saved but never read into payroll: they weren't in SALARY_ROSTER, so their
+// pay was missing from the labor report and any hours on the schedule showed
+// up under "Not in wage roster". Built-in salaried people always take
+// priority; entries merged here are tagged so a removal clears them on reload.
+function mergeCustomSalariedIntoSalaryRoster() {
+  Object.keys(SALARY_ROSTER).forEach(function(k){ if(SALARY_ROSTER[k]._custom) delete SALARY_ROSTER[k]; });
+  if(typeof CUSTOM_ROSTER === 'undefined') return;
+  CUSTOM_ROSTER.forEach(function(p){
+    if(!p.is_salaried || p.annual_salary == null) return;
+    if(SALARY_ROSTER[p.name]) return;
+    SALARY_ROSTER[p.name] = {salary: Number(p.annual_salary), role: p.role_label || 'Manager', fullName: p.name, _custom: true};
+  });
+}
+
 function seedCustomRosterIntoSections() {
   if(typeof CUSTOM_ROSTER !== 'undefined' && CUSTOM_ROSTER.length) {
     CUSTOM_ROSTER.forEach(function(person){
+      if(person.is_salaried && person.role_label === 'Manager') {
+        if(!MANAGERS[person.name]) MANAGERS[person.name] = [null,null,null,null,null,null,null];
+        return;
+      }
       if(person.is_salaried) return; // salaried staff aren't tied to schedule sections
       var roles = [];
       try { roles = JSON.parse(person.roles_json || '[]'); } catch(e) { roles = []; }
@@ -13866,7 +13886,7 @@ async function processSingle(type) {
       var rejectedList = window._rejectedManagerNames.slice();
       window._rejectedManagerNames = null;
       setTimeout(function(){
-        alert('Heads up: "' + rejectedList.join('", "') + '" showed up under Managers in this photo but ' + (rejectedList.length===1?'isn\'t':'aren\'t') + ' one of the 5 approved managers (Selena, Dom, Ely, Alex, Brett), so ' + (rejectedList.length===1?'it was':'they were') + ' left off. If this was a typo for a real manager, fix it directly in the Schedule tab editor.');
+        alert('Heads up: "' + rejectedList.join('", "') + '" showed up under Managers in this photo but ' + (rejectedList.length===1?'isn\'t':'aren\'t') + ' one of the approved managers (' + (window._approvedManagerNames || ['Selena','Dom','Ely','Alex','Brett']).join(', ') + '), so ' + (rejectedList.length===1?'it was':'they were') + ' left off. If this is a real manager, add them in Manage Roster as a Manager; if it was a typo, fix it directly in the Schedule tab editor.');
       }, 400);
     }
     await loadAllWeeks();
@@ -14183,6 +14203,18 @@ async function readScheduleImage(dataUrl, type) {
         var managerAliasResolve = {'selena':'Selena','dom':'Dom','dominic':'Dom','ely':'Ely','elly':'Ely',
           'alexis a':'Alex','alex':'Alex','alex a':'Alex','alexis acosta':'Alex','alex acosta':'Alex',
           'brett':'Brett'};
+        // Managers added through Manage Roster (Role = Manager) are approved
+        // too -- the roster is the authority on who's a manager, not a fixed
+        // list. Anyone the photo shows who is on neither list is still removed.
+        if(typeof CUSTOM_ROSTER !== 'undefined') {
+          CUSTOM_ROSTER.forEach(function(p){
+            if(p.is_salaried && p.role_label === 'Manager' && MANAGER_ALLOWLIST.indexOf(p.name) === -1) {
+              MANAGER_ALLOWLIST.push(p.name);
+              managerAliasResolve[p.name.toLowerCase()] = p.name;
+            }
+          });
+        }
+        window._approvedManagerNames = MANAGER_ALLOWLIST.slice();
         var rejectedManagers = [];
         Object.keys(sched.MANAGERS).forEach(function(name){
           var resolved = managerAliasResolve[name.toLowerCase()];
