@@ -9859,7 +9859,7 @@ function loadCustomRosterThenRender() {
     // actual lookup map the alias merge below reads from. That's why a
     // saved alias could look correct in the panel while never actually
     // taking effect on real schedule data.
-    CUSTOM_ALIASES_LIST.forEach(function(row){ NAME_ALIASES[row.alias.toLowerCase()] = row.canonical_name; });
+    CUSTOM_ALIASES_LIST.forEach(registerCustomAlias);
     ROLE_OVERRIDES = {};
     (results[5] || []).forEach(function(row){
       try { ROLE_OVERRIDES[row.original_name] = JSON.parse(row.roles_json || '[]'); } catch(e) {}
@@ -10012,6 +10012,7 @@ function loadCustomRosterEarly() {
     headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
   }).then(function(r){ return r.ok ? r.json() : []; }).then(function(rows){
     CUSTOM_ROSTER = rows || [];
+    mergeCustomSalariedIntoSalaryRoster();
     applyNameAliasesToSections();
     seedCustomRosterIntoSections();
     if(typeof renderSchedule === 'function' && document.getElementById('tab-schedule') && document.getElementById('tab-schedule').style.display !== 'none') {
@@ -10020,11 +10021,35 @@ function loadCustomRosterEarly() {
   }).catch(function(){ /* non-fatal -- schedule still works for existing staff */ });
 }
 
+// Custom aliases are rows saved in Manage Roster ("Raegan -> Reagan"). A bad
+// pair of rows can point the OTHER way too ("Reagan -> Raegan"), and that one
+// rewrites a correctly spelled roster name into a misspelling on every load,
+// so the person never matches the wage roster. An alias must never rewrite a
+// name that is itself on the roster. Everything that loads aliases goes
+// through this one function.
+function isRosterIdentityLower(a) {
+  var hit = false;
+  if(typeof DEFAULT_ROSTER !== 'undefined') Object.keys(DEFAULT_ROSTER).forEach(function(k){ if(k.toLowerCase() === a) hit = true; });
+  if(typeof SALARY_ROSTER !== 'undefined') Object.keys(SALARY_ROSTER).forEach(function(k){ if(k.toLowerCase() === a) hit = true; });
+  if(typeof CUSTOM_ROSTER !== 'undefined') CUSTOM_ROSTER.forEach(function(p){ if(String(p.name).toLowerCase() === a) hit = true; });
+  return hit;
+}
+function registerCustomAlias(row) {
+  var a = String(row.alias || '').toLowerCase();
+  if(!a || !row.canonical_name) return;
+  if(a !== String(row.canonical_name).toLowerCase() && isRosterIdentityLower(a)) {
+    // keep any built-in mapping; only drop one a custom row set earlier
+    if(typeof BASE_NAME_ALIASES === 'undefined' || !(a in BASE_NAME_ALIASES)) delete NAME_ALIASES[a];
+    return;
+  }
+  NAME_ALIASES[a] = row.canonical_name;
+}
+
 function loadCustomAliasesIntoMap() {
   fetch(SUPABASE_URL + '/rest/v1/name_aliases', {
     headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
   }).then(function(r){ return r.ok ? r.json() : []; }).then(function(rows){
-    (rows||[]).forEach(function(row){ NAME_ALIASES[row.alias.toLowerCase()] = row.canonical_name; });
+    (rows||[]).forEach(registerCustomAlias);
     applyNameAliasesToSections();
     if(document.getElementById('private-content') && document.getElementById('private-content').style.display !== 'none') renderPrivate();
     if(typeof renderSchedule === 'function' && document.getElementById('tab-schedule') && document.getElementById('tab-schedule').style.display !== 'none') renderSchedule();
@@ -12601,7 +12626,7 @@ function parseWeekData(week) {
     Object.keys(NAME_ALIASES).forEach(function(k){ delete NAME_ALIASES[k]; });
     Object.assign(NAME_ALIASES, BASE_NAME_ALIASES);
     if(typeof CUSTOM_ALIASES_LIST !== 'undefined') {
-      CUSTOM_ALIASES_LIST.forEach(function(row){ NAME_ALIASES[row.alias.toLowerCase()] = row.canonical_name; });
+      CUSTOM_ALIASES_LIST.forEach(registerCustomAlias);
     }
     var boh = week.boh_data ? JSON.parse(week.boh_data) : {};
     var foh = week.foh_data ? JSON.parse(week.foh_data) : {};
