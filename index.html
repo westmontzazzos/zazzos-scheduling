@@ -5886,7 +5886,7 @@ const DISH = {
 function buildRoleMap() {
   var map = {};
   var removedSet = {};
-  (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).forEach(function(r){ removedSet[r.name] = true; });
+  (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).forEach(function(r){ if(removalIsLegacy(r)) removedSet[r.name] = true; });
   var roleOverridesMap = (typeof ROLE_OVERRIDES !== 'undefined') ? ROLE_OVERRIDES : {};
   var allNames = {};
   Object.keys(DEFAULT_ROSTER).forEach(function(n){ allNames[n] = true; });
@@ -9781,6 +9781,21 @@ function checkPin() {
 // -----------------------------------------------------------------
 var CUSTOM_ROSTER = [];          // [{id, name, roles_json, rate, added_by, added_at}]
 var CUSTOM_ROSTER_REMOVED = [];  // [{id, name, removed_by, removed_at}]
+// Removing someone used to erase them from EVERY week -- their past hours
+// vanished from old labor reports and old schedules threw false "not in wage
+// roster" / "approve this role?" errors, even though the Remove prompt says
+// past pay history is unaffected. A removal now applies from its date forward
+// and earlier weeks keep that person's pay. Removals recorded before this
+// date keep the old behaviour, so nothing already on your reports changes.
+var REMOVAL_KEEPS_HISTORY_FROM = '2026-10-16';
+function removalIsLegacy(r) {
+  var d = r && r.removed_at ? String(r.removed_at).slice(0,10) : '';
+  return !d || d < REMOVAL_KEEPS_HISTORY_FROM;
+}
+function removalAppliesToWeek(r, weekStart) {
+  if(removalIsLegacy(r)) return true;
+  return !weekStart || String(weekStart) >= String(r.removed_at).slice(0,10);
+}
 var CUSTOM_ROSTER_RENAMES = [];  // [{id, original_name, display_name, renamed_by, renamed_at}]
 var CUSTOM_ROSTER_RATES = [];    // [{id, original_name, rate, updated_by, updated_at}]
 var CUSTOM_ALIASES_LIST = [];    // [{id, alias, canonical_name, added_by, added_at}]
@@ -10672,9 +10687,13 @@ function renderPrivate() {
   if(typeof CUSTOM_ROSTER !== 'undefined') {
     CUSTOM_ROSTER.forEach(function(p){ if(!p.is_salaried) allRosterNames[p.name] = true; });
   }
-  var removedNamesSet = {};
+  var removedNamesSet = {}, removedAnyNames = {};
+  var _engineWeekStart = (typeof allWeeks !== 'undefined' && allWeeks[currentWeekIdx]) ? allWeeks[currentWeekIdx].week_start : null;
   if(typeof CUSTOM_ROSTER_REMOVED !== 'undefined') {
-    CUSTOM_ROSTER_REMOVED.forEach(function(r){ removedNamesSet[r.name] = true; });
+    CUSTOM_ROSTER_REMOVED.forEach(function(r){
+      removedAnyNames[r.name] = true;
+      if(removalAppliesToWeek(r, _engineWeekStart)) removedNamesSet[r.name] = true;
+    });
   }
   var roleOverridesMap = (typeof ROLE_OVERRIDES !== 'undefined') ? ROLE_OVERRIDES : {};
   var roleRateOverridesMap = (typeof ROLE_RATE_OVERRIDES !== 'undefined') ? ROLE_RATE_OVERRIDES : {};
@@ -10776,7 +10795,7 @@ function renderPrivate() {
     SAL.forEach(function(e){ if(salaryMap[e._origName] != null) e.s = salaryMap[e._origName]; });
   }
 
-    FULL_ROSTER_NAMES = HLY.map(function(e){ return {n: e.n, role: e.role, origName: e._origName, rate: e.r, salaried:false}; })
+    FULL_ROSTER_NAMES = HLY.filter(function(e){ return !removedAnyNames[e._origName]; }).map(function(e){ return {n: e.n, role: e.role, origName: e._origName, rate: e.r, salaried:false}; })
     .concat(SAL.map(function(e){ return {n: e.n, role: e.role, origName: e._origName, rate: e.s, salaried:true}; }));
   // Chronological OT allocation: walk each person's week in day order (and,
   // within a day, by actual shift start time across roles), accumulating
@@ -12525,7 +12544,7 @@ function cleanNames(obj, sectionType, sectionKey) {
   // previously only hid someone from payroll displays, while the actual
   // scheduling data (and this parsing step) never knew they'd been removed
   // at all, so they'd silently reappear the next time a schedule came in.
-  var removedNames = (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).map(function(r){ return r.name.toLowerCase(); });
+  var removedNames = (typeof CUSTOM_ROSTER_REMOVED !== 'undefined' ? CUSTOM_ROSTER_REMOVED : []).filter(function(r){ return removalAppliesToWeek(r, window._cleanWeekStart); }).map(function(r){ return r.name.toLowerCase(); });
   Object.keys(obj).forEach(function(rawName) {
     // Collapse any run of whitespace (including non-breaking spaces the
     // photo parser sometimes produces) to a single space, strip zero-width/
@@ -12664,6 +12683,7 @@ function parseWeekData(week) {
         });
       });
     } catch(e) { /* leave empty if malformed */ }
+    window._cleanWeekStart = week.week_start;
     if(boh.MANAGERS) boh.MANAGERS = cleanNames(boh.MANAGERS, 'managers', 'MANAGERS');
     if(boh.PIZZA)    boh.PIZZA    = cleanNames(boh.PIZZA, null, 'PIZZA');
     if(boh.KITCHEN)  boh.KITCHEN  = cleanNames(boh.KITCHEN, null, 'KITCHEN');
