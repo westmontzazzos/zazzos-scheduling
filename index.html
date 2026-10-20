@@ -280,6 +280,30 @@ body {
 .sub-btn:hover { border-color: var(--red); color: var(--red); }
 .sub-btn.active { background: var(--red); color: var(--white); border-color: var(--red); }
 
+/* ── EXCEL-STYLE FULL-SCREEN SCHEDULE VIEW (screen only) ── */
+#sheet-view{ --z:1; --dcpx:62; --rn-w:calc(22px*var(--z)); --nm-w:calc(64px*var(--z)); --dc-w:calc(var(--dcpx)*1px*var(--z)); --fs:calc(10.5px*var(--z)); --lt-h:calc(16px*var(--z)); --rh:calc(20px*var(--z));
+  position:fixed; inset:0; z-index:100002; background:#fff; display:none; overscroll-behavior:contain; }
+#sheet-scroll{ position:absolute; top:env(safe-area-inset-top,0px); left:env(safe-area-inset-left,0px); right:env(safe-area-inset-right,0px); bottom:env(safe-area-inset-bottom,0px);
+  overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-x pan-y; background:#fff; }
+.xl-table{ border-collapse:separate; border-spacing:0; table-layout:fixed; width:calc(var(--rn-w) + var(--nm-w) + 7*var(--dc-w)); font:var(--fs)/1.15 Arial,Helvetica,sans-serif; color:#000; background:#fff; }
+.xl-table th,.xl-table td{ box-sizing:border-box; height:var(--rh); padding:0 calc(3px*var(--z)); border-right:1px solid #2b2b2b; border-bottom:1px solid #2b2b2b; white-space:nowrap; overflow:hidden; text-align:center; vertical-align:middle; font-weight:400; font-size:calc(var(--fs)*var(--k,1)); }
+.xl-table .xl-rn{ position:sticky; left:0; z-index:3; width:var(--rn-w); min-width:var(--rn-w); background:#e6e6e6; color:#444; text-align:center; padding:0; font-size:calc(9px*var(--z)); border-left:1px solid #2b2b2b; }
+.xl-table .xl-nm{ position:sticky; left:var(--rn-w); z-index:3; width:var(--nm-w); min-width:var(--nm-w); text-align:left; font-weight:700; background:#fff; }
+.xl-table thead th{ position:sticky; z-index:4; }
+.xl-table .xl-letters th{ top:0; height:var(--lt-h); background:#e6e6e6; color:#444; font-size:calc(9px*var(--z)); border-top:1px solid #2b2b2b; }
+.xl-table .xl-head th{ top:var(--lt-h); height:calc(var(--rh)*1.8); background:#fff; font-weight:700; line-height:1.15; white-space:normal; padding-top:calc(2px*var(--z)); padding-bottom:calc(2px*var(--z)); }
+.xl-table .xl-head th.xl-nm{ cursor:pointer; color:#c8102e; }
+.xl-table .xl-head th.xl-rn{ z-index:6; background:#e6e6e6; font-weight:400; }
+.xl-table .xl-head th.xl-nm{ z-index:6; }
+.xl-table .xl-letters th.xl-rn{ z-index:6; }
+.xl-table .xl-head .xl-ev{ font-weight:700; color:#c8102e; font-size:calc(8px*var(--z)) !important; line-height:1.1; letter-spacing:0 !important; margin-top:calc(1px*var(--z)) !important; white-space:normal; }
+.xl-table tr.xl-bar td{ background:#4472C4; color:#fff; font-weight:700; text-align:left; letter-spacing:0.04em; }
+.xl-table td .tob,.xl-table td div{ font-size:calc(8px*var(--z)*var(--k,1)) !important; }
+.xl-table .xl-nm div{ font-size:calc(7px*var(--z)*var(--k,1)) !important; line-height:1.05 !important; margin-top:0 !important; white-space:nowrap; }
+.xl-table .xl-letters th:nth-child(2){ position:sticky; left:var(--rn-w); z-index:6; }
+.xl-table tr.xl-bar td .xl-barlbl{ position:sticky; left:calc(var(--rn-w) + 6px*var(--z)); display:inline-block; }
+@media print { #sheet-view{ display:none !important; } }
+
 .sched-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 180px); border-radius: var(--radius); box-shadow: var(--shadow); }
 .sched-table {
   width: 100%;
@@ -4840,6 +4864,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="backToScheduleCalendar()">🗓 Calendar</button>
     <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="toggleSchedEditMode()">✏️ Edit</button>
     <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="showSchedPrintMenu(this)">🖨 Print</button>
+    <button class="btn btn-secondary" style="padding:6px 12px;font-size:13px;white-space:nowrap;flex-shrink:0;" onclick="openSheetView()">▦ Excel</button>
   </div>
   <div class="sub-nav" id="sched-sub-nav">
     <button class="sub-btn active" onclick="switchSched('drivers',this)">Drivers</button>
@@ -9478,7 +9503,152 @@ function timeOffBadgeHtml(name) {
   var matches = window._timeOffForErrorCheck.filter(function(r){ return r.name===name && dateForDay.indexOf(r.request_date)!==-1; });
   if(!matches.length) return '';
   var days = matches.map(function(r){ return DAYS_SHORT[dateForDay.indexOf(r.request_date)]; });
+  days = days.filter(function(d, i){ return days.indexOf(d) === i; });   // two requests the same day = one "Fri", not "Fri, Fri"
   return '<div style="font-size:9px;font-weight:700;color:var(--red);margin-top:2px;white-space:nowrap;">R/O ('+days.join(', ')+')</div>';
+}
+
+// ══ EXCEL-STYLE FULL-SCREEN SCHEDULE VIEW ══════════════════════════════
+// Screen only. Builds one continuous sheet (Drivers, Front of House, Back of
+// House) edge to edge, with row numbers, column letters, and frozen day
+// headers + name column, so it can be pinched, dragged and rotated. The cell
+// text comes from renderSchedule() itself (same names, formats, visibility
+// rules, time-off badges) -- nothing here touches any print code.
+var _sheetZoom = 1, _sheetUserZoomed = false;
+var SHEET_BASE_W = 22 + 64 + 7*62;   // row-number col + name col + 7 day cols at zoom 1
+
+function buildSheetHtml() {
+  var el = document.getElementById('schedule-content');
+  var savedView = currentSchedView, savedEdit = window._schedEditMode;
+  window._schedEditMode = false;
+  var headCells = null, rows = [], rn = 1;   // row 1 is the day-header row
+  function bar(label) { rn++; rows.push('<tr class="xl-bar"><th class="xl-rn">'+rn+'</th><td colspan="8"><span class="xl-barlbl">'+label+'</span></td></tr>'); }
+  [['drivers','DRIVERS'],['foh',''],['boh','']].forEach(function(g) {
+    currentSchedView = g[0];
+    renderSchedule();
+    var t = el.querySelector('table');
+    if(!t) return;
+    if(!headCells) headCells = Array.prototype.map.call(t.querySelectorAll('thead th'), function(th){ return th.innerHTML; });
+    if(g[1]) bar(g[1]);
+    Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function(tr) {
+      if(tr.classList.contains('sched-sec-hdr')) { bar(tr.textContent.trim()); return; }
+      var cells = tr.children;
+      if(!cells.length) return;
+      rn++;
+      var h = '<tr><th class="xl-rn">'+rn+'</th><th class="xl-nm">'+cells[0].innerHTML+'</th>';
+      for(var i=1; i<cells.length && i<=7; i++) {
+        var txt = (cells[i].textContent || '').trim().split('\n')[0];
+        var bg = getOpenerCloserBg(txt.replace(/[–—]/g,'-').replace(/\s+/g,''));
+        h += '<td'+(bg ? ' style="'+bg+'"' : '')+'>'+cells[i].innerHTML.replace(/\s+–\s+/g,'–')+'</td>';
+      }
+      rows.push(h+'</tr>');
+    });
+  });
+  currentSchedView = savedView; window._schedEditMode = savedEdit;
+  renderSchedule();   // put the normal grid back exactly as it was
+  var letters = ['A','B','C','D','E','F','G','H'];
+  var out = '<table class="xl-table"><thead><tr class="xl-letters"><th class="xl-rn"></th>'
+    + letters.map(function(l){ return '<th>'+l+'</th>'; }).join('') + '</tr>';
+  var hc = headCells || ['Name'];
+  out += '<tr class="xl-head"><th class="xl-rn">1</th><th class="xl-nm xl-close" title="Close">✕ Close</th>'
+    + hc.slice(1).map(function(x){ return '<th>'+x.replace(/<div/g,'<div class="xl-ev"')+'</th>'; }).join('') + '</tr></thead><tbody>'
+    + rows.join('') + '</tbody></table>';
+  return out.replace(/\sonclick="[^"]*"/g,'');   // header event links open modals that would sit behind the sheet
+}
+
+function sheetFit() {
+  var sc = document.getElementById('sheet-scroll');
+  var avail = sc ? sc.clientWidth : window.innerWidth;
+  var z = avail / SHEET_BASE_W, dc = 62;
+  if(z > 1.15) {            // wide screen (landscape): keep text a comfortable size and widen the day columns instead
+    z = 1.15;
+    dc = (avail / z - 22 - 64) / 7;
+  }
+  z = Math.max(0.5, z);
+  document.getElementById('sheet-view').style.setProperty('--dcpx', dc.toFixed(2));
+  sheetApplyZoom(z);
+  sheetShrinkToFit();
+}
+function sheetApplyZoom(z) {
+  _sheetZoom = Math.max(0.35, Math.min(4, z));
+  document.getElementById('sheet-view').style.setProperty('--z', _sheetZoom.toFixed(4));
+}
+// Like Excel's "shrink to fit": a shift too long for its cell gets slightly smaller text instead of being cut off.
+function sheetShrinkToFit() {
+  var cells = document.querySelectorAll('#sheet-scroll .xl-table tbody td, #sheet-scroll .xl-table tbody th.xl-nm, #sheet-scroll .xl-table .xl-head th');
+  Array.prototype.forEach.call(cells, function(td){ td.style.removeProperty('--k'); });
+  Array.prototype.forEach.call(cells, function(td){
+    if(td.colSpan > 1) return;
+    var inner = td.scrollWidth, box = td.clientWidth;
+    if(inner > box + 1) td.style.setProperty('--k', Math.max(0.55, (box / inner) * 0.96).toFixed(3));
+  });
+}
+function sheetOnResize() {
+  var v = document.getElementById('sheet-view');
+  if(!v || v.style.display === 'none') return;
+  setTimeout(function(){ if(!_sheetUserZoomed) sheetFit(); }, 120);   // rotating refits unless you've pinched
+}
+function sheetInitGestures(sc) {
+  var pinch = null, lastTap = 0, tapStart = null;
+  sc.addEventListener('touchstart', function(e) {
+    if(e.touches.length === 2) {
+      var a = e.touches[0], b = e.touches[1], r = sc.getBoundingClientRect();
+      pinch = {d: Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY), z: _sheetZoom,
+               cx: (a.clientX+b.clientX)/2 - r.left, cy: (a.clientY+b.clientY)/2 - r.top, sl: sc.scrollLeft, st: sc.scrollTop};
+      tapStart = null;
+    } else if(e.touches.length === 1) {
+      tapStart = {x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now()};
+    }
+  }, {passive:false});
+  sc.addEventListener('touchmove', function(e) {
+    if(pinch && e.touches.length === 2) {
+      e.preventDefault();
+      var a = e.touches[0], b = e.touches[1];
+      var nz = Math.max(0.35, Math.min(4, pinch.z * Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY) / pinch.d));
+      var ratio = nz / pinch.z;
+      sheetApplyZoom(nz);
+      sc.scrollLeft = (pinch.sl + pinch.cx) * ratio - pinch.cx;   // keep the spot under your fingers where it was
+      sc.scrollTop  = (pinch.st + pinch.cy) * ratio - pinch.cy;
+      _sheetUserZoomed = true;
+    } else if(tapStart && e.touches.length === 1) {
+      var m = e.touches[0];
+      if(Math.abs(m.clientX-tapStart.x) > 10 || Math.abs(m.clientY-tapStart.y) > 10) tapStart = null;
+    }
+  }, {passive:false});
+  sc.addEventListener('touchend', function(e) {
+    if(e.touches.length < 2) pinch = null;
+    if(tapStart && e.touches.length === 0 && Date.now() - tapStart.t < 300) {
+      if(Date.now() - lastTap < 350) {   // double-tap = fit the whole week to the screen again
+        _sheetUserZoomed = false; sheetFit(); sc.scrollLeft = 0; sc.scrollTop = 0; lastTap = 0;
+      } else lastTap = Date.now();
+    }
+    tapStart = null;
+  }, {passive:true});
+  ['gesturestart','gesturechange'].forEach(function(n){ sc.addEventListener(n, function(e){ e.preventDefault(); }); });   // iOS Safari's own page pinch
+}
+function openSheetView() {
+  var html = buildSheetHtml();
+  var v = document.getElementById('sheet-view');
+  if(!v) {
+    v = document.createElement('div');
+    v.id = 'sheet-view';
+    v.innerHTML = '<div id="sheet-scroll"></div>';
+    document.body.appendChild(v);
+    sheetInitGestures(document.getElementById('sheet-scroll'));
+    window.addEventListener('resize', sheetOnResize);
+    window.addEventListener('orientationchange', sheetOnResize);
+  }
+  var sc = document.getElementById('sheet-scroll');
+  sc.innerHTML = html;
+  var x = sc.querySelector('.xl-close');
+  if(x) x.addEventListener('click', closeSheetView);
+  v.style.display = 'block';
+  _sheetUserZoomed = false;
+  sheetFit();
+  sc.scrollLeft = 0; sc.scrollTop = 0;
+}
+function closeSheetView() {
+  var v = document.getElementById('sheet-view');
+  if(v) v.style.display = 'none';
 }
 
 function renderSchedule() {
