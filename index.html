@@ -6883,6 +6883,9 @@ function buildDayEntryFromWeek(week, di) {
     ['Drivers',    drivers]
   ];
 
+  var _fl = floaterPrintSection(week.week_start, di);      // days with no floater print exactly as before
+  if(_fl) leftCol.push(_fl);
+
   return {dayName: dayInfo.dayName, dateLabel: dayInfo.dateLabel, eventLabel: eventLabel, leftCol: leftCol, rightCol: rightCol, MAX: MAX};
 }
 
@@ -7002,6 +7005,9 @@ function printRunSheet() {
     ['Cashiers',   cashiers],
     ['Drivers',    drivers]
   ];
+
+  var _fl = floaterPrintSection(floaterWeekStart(), di);   // days with no floater print exactly as before
+  if(_fl) leftCol.push(_fl);
 
   var blob = buildRunSheetPDF(dayName, dateLabel, eventLabel, leftCol, rightCol, MAX);
   var safeName = String(dayName).replace(/[^A-Za-z0-9]/g, '');
@@ -7722,6 +7728,17 @@ async function undoAcceptedError(di, dept, msg) {
     method: 'DELETE',
     headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
   }).catch(function(e){ console.log('Undo failed:',e.message); });
+  // If a floater was covering this exact error, remove it too so the two never disagree.
+  var _fw = _floatersByWeek[weekKey];
+  if(_fw && _fw[di]) {
+    var _gone = _fw[di].filter(function(f){ return f.errMsg && bypassKey(di, f.errDept, f.errMsg) === bypassKey(di, dept, msg); });
+    if(_gone.length) {
+      _fw[di] = _fw[di].filter(function(f){ return _gone.indexOf(f) === -1; });
+      _gone.forEach(function(f){ floaterPostRow('floater_removed', di, f.errDept || f.dept, 'Floater removed: ' + f.dept, {ref: f.id, n: f.name, d: f.dept}); });
+      var _rsEl = document.getElementById('run-sheet-display');
+      if(_rsEl && _rsEl.offsetParent !== null) renderRunSheet(currentDay);
+    }
+  }
   checkScheduleErrors();
   renderAcceptedErrors();
 }
@@ -8198,6 +8215,196 @@ function buildDrawerCountsPDF(dateStr, rows) {
   return new Blob([pdf],{type:'application/pdf'});
 }
 
+// ══ FLOATERS ═════════════════════════════════════════════════════════════
+// A floater is someone ALREADY working that day (a manager or anyone) who also
+// covers a gap in another area for part of the day -- e.g. a manager on the
+// schedule who covers Kitchen in the morning and Pizza at night. It never
+// changes that person's schedule, hours or pay. It shows on the Run Sheet
+// (on screen always; on the printout only on days that have one), hides the
+// one coverage error it covers, and is recorded in the Schedule Log.
+// Stored as rows in the Schedule Log table (override_log): one row when a floater
+// is added, one when it's removed. That table is never wiped, so uploading or
+// copying a schedule can't lose them, and every change shows in the Schedule Log.
+var _floatersByWeek = {};
+var FLOATER_DEPTS = ['Managers','Pizza','Kitchen','Prep','Bus / Dish','Servers','Bartenders','Cashiers','Hosts','Drivers'];
+
+function fEsc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function floaterWeekStart() { return (window.allWeeks && window.allWeeks[window.currentWeekIdx]) ? window.allWeeks[window.currentWeekIdx].week_start : ''; }
+function floatersFor(weekStart, di) { var w = _floatersByWeek[weekStart]; return (w && w[di]) ? w[di] : []; }
+
+async function loadAllFloaters() {
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/override_log?ack_type=in.(floater,floater_removed)&select=id,week_label,day_index,dept,msg,ack_type,note&order=id.asc', {
+      headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+    });
+    if(!r.ok) return;
+    var rows = await r.json(), out = {};
+    rows.forEach(function(row) {
+      var note; try { note = JSON.parse(row.note || '{}'); } catch(e) { return; }
+      var ws = row.week_label, di = row.day_index;
+      if(!ws || di == null) return;
+      if(!out[ws]) out[ws] = {};
+      if(!out[ws][di]) out[ws][di] = [];
+      if(row.ack_type === 'floater') {
+        var f = {id: row.id, name: note.n, dept: note.d, from: note.f || '', to: note.t || ''};
+        if(!/^Floater added:/.test(row.msg || '')) { f.errDept = row.dept; f.errMsg = row.msg; }   // it was covering a specific error
+        out[ws][di].push(f);
+      } else if(row.ack_type === 'floater_removed') {
+        out[ws][di] = out[ws][di].filter(function(f){ return f.id !== note.ref; });
+      }
+    });
+    _floatersByWeek = out;
+    var el = document.getElementById('run-sheet-display');
+    if(el && el.offsetParent !== null && typeof currentDay !== 'undefined') renderRunSheet(currentDay);
+  } catch(e) { /* silent -- floaters just don't show until the next load */ }
+}
+// Writes one Schedule Log row and returns it (with its id), or null if it didn't save.
+async function floaterPostRow(ack, di, dept, msg, noteObj) {
+  var DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/override_log', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=representation'},
+      body: JSON.stringify([{week_label: floaterWeekStart(), day_index: di, day_name: DAYS_FULL[di] || '', dept: dept, msg: msg, who: getCurrentUser(), ack_type: ack, logged_at: new Date().toISOString(), note: JSON.stringify(noteObj)}])
+    });
+    if(!r.ok) return null;
+    var rows = await r.json();
+    return (rows && rows[0]) ? rows[0] : null;
+  } catch(e) { return null; }
+}
+// Everyone with a real shift that day, in any section (managers included).
+function floaterPeopleForDay(di) {
+  var people = {};
+  function add(label, rows) {
+    (rows || []).forEach(function(r) {
+      var n = r.n || r.name; if(!n) return;
+      var o = people[n] || (people[n] = {secs: [], times: []});
+      if(o.secs.indexOf(label) === -1) o.secs.push(label);
+      var t = (r.a || '') + (r.p ? '–' + r.p : '');
+      if(t) o.times.push(t);
+    });
+  }
+  add('Managers', getBOHSection(MANAGERS, di)); add('Pizza', getBOHSection(PIZZA, di)); add('Kitchen', getBOHSection(KITCHEN, di));
+  add('Prep', getBOHSection(PREP, di)); add('Bus', getBOHSection(BUS, di)); add('Dish', getBOHSection(DISH, di));
+  add('Servers', getFOHSection(SERVERS, di)); add('Bartenders', getFOHSection(BARTENDERS, di));
+  add('Cashiers', getFOHSection(CASHIERS, di)); add('Hosts', getFOHSection(HOSTS, di));
+  add('Drivers', getDriversForDay(di).map(function(d){ return {n: d.name, a: d.am, p: d.pm}; }));
+  return Object.keys(people).sort(function(a, b){ return a.localeCompare(b); }).map(function(n) {
+    return {name: n, label: n + ' — ' + people[n].secs.join('/') + (people[n].times.length ? '  ' + people[n].times.join(', ') : '')};
+  });
+}
+// Staffing/coverage errors a floater can cover. Not: schedule not uploaded,
+// missing end time, role approvals, time off, cross-location overlaps.
+function isFloaterCoverable(e) {
+  var m = String(e && e.msg || '');
+  if(!m || e.dept === 'FOH' || e.dept === 'BOH') return false;
+  return !/has not been uploaded|missing end time|approve this role|Time Off request|recognized employee|Cross-Location|both Westmont/.test(m);
+}
+function floaterGuessTimes(msg) {
+  var m = /between (\d{1,2})-(\d{1,2})PM/i.exec(String(msg || ''));
+  return m ? {from: m[1] + 'PM', to: m[2] + 'PM'} : {from: '', to: ''};
+}
+function closeFloaterModal() { var m = document.getElementById('floater-modal'); if(m) m.parentNode.removeChild(m); }
+function openFloaterModal(di, errDept, errMsg) {
+  closeFloaterModal();
+  window._floaterCtx = {di: di, errDept: errDept || '', errMsg: errMsg || ''};
+  var people = floaterPeopleForDay(di);
+  var g = errMsg ? floaterGuessTimes(errMsg) : {from: '', to: ''};
+  var pre = (FLOATER_DEPTS.indexOf(errDept) !== -1) ? errDept : '';
+  var dayLbl = DAYS[di] + (FULL_DATES[di] ? ', ' + String(FULL_DATES[di]).replace(',', '') : '');
+  var box = 'width:100%;box-sizing:border-box;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:12px;font-family:inherit;background:#fff;color:#111;';
+  var lab = 'font-size:11px;font-weight:700;letter-spacing:0.06em;color:#888;margin-bottom:4px;text-transform:uppercase;';
+  var ov = document.createElement('div');
+  ov.id = 'floater-modal';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:100006;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;padding:16px;';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;width:100%;max-width:420px;padding:18px 18px 16px;max-height:92vh;overflow-y:auto;box-sizing:border-box;">'
+    + '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:24px;letter-spacing:0.05em;line-height:1;">Cover with a floater</div>'
+    + '<div style="font-size:12px;color:#666;margin:4px 0 14px;line-height:1.35;">' + fEsc(dayLbl) + (errMsg ? ' — ' + fEsc(errMsg) : '') + '</div>'
+    + (people.length ? '' : '<div style="background:#fff3f3;border:1px solid #f5c0c8;border-radius:8px;padding:10px;font-size:13px;color:#c8102e;margin-bottom:12px;">Nobody is scheduled this day yet.</div>')
+    + '<div style="' + lab + '">Who is covering? (working that day)</div>'
+    + '<select id="fl-name" style="' + box + '"><option value="">Choose…</option>' + people.map(function(p){ return '<option value="' + fEsc(p.name) + '">' + fEsc(p.label) + '</option>'; }).join('') + '</select>'
+    + '<div style="' + lab + '">Covering</div>'
+    + '<select id="fl-dept" style="' + box + '"><option value="">Choose…</option>' + FLOATER_DEPTS.map(function(d){ return '<option value="' + fEsc(d) + '"' + (d === pre ? ' selected' : '') + '>' + fEsc(d) + '</option>'; }).join('') + '</select>'
+    + '<div style="display:flex;gap:10px;"><div style="flex:1;min-width:0;"><div style="' + lab + '">From</div><input id="fl-from" type="text" value="' + fEsc(g.from) + '" placeholder="e.g. 9AM" autocapitalize="characters" autocomplete="off" style="' + box + '"></div>'
+    + '<div style="flex:1;min-width:0;"><div style="' + lab + '">To</div><input id="fl-to" type="text" value="' + fEsc(g.to) + '" placeholder="e.g. 1PM or C" autocapitalize="characters" autocomplete="off" style="' + box + '"></div></div>'
+    + '<div id="fl-err" style="color:#c8102e;font-size:12px;min-height:16px;margin-bottom:8px;"></div>'
+    + '<div style="display:flex;gap:8px;"><button onclick="closeFloaterModal()" style="flex:1;padding:12px;background:#f0efed;color:#444;border:none;border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:0.05em;cursor:pointer;">CANCEL</button>'
+    + '<button onclick="confirmFloater()" style="flex:1;padding:12px;background:#c8102e;color:#fff;border:none;border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:0.05em;cursor:pointer;">SAVE</button></div></div>';
+  document.body.appendChild(ov);
+}
+async function confirmFloater() {
+  var ctx = window._floaterCtx; if(!ctx) return;
+  var name = document.getElementById('fl-name').value, dept = document.getElementById('fl-dept').value;
+  var from = document.getElementById('fl-from').value.trim(), to = document.getElementById('fl-to').value.trim();
+  var err = document.getElementById('fl-err');
+  if(!name) { err.textContent = 'Choose who is covering.'; return; }
+  if(!dept) { err.textContent = 'Choose what they are covering.'; return; }
+  var ws = floaterWeekStart(), di = ctx.di;
+  if(!ws) { err.textContent = 'No week is loaded.'; return; }
+  var row = await floaterPostRow('floater', di, ctx.errDept || dept, ctx.errMsg || ('Floater added: ' + dept), {n: name, d: dept, f: from, t: to});
+  if(!row) { err.textContent = 'Could not save. Check your connection and try again.'; return; }
+  if(!_floatersByWeek[ws]) _floatersByWeek[ws] = {};
+  if(!_floatersByWeek[ws][di]) _floatersByWeek[ws][di] = [];
+  var entry = {id: row.id, name: name, dept: dept, from: from, to: to};
+  if(ctx.errMsg) {
+    entry.errDept = ctx.errDept; entry.errMsg = ctx.errMsg;
+    // hide the one error this covers -- same mechanism "Override Rule" uses
+    if(!window._bypassedErrors) window._bypassedErrors = {};
+    window._bypassedErrors[bypassKey(di, ctx.errDept, ctx.errMsg)] = true;
+    fetch(SUPABASE_URL + '/rest/v1/schedule_bypasses', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'resolution=merge-duplicates,return=minimal'},
+      body: JSON.stringify([{week_label: ws, day_index: di, dept: ctx.errDept, msg: ctx.errMsg}])
+    }).catch(function(e){ console.log('Bypass save failed:', e.message); });
+  }
+  _floatersByWeek[ws][di].push(entry);
+  closeFloaterModal();
+  if(ctx.errMsg) { checkScheduleErrors(); if(typeof renderAcceptedErrors === 'function') renderAcceptedErrors(); }
+  var el = document.getElementById('run-sheet-display');
+  if(el && el.offsetParent !== null) renderRunSheet(currentDay);
+}
+async function removeFloater(di, idx) {
+  var ws = floaterWeekStart(), list = (_floatersByWeek[ws] || {})[di];
+  if(!list || !list[idx]) return;
+  var f = list[idx];
+  if(!confirm('Remove ' + f.name + ' as a floater (' + f.dept + ')?')) return;
+  var row = await floaterPostRow('floater_removed', di, f.errDept || f.dept, 'Floater removed: ' + f.dept, {ref: f.id, n: f.name, d: f.dept});
+  if(!row) { alert('Could not remove it. Check your connection and try again.'); return; }
+  list.splice(idx, 1);
+  if(f.errMsg) await undoAcceptedError(di, f.errDept, f.errMsg);   // the error comes back if it's still true
+  var el = document.getElementById('run-sheet-display');
+  if(el && el.offsetParent !== null) renderRunSheet(currentDay);
+}
+function coverErrorByIdx(idx) {
+  var e = window._currentErrorList && window._currentErrorList[idx];
+  if(!e) return;
+  openFloaterModal(parseInt(e.di, 10), e.dept, e.msg);
+}
+function floaterSecHtml(di) {
+  var list = floatersFor(floaterWeekStart(), di);
+  var rows = list.length ? list.map(function(f, i) {
+    return '<tr><td style="font-weight:600;">' + fEsc(f.name) + ' <span style="color:#888;font-size:10px;font-weight:400;">(' + fEsc(f.dept) + ')</span></td>'
+      + '<td class="mono">' + fEsc(f.from) + '</td><td class="mono">' + fEsc(f.to) + '</td>'
+      + '<td style="width:30px;text-align:right;"><span onclick="removeFloater(' + di + ',' + i + ')" style="cursor:pointer;color:#c8102e;font-weight:700;padding:4px 6px;">✕</span></td></tr>';
+  }).join('') : '<tr><td colspan="4" style="color:#A8A49E;font-style:italic;padding:8px 10px;font-size:11px;">None assigned</td></tr>';
+  return '<div class="rs-section"><div class="rs-section-hdr">Floaters</div>'
+    + '<table class="rs-table"><thead><tr><th>Name</th><th>In</th><th>Out</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<div style="padding:6px 8px;"><button class="btn btn-secondary" style="width:100%;font-size:12px;padding:8px;" onclick="openFloaterModal(' + di + ')">+ Add floater</button></div></div>';
+}
+function floaterPrintSection(weekStart, di) {
+  var fl = floatersFor(weekStart, di);
+  return fl.length ? ['Floaters', fl.map(function(f){ return {n: f.name + ' (' + f.dept + ')', a: f.from, p: f.to}; })] : null;
+}
+
+// Schedule Log wording for floater rows (the note holds the details as JSON).
+function floaterLogText(r, removed) {
+  try {
+    var n = JSON.parse(r.note || '{}');
+    if(removed) return 'Floater removed: ' + n.n + ' (' + n.d + ')';
+    return 'Floater: ' + n.n + ' covering ' + n.d + ((n.f || n.t) ? ' ' + (n.f || '') + (n.t ? '–' + n.t : '') : '');
+  } catch(e) { return r.note || r.ack_type || ''; }
+}
+
 function renderRunSheet(di) {
   const el = document.getElementById('run-sheet-display');
   const drivers  = getDriversForDay(di).map(d=>({n:d.name, a:d.am, p:d.pm}));
@@ -8244,6 +8451,7 @@ function renderRunSheet(di) {
       ${sec('Kitchen',       kitchen)}
       ${sec('Prep / Utility',prep)}
       ${sec('Bus / Dish',    busdish)}
+      ${floaterSecHtml(di)}
       ${sec('Host',          hosts)}
       ${sec('Servers',       servers)}
       ${sec('Bartenders',    bars)}
@@ -9585,7 +9793,8 @@ function sheetShrinkToFit() {
 function sheetOnResize() {
   var v = document.getElementById('sheet-view');
   if(!v || v.style.display === 'none') return;
-  setTimeout(function(){ if(!_sheetUserZoomed) sheetFit(); }, 120);   // rotating refits unless you've pinched
+  // iPhones report the new screen size a beat late after a turn, so check twice
+  [150, 600].forEach(function(ms){ setTimeout(function(){ if(!_sheetUserZoomed) sheetFit(); }, ms); });   // rotating refits unless you've pinched
 }
 function sheetInitGestures(sc) {
   var pinch = null, lastTap = 0, tapStart = null;
@@ -12669,7 +12878,7 @@ async function refreshData() {
     var activeWeek = allWeeks[currentWeekIdx];
     if(activeWeek) {
       window._bypassedErrors = {};
-      await Promise.all([loadScheduleBypasses(activeWeek.week_start), loadTimeOffForErrorCheck()]);
+      await Promise.all([loadScheduleBypasses(activeWeek.week_start), loadTimeOffForErrorCheck(), loadAllFloaters()]);
     }
     // Restore day and re-render active tab
     currentDay = savedDay;
@@ -13056,7 +13265,7 @@ function applyWeek(idx) {
   if(currentTab === 'private' && document.getElementById('private-content').style.display !== 'none') renderPrivate();
   var _wkLblForBypass = week.week_start;
   window._bypassedErrors = {};
-  Promise.all([loadScheduleBypasses(_wkLblForBypass), loadTimeOffForErrorCheck()]).then(function(){
+  Promise.all([loadScheduleBypasses(_wkLblForBypass), loadTimeOffForErrorCheck(), loadAllFloaters()]).then(function(){
     autoBypassLoggedDays();
     setTimeout(checkScheduleErrors, 300);
     setTimeout(checkEarlyBOHStarts, 350);
@@ -13882,6 +14091,10 @@ async function checkScheduleErrors() {
       h += '<button onclick="event.stopPropagation();acceptErrorByIdx('+errIdx+');" '
          + 'style="flex:1;padding:9px 6px;background:#f0efed;color:#555;border:none;border-radius:8px;font-family:\'Bebas Neue\',sans-serif;font-size:13px;letter-spacing:0.05em;cursor:pointer;">⚠️ OVERRIDE RULE</button>';
       h += '</div>';
+      if(diVal !== '' && isFloaterCoverable(e)) {
+        h += '<button onclick="event.stopPropagation();coverErrorByIdx('+errIdx+');" '
+           + 'style="width:100%;margin-top:8px;padding:9px 6px;background:#fff;color:#222;border:1.5px solid #222;border-radius:8px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:0.05em;cursor:pointer;">🙋 COVER WITH A FLOATER</button>';
+      }
       h += '</div>';
     });
     h += '</div>';
@@ -15357,6 +15570,8 @@ function showOverrideLog(btn) {
            r.ack_type === 'upload_errors' ? 'Uploaded with errors' :
            r.ack_type === 'bypass_now' ? 'Bypassed for now' :
            r.ack_type === 'copy_week' ? 'Schedule copied' :
+           r.ack_type === 'floater' ? floaterLogText(r, false) :
+           r.ack_type === 'floater_removed' ? floaterLogText(r, true) :
            r.note || r.ack_type || '';
   }
   function eventColor(r) {
@@ -15367,6 +15582,7 @@ function showOverrideLog(btn) {
            r.ack_type === 'edit' ? '#1a7a3c' :
            r.ack_type === 'upload' ? '#1a7a3c' :
            r.ack_type === 'copy_week' ? '#1a7a3c' :
+           r.ack_type === 'floater' ? '#1a5fb4' :
            r.ack_type === 'upload_errors' ? '#c8102e' :
            r.ack_type === 'uncleared' ? '#888' :
            r.ack_type === 'published' ? '#1a7a3c' : '#c8102e';
