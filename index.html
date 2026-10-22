@@ -7590,6 +7590,165 @@ function acceptError(di, dept, msg, timeOffRequestId) {
   window._zpOverrideAck = null;
 }
 
+// ===== BULK OVERRIDE: tick several schedule errors, override them in one go =====
+// Each ticked error goes through the exact same zpConfirmOverride path as a
+// single OVERRIDE RULE tap, so every one gets its own bypass row, its own log
+// entry, and can be undone on its own.
+function bulkErrToggle(idx, on) {
+  if(!window._bulkSel) window._bulkSel = {};
+  if(on) window._bulkSel[idx] = true; else delete window._bulkSel[idx];
+  bulkBarUpdate();
+}
+function bulkBarUpdate() {
+  var n = Object.keys(window._bulkSel || {}).length;
+  var c = document.getElementById('bulk-ovr-count');
+  var btn = document.getElementById('bulk-ovr-go');
+  if(c) c.textContent = n;
+  if(btn) { btn.style.opacity = n ? '1' : '0.4'; btn.style.pointerEvents = n ? 'auto' : 'none'; }
+  var all = document.getElementById('bulk-ovr-all');
+  var total = (window._currentErrorList || []).length;
+  if(all) all.textContent = (total && n === total) ? '\u2610 CLEAR ALL' : '\u2611 SELECT ALL';
+  document.querySelectorAll('.bulk-ovr-cb').forEach(function(cb){
+    cb.checked = !!(window._bulkSel && window._bulkSel[cb.getAttribute('data-idx')]);
+  });
+}
+function bulkSelectAll() {
+  var total = (window._currentErrorList || []).length;
+  var n = Object.keys(window._bulkSel || {}).length;
+  window._bulkSel = {};
+  if(!(total && n === total)) { for(var i = 0; i < total; i++) window._bulkSel[i] = true; }
+  bulkBarUpdate();
+}
+function bulkBarHtml() {
+  return '<div id=\"bulk-ovr-bar\" style=\"position:sticky;bottom:0;margin:0 -18px -16px;padding:10px 18px;background:#fff;border-top:1px solid #eee;display:flex;gap:8px;align-items:center;z-index:2;\">'
+    + '<button id=\"bulk-ovr-all\" onclick=\"event.stopPropagation();bulkSelectAll();\" style=\"padding:10px 12px;background:#f0efed;color:#555;border:none;border-radius:8px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:0.05em;cursor:pointer;white-space:nowrap;\">\u2611 SELECT ALL</button>'
+    + '<button id=\"bulk-ovr-go\" onclick=\"event.stopPropagation();bulkOverrideOpen();\" style=\"flex:1;padding:10px 6px;background:#c8102e;color:#fff;border:none;border-radius:8px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:0.05em;cursor:pointer;opacity:0.4;pointer-events:none;\">\u26a0\ufe0f OVERRIDE SELECTED (<span id=\"bulk-ovr-count\">0</span>)</button>'
+    + '</div>';
+}
+function bulkSelectedItems() {
+  var list = window._currentErrorList || [];
+  var seen = {}, out = [];
+  Object.keys(window._bulkSel || {}).map(Number).sort(function(a,b){ return a-b; }).forEach(function(i){
+    var e = list[i]; if(!e) return;
+    // two identical errors (same rule, same day, same request) are one override
+    var k = bypassKey(e.di, e.dept, e.msg) + '|' + (e.timeOffRequestId || '');
+    if(seen[k]) return; seen[k] = true;
+    out.push({di:e.di, dept:e.dept, msg:e.msg, timeOffRequestId:e.timeOffRequestId});
+  });
+  return out;
+}
+function bulkOverrideOpen() {
+  var items = bulkSelectedItems();
+  if(!items.length) return;
+  window._bulkItems = items;
+  var DAYS3 = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var overlay = document.createElement('div');
+  overlay.id = 'accept-pin-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.55);display:flex;align-items:flex-end;justify-content:center;';
+  var inner = document.createElement('div');
+  inner.style.cssText = 'background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:500px;padding:20px 18px 36px;overflow-y:auto;max-height:90vh;box-sizing:border-box;';
+  var handle = document.createElement('div');
+  handle.style.cssText = 'width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 16px;';
+  inner.appendChild(handle);
+  var title = document.createElement('div');
+  title.style.cssText = 'font-family:"Bebas Neue",sans-serif;font-size:18px;letter-spacing:0.06em;color:#222;margin-bottom:8px;';
+  title.textContent = 'Override ' + items.length + ' Scheduling Rule' + (items.length === 1 ? '' : 's');
+  inner.appendChild(title);
+  var listBox = document.createElement('div');
+  listBox.style.cssText = 'font-size:12px;font-weight:700;color:#c8102e;background:#fff8f8;border:1px solid #f5c0c8;border-radius:8px;padding:8px 10px;margin-bottom:14px;max-height:150px;overflow-y:auto;line-height:1.5;';
+  listBox.innerHTML = items.map(function(it){
+    var d = (DAYS3[it.di] || '') + (FULL_DATES && FULL_DATES[it.di] ? ' ' + String(FULL_DATES[it.di]).replace(',','') : '');
+    return '<div style="margin-bottom:4px;">' + d + ' \u00b7 ' + it.dept + ' \u2014 ' + it.msg + '</div>';
+  }).join('');
+  inner.appendChild(listBox);
+  var whoLbl = document.createElement('div');
+  whoLbl.style.cssText = 'font-size:11px;font-weight:700;letter-spacing:0.06em;color:#888;margin-bottom:6px;';
+  whoLbl.textContent = 'WHO IS OVERRIDING?';
+  inner.appendChild(whoLbl);
+  var whoRow = document.createElement('div');
+  whoRow.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
+  ['Selena','Alex','Ely'].forEach(function(name){
+    var b = document.createElement('button');
+    b.className = 'zp-who-btn';
+    b.style.cssText = 'flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
+    b.textContent = name;
+    b.addEventListener('click', function(){ zpSelectOverrider(b, name); });
+    whoRow.appendChild(b);
+  });
+  inner.appendChild(whoRow);
+  var ackLbl = document.createElement('div');
+  ackLbl.style.cssText = 'font-size:11px;font-weight:700;letter-spacing:0.06em;color:#888;margin-bottom:6px;';
+  ackLbl.textContent = 'ACKNOWLEDGMENT';
+  inner.appendChild(ackLbl);
+  [{type:'intentional', label:'Intentional: I hereby acknowledge this rule override was an intentional scheduling decision.'},
+   {type:'mistake', label:'Mistake: I hereby acknowledge this was a mistake and will be corrected moving forward.'}].forEach(function(def){
+    var b = document.createElement('button');
+    b.className = 'zp-ack-btn';
+    b.style.cssText = 'width:100%;padding:10px 12px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:12px;text-align:left;cursor:pointer;margin-bottom:8px;line-height:1.4;box-sizing:border-box;';
+    b.textContent = def.label;
+    b.addEventListener('click', function(){ zpSelectAck(b, def.type); });
+    inner.appendChild(b);
+  });
+  var inp = document.createElement('input');
+  inp.id = 'zp-override-pin';
+  if(!window._overrideUnlocked) {
+    var pinLbl = document.createElement('div');
+    pinLbl.style.cssText = 'font-size:11px;font-weight:700;letter-spacing:0.06em;color:#888;margin-bottom:6px;margin-top:6px;';
+    pinLbl.textContent = 'ENTER PIN TO CONFIRM';
+    inner.appendChild(pinLbl);
+    inp.type = 'number'; inp.inputMode = 'numeric'; inp.pattern = '[0-9]*'; inp.placeholder = '\u2022 \u2022 \u2022 \u2022';
+    inp.style.cssText = 'width:100%;padding:12px;border:2px solid #e0e0e0;border-radius:8px;font-size:28px;font-family:monospace;color:#111;text-align:center;margin-bottom:16px;box-sizing:border-box;';
+  } else {
+    inp.type = 'hidden'; inp.value = APP_PIN;
+  }
+  inner.appendChild(inp);
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px;';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.style.cssText = 'flex:1;padding:13px;background:#f0efed;color:#333;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;';
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.addEventListener('click', zpCancelOverride);
+  var okBtn = document.createElement('button');
+  okBtn.style.cssText = 'flex:1;padding:13px;background:#0d0d0d;color:#fff;border:none;border-radius:10px;font-size:18px;font-weight:700;cursor:pointer;';
+  okBtn.textContent = 'CONFIRM ALL ' + items.length;
+  okBtn.addEventListener('click', bulkOverrideConfirm);
+  btnRow.appendChild(cancelBtn);
+  btnRow.appendChild(okBtn);
+  inner.appendChild(btnRow);
+  overlay.appendChild(inner);
+  overlay.addEventListener('click', function(ev){ if(ev.target===overlay) zpCancelOverride(); });
+  document.body.appendChild(overlay);
+  window._zpOverrideWho = null;
+  window._zpOverrideAck = null;
+}
+function bulkOverrideConfirm() {
+  if(!window._zpOverrideWho) { alert('Please select who is overriding.'); return; }
+  if(!window._zpOverrideAck) { alert('Please select an acknowledgment.'); return; }
+  var pin = (document.getElementById('zp-override-pin')||{}).value;
+  if(String(pin).trim() !== APP_PIN) {
+    var pinInp = document.getElementById('zp-override-pin');
+    if(pinInp){ pinInp.style.borderColor='#E31010'; pinInp.value=''; pinInp.placeholder='Incorrect PIN'; }
+    return;
+  }
+  var items = window._bulkItems || [];
+  window._bulkItems = null;
+  zpCancelOverride();
+  // zpConfirmOverride reads the PIN from an element and closes the modal, so
+  // give each pass its own hidden PIN field (PIN was already verified above).
+  items.forEach(function(it){
+    var old = document.getElementById('zp-override-pin');
+    if(old && old.parentNode) old.parentNode.removeChild(old);
+    var hp = document.createElement('input');
+    hp.id = 'zp-override-pin'; hp.type = 'hidden'; hp.value = APP_PIN;
+    document.body.appendChild(hp);
+    zpConfirmOverride(it.di, it.dept, it.msg, it.timeOffRequestId);
+  });
+  var last = document.getElementById('zp-override-pin');
+  if(last && last.parentNode) last.parentNode.removeChild(last);
+  window._bulkSel = {};
+  bulkBarUpdate();
+}
+
 function zpSelectOverrider(btn, name) {
   document.querySelectorAll('.zp-who-btn').forEach(function(b){ b.style.borderColor='#e0e0e0'; b.style.background='#fff'; });
   btn.style.borderColor = '#c8102e';
@@ -14051,6 +14210,7 @@ async function checkScheduleErrors() {
       var _fullDate = FULL_DATES && FULL_DATES[e.di] ? FULL_DATES[e.di].replace(',','') : '';
       var dayLabel = (_days[e.di]||'') + (_fullDate ? ' '+_fullDate : '');
       h += '<div style="background:#fff8f8;border:1px solid #f5c0c8;border-radius:10px;padding:12px 14px;margin-bottom:8px;">';
+      h += '<label onclick=\"event.stopPropagation();\" style=\"float:right;margin:-8px -10px 4px 8px;padding:8px;cursor:pointer;\"><input type=\"checkbox\" class=\"bulk-ovr-cb\" data-idx=\"'+errIdx+'\" onclick=\"event.stopPropagation();bulkErrToggle('+errIdx+', this.checked);\" style=\"width:24px;height:24px;accent-color:#c8102e;\"></label>';
       h += '<div style="font-size:13px;font-weight:700;color:#c8102e;margin-bottom:2px;">'+e.msg+'</div>';
       h += '<div style="font-size:11px;color:#aaa;margin-bottom:10px;">'+dayLabel+' · '+e.dept+(e.name&&e.name!=='—'?' · '+e.name:'')+'</div>';
       // Staff time list for count-based errors
@@ -14102,9 +14262,11 @@ async function checkScheduleErrors() {
   }
 
   window._currentErrorList = [];
+  window._bulkSel = {};
   html += renderErrorSection('Back of House', errors.BOH);
   html += renderErrorSection('Front of House', errors.FOH);
   html += renderErrorSection('Drivers', errors.Drivers);
+  if(html) html += bulkBarHtml();
 
   // Store for print
   window._schedErrors = { html: html, depts: depts, total: totalErrors };
