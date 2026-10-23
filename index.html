@@ -284,8 +284,12 @@ body {
 #sheet-view{ --z:1; --dcpx:62; --rn-w:calc(22px*var(--z)); --nm-w:calc(64px*var(--z)); --dc-w:calc(var(--dcpx)*1px*var(--z)); --fs:calc(10.5px*var(--z)); --lt-h:calc(16px*var(--z)); --rh:calc(20px*var(--z));
   position:fixed; inset:0; z-index:100002; background:#fff; display:none; overscroll-behavior:contain; }
 #sheet-topbar{ position:absolute; top:env(safe-area-inset-top,0px); left:env(safe-area-inset-left,0px); right:env(safe-area-inset-right,0px); height:32px; background:#111; display:flex; align-items:center; padding:0 6px; z-index:5; }
-#sheet-close-btn{ width:40px; height:26px; padding:0; font:700 15px Arial,Helvetica,sans-serif; line-height:1; border:none; border-radius:6px; background:#c8102e; color:#fff; -webkit-appearance:none; cursor:pointer; }
-@media (orientation:landscape) and (max-height:500px){ #sheet-topbar{ height:26px; } #sheet-close-btn{ width:36px; height:22px; font-size:13px; } #sheet-scroll{ top:calc(env(safe-area-inset-top,0px) + 26px) !important; } }
+#sheet-tabs{ display:flex; gap:6px; margin-left:8px; flex:1 1 auto; min-width:0; overflow-x:auto; scrollbar-width:none; }
+#sheet-tabs::-webkit-scrollbar{ display:none; }
+#sheet-tabs button{ flex:none; height:26px; padding:0 12px; font:700 12px Arial,Helvetica,sans-serif; border:1px solid #555; border-radius:6px; background:#222; color:#ddd; white-space:nowrap; -webkit-appearance:none; cursor:pointer; }
+#sheet-tabs button.on{ background:#fff; color:#111; border-color:#fff; }
+#sheet-close-btn{ flex:none; width:40px; height:26px; padding:0; font:700 15px Arial,Helvetica,sans-serif; line-height:1; border:none; border-radius:6px; background:#c8102e; color:#fff; -webkit-appearance:none; cursor:pointer; }
+@media (orientation:landscape) and (max-height:500px){ #sheet-topbar{ height:26px; } #sheet-close-btn{ width:36px; height:22px; font-size:13px; } #sheet-tabs button{ height:22px; font-size:11px; padding:0 10px; } #sheet-scroll{ top:calc(env(safe-area-inset-top,0px) + 26px) !important; } }
 #sheet-scroll{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 32px); left:env(safe-area-inset-left,0px); right:env(safe-area-inset-right,0px); bottom:env(safe-area-inset-bottom,0px);
   overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-x pan-y; background:#fff; }
 .xl-table{ border-collapse:separate; border-spacing:0; table-layout:fixed; width:calc(var(--rn-w) + var(--nm-w) + 7*var(--dc-w)); font:var(--fs)/1.15 Arial,Helvetica,sans-serif; color:#000; background:#fff; }
@@ -4827,7 +4831,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.7</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.8</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -9909,15 +9913,15 @@ function buildSheetHtml() {
   var el = document.getElementById('schedule-content');
   var savedView = currentSchedView, savedEdit = window._schedEditMode;
   window._schedEditMode = false;
-  var headCells = null, rows = [], rn = 1;   // row 1 is the day-header row
-  function bar(label) { rn++; rows.push('<tr class="xl-bar"><th class="xl-rn">'+rn+'</th><td colspan="8"><span class="xl-barlbl">'+label+'</span></td></tr>'); }
-  [['drivers','DRIVERS'],['foh',''],['boh','']].forEach(function(g) {
+  var headCells = null, groups = [];
+  [['drivers','Drivers'],['foh','Front of House'],['boh','Back of House']].forEach(function(g) {
     currentSchedView = g[0];
     renderSchedule();
     var t = el.querySelector('table');
     if(!t) return;
     if(!headCells) headCells = Array.prototype.map.call(t.querySelectorAll('thead th'), function(th){ return th.innerHTML; });
-    if(g[1]) bar(g[1]);
+    var rows = [], rn = 1;   // row 1 is the day-header row (each tab numbers its own rows)
+    function bar(label) { rn++; rows.push('<tr class="xl-bar"><th class="xl-rn">'+rn+'</th><td colspan="8"><span class="xl-barlbl">'+label+'</span></td></tr>'); }
     Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function(tr) {
       if(tr.classList.contains('sched-sec-hdr')) { bar(tr.textContent.trim()); return; }
       var cells = tr.children;
@@ -9931,17 +9935,32 @@ function buildSheetHtml() {
       }
       rows.push(h+'</tr>');
     });
+    groups.push({key: g[0], label: g[1], rows: rows});
   });
   currentSchedView = savedView; window._schedEditMode = savedEdit;
   renderSchedule();   // put the normal grid back exactly as it was
+  window._sheetGroups = groups.map(function(g){ return {key: g.key, label: g.label}; });
   var letters = ['A','B','C','D','E','F','G','H'];
-  var out = '<table class="xl-table"><thead><tr class="xl-letters"><th class="xl-rn"></th>'
-    + letters.map(function(l){ return '<th>'+l+'</th>'; }).join('') + '</tr>';
   var hc = headCells || ['Name'];
-  out += '<tr class="xl-head"><th class="xl-rn">1</th><th class="xl-nm xl-close" title="Close">✕ Close</th>'
-    + hc.slice(1).map(function(x){ return '<th>'+x.replace(/<div/g,'<div class="xl-ev"')+'</th>'; }).join('') + '</tr></thead><tbody>'
-    + rows.join('') + '</tbody></table>';
+  var out = '';
+  groups.forEach(function(g, i) {
+    out += '<table class="xl-table" data-grp="'+g.key+'"'+(i ? ' style="display:none"' : '')+'><thead><tr class="xl-letters"><th class="xl-rn"></th>'
+      + letters.map(function(l){ return '<th>'+l+'</th>'; }).join('') + '</tr>'
+      + '<tr class="xl-head"><th class="xl-rn">1</th><th class="xl-nm xl-close" title="Close">✕ Close</th>'
+      + hc.slice(1).map(function(x){ return '<th>'+x.replace(/<div/g,'<div class="xl-ev"')+'</th>'; }).join('') + '</tr></thead><tbody>'
+      + g.rows.join('') + '</tbody></table>';
+  });
   return out.replace(/\sonclick="[^"]*"/g,'');   // header event links open modals that would sit behind the sheet
+}
+
+// Show one schedule (Drivers / Front of House / Back of House) at a time in the Excel view.
+function sheetShowTab(key) {
+  var sc = document.getElementById('sheet-scroll');
+  if(!sc) return;
+  Array.prototype.forEach.call(sc.querySelectorAll('.xl-table'), function(t){ t.style.display = (t.getAttribute('data-grp') === key) ? '' : 'none'; });
+  Array.prototype.forEach.call(document.querySelectorAll('#sheet-tabs button'), function(b){ b.classList.toggle('on', b.getAttribute('data-grp') === key); });
+  sc.scrollTop = 0; sc.scrollLeft = 0;
+  sheetShrinkToFit();
 }
 
 function sheetFit() {
@@ -10021,7 +10040,7 @@ function openSheetView() {
   if(!v) {
     v = document.createElement('div');
     v.id = 'sheet-view';
-    v.innerHTML = '<div id="sheet-topbar"><button id="sheet-close-btn" type="button" onclick="closeSheetView()" aria-label="Close">\u2715</button></div><div id="sheet-scroll"></div>';
+    v.innerHTML = '<div id="sheet-topbar"><button id="sheet-close-btn" type="button" onclick="closeSheetView()" aria-label="Close">\u2715</button><div id="sheet-tabs"></div></div><div id="sheet-scroll"></div>';
     document.body.appendChild(v);
     sheetInitGestures(document.getElementById('sheet-scroll'));
     window.addEventListener('resize', sheetOnResize);
@@ -10035,6 +10054,13 @@ function openSheetView() {
   _sheetUserZoomed = false;
   sheetFit();
   sc.scrollLeft = 0; sc.scrollTop = 0;
+  var tabsEl = document.getElementById('sheet-tabs');
+  if(tabsEl) {
+    var gs = window._sheetGroups || [];
+    tabsEl.innerHTML = gs.map(function(g){ return '<button type="button" data-grp="'+g.key+'" onclick="sheetShowTab(\''+g.key+'\')">'+g.label+'</button>'; }).join('');
+    var startKey = gs.some(function(g){ return g.key === currentSchedView; }) ? currentSchedView : (gs[0] && gs[0].key);
+    if(startKey) sheetShowTab(startKey);
+  }
 }
 function closeSheetView() {
   var v = document.getElementById('sheet-view');
