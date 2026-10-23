@@ -756,6 +756,16 @@ body {
 #refresh-fab.refreshing svg{ animation: fab-spin 0.7s linear infinite; transform-origin: 50% 50%; }
 @keyframes fab-spin{ to { transform: rotate(360deg); } }
 @media print { #refresh-fab{ display: none !important; } }
+/* Bottom strip: app content stops above it, Home/Refresh sit inside it. Anchored with top/bottom edges, no height math. */
+:root{ --strip-h: 44px; --strip-total: calc(var(--strip-h) + env(safe-area-inset-bottom, 0px)); }
+@media (orientation: landscape) and (max-height: 500px){ :root{ --strip-h: 34px; } }
+#app-wrap{ position: fixed !important; top: 0; left: 0; right: 0; bottom: var(--strip-total); height: auto !important; padding-bottom: 0 !important; }
+#zp-strip{ position: fixed; left: 0; right: 0; bottom: 0; height: var(--strip-total); background: var(--white); border-top: 1px solid var(--gray-200); z-index: 50; }
+#refresh-fab, #floating-home-btn{ width: calc(var(--strip-h) - 8px) !important; height: calc(var(--strip-h) - 8px) !important; bottom: calc(env(safe-area-inset-bottom, 0px) + 4px) !important; box-shadow: none !important; z-index: 2000; }
+#refresh-fab{ right: 12px !important; left: auto !important; }
+#floating-home-btn{ left: 12px !important; right: auto !important; }
+#refresh-fab svg{ width: 20px; height: 20px; }
+@media print { #zp-strip{ display: none !important; } #app-wrap{ position: static !important; } }
 
 @media(min-width:768px) {
   /* Nav */
@@ -4784,6 +4794,14 @@ document.addEventListener("DOMContentLoaded",function(){
   </div>
 </div>
 
+<div id="zp-strip"></div>
+<div id="floating-home-btn" onclick="goHome()" aria-label="Home" title="Home" style="display:none;position:fixed;bottom:calc(18px + env(safe-area-inset-bottom, 0px));left:18px;z-index:2000;background:var(--red);color:#fff;border-radius:50%;width:52px;height:52px;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.28);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;display:block;">
+    <path d="M3 11.5 12 4l9 7.5"/>
+    <path d="M5.5 9.5V20h13V9.5"/>
+    <path d="M9.5 20v-6h5v6"/>
+  </svg>
+</div>
 <div id="app-wrap">
 
 <nav class="nav" style="display:none">
@@ -4806,7 +4824,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.4</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.5</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -4820,13 +4838,7 @@ document.addEventListener("DOMContentLoaded",function(){
     </div>
   </div>
 </div>
-<div id="floating-home-btn" onclick="goHome()" aria-label="Home" title="Home" style="display:none;position:fixed;bottom:calc(18px + env(safe-area-inset-bottom, 0px));left:18px;z-index:2000;background:var(--red);color:#fff;border-radius:50%;width:52px;height:52px;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,0.28);cursor:pointer;-webkit-tap-highlight-color:transparent;">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="width:26px;height:26px;display:block;">
-    <path d="M3 11.5 12 4l9 7.5"/>
-    <path d="M5.5 9.5V20h13V9.5"/>
-    <path d="M9.5 20v-6h5v6"/>
-  </svg>
-</div>
+
 <div id="global-status-bar" style="display:none;padding:6px 14px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:12px;letter-spacing:0.06em;color:#fff;"></div>
 <div id="global-user-bar" style="display:flex;align-items:center;justify-content:flex-start;gap:8px;padding:5px 14px;background:#f7f7f7;border-bottom:1px solid #eee;font-size:11px;color:#888;">
   Signed in as <b id="global-user-display" style="color:#333;"></b>
