@@ -127,7 +127,7 @@ body {
   padding-bottom: 4px;
   margin-bottom: 16px;
   position: sticky;
-  top: var(--nav-h);
+  top: env(safe-area-inset-top, 0px);
   z-index: 90;
   background: var(--off-white);
   padding-top: 12px;
@@ -250,7 +250,7 @@ body {
   gap: 6px;
   margin-bottom: 16px;
   position: sticky;
-  top: var(--nav-h);
+  top: env(safe-area-inset-top, 0px);
   z-index: 90;
   background: var(--off-white);
   padding-top: 12px;
@@ -611,6 +611,13 @@ body {
 .edit-input:focus{outline:none;border-color:var(--red);}
 .edit-label{font-size:10px;color:var(--gray-400);text-align:center;margin-top:2px;}
 .edit-section-hdr{background:var(--gray-100);padding:8px 10px;font-size:11px;font-weight:700;letter-spacing:0.06em;color:var(--gray-600);text-transform:uppercase;margin:8px -16px;padding-left:16px;}
+/* Editor layout: header + Cancel/Save strip stay put in their own area; only the list scrolls underneath.
+   No position:sticky involved, so nothing can sit on top of rows. */
+#editor-inner{display:flex;flex-direction:column;overflow:hidden;padding:0;}
+#editor-inner > .modal-handle{flex:none;margin:20px auto 16px;}
+#editor-inner > .modal-title{flex:none;margin:0 16px 16px;}
+#editor-inner > .editor-actions{flex:none;position:static !important;margin:0 16px 8px !important;}
+#editor-body{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0 16px calc(40px + env(safe-area-inset-bottom, 0px));}
 
 /* ── PRINT ── */
 @media print {
@@ -4832,7 +4839,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div class="report-title">RUN SHEETS</div>
     <div class="report-sub">Daily staff run sheets</div>
   </div>
-  <div id="rs-sticky-nav" style="position:sticky;top:calc(var(--nav-h) + env(safe-area-inset-top, 0px));z-index:95;background:var(--off-white);">
+  <div id="rs-sticky-nav" style="position:sticky;top:env(safe-area-inset-top, 0px);z-index:95;background:var(--off-white);">
     <div id="week-selector-bar" style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 8px;">
       <div style="display:flex;align-items:center;gap:8px;">
         <button class="btn btn-secondary" style="padding:6px 10px;font-size:18px;line-height:1;" onclick="changeWeek(1)">‹</button>
