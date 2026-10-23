@@ -310,6 +310,22 @@ body {
 .xl-table .xl-letters th:nth-child(2){ position:sticky; left:var(--rn-w); z-index:6; }
 .xl-table tr.xl-bar td .xl-barlbl{ position:sticky; left:calc(var(--rn-w) + 6px*var(--z)); display:inline-block; }
 @media print { #sheet-view{ display:none !important; } }
+/* Excel view restyled to match the app: same fonts, black header, red section bars, light row lines, pill tabs. Shift highlights are untouched. */
+#sheet-view{ --rn-w:0px; --lt-h:0px; background:var(--off-white); }
+#sheet-scroll{ background:var(--off-white); }
+#sheet-topbar{ background:var(--off-white); border-bottom:1px solid var(--gray-200); }
+#sheet-close-btn{ background:var(--red); font-family:'DM Sans',sans-serif; }
+#sheet-tabs button{ font:600 12px 'DM Sans',sans-serif; background:var(--white); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:999px; }
+#sheet-tabs button.on{ background:var(--red); color:var(--white); border-color:var(--red); }
+.xl-table{ font-family:'DM Sans',sans-serif; color:var(--gray-800); background:var(--white); }
+.xl-table th,.xl-table td{ border-right:none; border-bottom:1px solid var(--gray-100); }
+.xl-table .xl-letters, .xl-table .xl-rn{ display:none; }
+.xl-table .xl-nm{ background:var(--gray-50); font-weight:500; }
+.xl-table .xl-head th{ background:var(--black); color:var(--white); font-weight:600; letter-spacing:0.04em; border-bottom:none; }
+.xl-table .xl-head th.xl-nm{ background:var(--black); color:var(--white); text-align:left; cursor:default; }
+.xl-table .xl-head .xl-ev{ color:var(--red); }
+.xl-table tr.xl-bar td{ background:var(--red); color:var(--white); font-size:calc(9px*var(--z)); letter-spacing:0.1em; text-transform:uppercase; border-bottom:none; }
+.xl-table tr.xl-bar td .xl-barlbl{ left:calc(6px*var(--z)); }
 
 .sched-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 180px); border-radius: var(--radius); box-shadow: var(--shadow); }
 .sched-table {
@@ -4831,7 +4847,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.8</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.9</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -9907,7 +9923,7 @@ function timeOffBadgeHtml(name) {
 // text comes from renderSchedule() itself (same names, formats, visibility
 // rules, time-off badges) -- nothing here touches any print code.
 var _sheetZoom = 1, _sheetUserZoomed = false;
-var SHEET_BASE_W = 22 + 64 + 7*62;   // row-number col + name col + 7 day cols at zoom 1
+var SHEET_BASE_W = 0 + 64 + 7*62;   // (no row-number col) + name col + 7 day cols at zoom 1
 
 function buildSheetHtml() {
   var el = document.getElementById('schedule-content');
@@ -9946,7 +9962,7 @@ function buildSheetHtml() {
   groups.forEach(function(g, i) {
     out += '<table class="xl-table" data-grp="'+g.key+'"'+(i ? ' style="display:none"' : '')+'><thead><tr class="xl-letters"><th class="xl-rn"></th>'
       + letters.map(function(l){ return '<th>'+l+'</th>'; }).join('') + '</tr>'
-      + '<tr class="xl-head"><th class="xl-rn">1</th><th class="xl-nm xl-close" title="Close">✕ Close</th>'
+      + '<tr class="xl-head"><th class="xl-rn">1</th><th class="xl-nm">Name</th>'
       + hc.slice(1).map(function(x){ return '<th>'+x.replace(/<div/g,'<div class="xl-ev"')+'</th>'; }).join('') + '</tr></thead><tbody>'
       + g.rows.join('') + '</tbody></table>';
   });
@@ -9969,7 +9985,7 @@ function sheetFit() {
   var z = avail / SHEET_BASE_W, dc = 62;
   if(z > 1.15) {            // wide screen (landscape): keep text a comfortable size and widen the day columns instead
     z = 1.15;
-    dc = (avail / z - 22 - 64) / 7;
+    dc = (avail / z - 0 - 64) / 7;
   }
   z = Math.max(0.5, z);
   document.getElementById('sheet-view').style.setProperty('--dcpx', dc.toFixed(2));
@@ -10048,8 +10064,6 @@ function openSheetView() {
   }
   var sc = document.getElementById('sheet-scroll');
   sc.innerHTML = html;
-  var x = sc.querySelector('.xl-close');
-  if(x) x.addEventListener('click', closeSheetView);
   v.style.display = 'block';
   _sheetUserZoomed = false;
   sheetFit();
