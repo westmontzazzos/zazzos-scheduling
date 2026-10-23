@@ -4847,7 +4847,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.0</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.1</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -10145,6 +10145,25 @@ function closeSheetView() {
   if(v) v.style.display = 'none';
 }
 
+// On a day a manager has no manager shift but is working Prep / Pizza / Kitchen, their Managers cell
+// shows short codes instead of looking like a day off: P = Prep, PZ = Pizza, K = Kitchen, in time order
+// (e.g. "P/PZ"). Display only -- nothing is saved or changed.
+function managerCoverAbbr(name, di) {
+  var found = [];
+  [['P', PREP], ['PZ', PIZZA], ['K', KITCHEN]].forEach(function(s, order) {
+    var days = s[1] && s[1][name];
+    if(!days) return;
+    var p = parseBOH(days[di], di);
+    if(!p) return;
+    var m = /^(\d+)(?::(\d+))?(AM|PM)$/.exec(p.a || '');
+    var mins = 0;
+    if(m) { var h = parseInt(m[1], 10) % 12; if(m[3] === 'PM') h += 12; mins = h * 60 + parseInt(m[2] || 0, 10); }
+    found.push({code: s[0], mins: mins, order: order});
+  });
+  found.sort(function(a, b){ return (a.mins - b.mins) || (a.order - b.order); });
+  return found.map(function(f){ return f.code; }).join('/');
+}
+
 function renderSchedule() {
   syncInlineEditsToMemory(); // must run before rebuilding the table below, or any unsaved keystroke gets silently discarded
   if(typeof setScheduleViewMode === 'function') setScheduleViewMode(false);
@@ -10261,7 +10280,11 @@ function renderSchedule() {
             return;
           }
           const p=parseBOH(raw,di);
-          if(!p){html+='<td class="sched-jump-cell" data-name="'+name+'" data-di="'+di+'"></td>';return;}
+          if(!p){
+            var _cover = (l==='MANAGERS') ? managerCoverAbbr(name, di) : '';
+            html+='<td class="sched-jump-cell" data-name="'+name+'" data-di="'+di+'">'+(_cover ? '<span style="font-weight:600;color:var(--gray-600);letter-spacing:0.04em;">'+_cover+'</span>' : '')+'</td>';
+            return;
+          }
           html += buildDayCell('BOH', name, di, '<span class="sched-jump-cell" data-name="'+name+'" data-di="'+di+'">'+(p.p?p.a+' – '+p.p:p.a)+'</span>');
         });
         html+='</tr>';
