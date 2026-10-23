@@ -4847,7 +4847,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.9</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.0</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -8447,6 +8447,7 @@ async function loadAllFloaters() {
       if(!out[ws]) out[ws] = {};
       if(!out[ws][di]) out[ws][di] = [];
       if(row.ack_type === 'floater') {
+        if(note.g) return;   // written into the schedule grid itself -- the grid shows it, so it is not listed again as a floater
         var f = {id: row.id, name: note.n, dept: note.d, from: note.f || '', to: note.t || ''};
         if(!/^Floater added:/.test(row.msg || '')) { f.errDept = row.dept; f.errMsg = row.msg; }   // it was covering a specific error
         out[ws][di].push(f);
@@ -8533,6 +8534,55 @@ function openFloaterModal(di, errDept, errMsg) {
     + '<button onclick="confirmFloater()" style="flex:1;padding:12px;background:#c8102e;color:#fff;border:none;border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:0.05em;cursor:pointer;">SAVE</button></div></div>';
   document.body.appendChild(ov);
 }
+// A manager covering another area gets their shift written into the schedule grid itself
+// (the same place a manual edit would put it), so it is one action instead of two.
+// Only managers: an hourly person covering a second area on top of their own shift would have
+// their hours counted twice. Everyone else keeps the original Run-Sheet-only behavior.
+// Returns {done:true} when the grid was written, otherwise {done:false, why:'...'} and nothing changed.
+async function floaterTryWriteGrid(name, dept, di, from, to) {
+  var T = {'Pizza':['PIZZA','boh_data'], 'Kitchen':['KITCHEN','boh_data'], 'Prep':['PREP','boh_data'],
+           'Servers':['SERVERS','foh_data'], 'Bartenders':['BARTENDERS','foh_data'], 'Cashiers':['CASHIERS','foh_data'], 'Hosts':['HOSTS','foh_data']};
+  if(Object.keys(MANAGERS).indexOf(name) === -1) return {done:false, why: name + ' is not listed under Managers.'};
+  if(dept === 'Managers') return {done:false, why: name + ' is already in the Managers section.'};
+  if(!T[dept]) return {done:false, why: dept + ' cannot be written to the grid.'};
+  if(!from) return {done:false, why: 'no start time was entered.'};
+  var label = T[dept][0], col = T[dept][1];
+  var raw = (String(from).replace(/\s+/g,'').toUpperCase()) + (to ? '-' + String(to).replace(/\s+/g,'').toUpperCase() : '');
+  var maps = {PIZZA:PIZZA, KITCHEN:KITCHEN, PREP:PREP, SERVERS:SERVERS, BARTENDERS:BARTENDERS, CASHIERS:CASHIERS, HOSTS:HOSTS};
+  function isEmptyCell(c) {
+    if(c == null || c === '') return true;
+    if(Array.isArray(c)) return !c[0] || /^off$/i.test(String(c[0]).trim());
+    return /^off$/i.test(String(c).trim());
+  }
+  try {
+    var wk = allWeeks && allWeeks[currentWeekIdx];
+    if(!wk || !wk.id) return {done:false, why: 'no week is loaded.'};
+    var hdr = {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+    // Read the saved copy right now and change only this one cell, so nobody else's edits get overwritten.
+    var r = await fetch(SUPABASE_URL + '/rest/v1/schedules?id=eq.' + wk.id + '&select=' + col, {headers: hdr});
+    if(!r.ok) return {done:false, why: 'the schedule could not be read.'};
+    var rows = await r.json();
+    var data = rows && rows[0] && rows[0][col];
+    if(typeof data === 'string') data = JSON.parse(data);
+    if(!data || typeof data !== 'object') return {done:false, why: 'the saved schedule could not be read.'};
+    if(!data[label]) data[label] = {};
+    if(data[label][name] === undefined) data[label][name] = [null,null,null,null,null,null,null];
+    if(!isEmptyCell(data[label][name][di])) return {done:false, why: name + ' already has a shift in ' + dept + ' that day.'};
+    setShiftValue(label, data[label], name, di, raw);
+    var up = await fetch(SUPABASE_URL + '/rest/v1/schedules?id=eq.' + wk.id, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify((function(){ var o = {}; o[col] = JSON.stringify(data); o.last_edited_by = getCurrentUser(); o.last_edited_at = new Date().toISOString(); return o; })())
+    });
+    if(!up.ok) return {done:false, why: 'the schedule could not be saved.'};
+    // keep what is on screen in step with what was just saved
+    var mem = maps[label];
+    if(mem[name] === undefined) mem[name] = [null,null,null,null,null,null,null];
+    setShiftValue(label, mem, name, di, raw);
+    wk[col] = JSON.stringify(data);
+    return {done:true};
+  } catch(e) { return {done:false, why: 'something went wrong (' + e.message + ').'}; }
+}
 async function confirmFloater() {
   var ctx = window._floaterCtx; if(!ctx) return;
   var name = document.getElementById('fl-name').value, dept = document.getElementById('fl-dept').value;
@@ -8542,6 +8592,19 @@ async function confirmFloater() {
   if(!dept) { err.textContent = 'Choose what they are covering.'; return; }
   var ws = floaterWeekStart(), di = ctx.di;
   if(!ws) { err.textContent = 'No week is loaded.'; return; }
+  var gridRes = await floaterTryWriteGrid(name, dept, di, from, to);
+  if(gridRes.done) {
+    // The shift is now in the schedule grid, so the schedule itself covers the gap. This row only records it in the Schedule Log.
+    var logRow = await floaterPostRow('floater', di, ctx.errDept || dept, ctx.errMsg || ('Floater added: ' + dept), {n: name, d: dept, f: from, t: to, g: 1});
+    closeFloaterModal();
+    var schedEl = document.getElementById('schedule-content');
+    if(schedEl && schedEl.offsetParent !== null) renderSchedule();
+    checkScheduleErrors(); if(typeof renderAcceptedErrors === 'function') renderAcceptedErrors();
+    var rsEl = document.getElementById('run-sheet-display');
+    if(rsEl && rsEl.offsetParent !== null) renderRunSheet(currentDay);
+    if(!logRow) alert('The shift was added to the schedule, but the Schedule Log entry did not save.');
+    return;
+  }
   var row = await floaterPostRow('floater', di, ctx.errDept || dept, ctx.errMsg || ('Floater added: ' + dept), {n: name, d: dept, f: from, t: to});
   if(!row) { err.textContent = 'Could not save. Check your connection and try again.'; return; }
   if(!_floatersByWeek[ws]) _floatersByWeek[ws] = {};
@@ -8563,6 +8626,7 @@ async function confirmFloater() {
   if(ctx.errMsg) { checkScheduleErrors(); if(typeof renderAcceptedErrors === 'function') renderAcceptedErrors(); }
   var el = document.getElementById('run-sheet-display');
   if(el && el.offsetParent !== null) renderRunSheet(currentDay);
+  if(gridRes && gridRes.why) alert('Added as a floater on the Run Sheet only. It was not added to the schedule grid: ' + gridRes.why);
 }
 async function removeFloater(di, idx) {
   var ws = floaterWeekStart(), list = (_floatersByWeek[ws] || {})[di];
@@ -8602,7 +8666,7 @@ function floaterLogText(r, removed) {
   try {
     var n = JSON.parse(r.note || '{}');
     if(removed) return 'Floater removed: ' + n.n + ' (' + n.d + ')';
-    return 'Floater: ' + n.n + ' covering ' + n.d + ((n.f || n.t) ? ' ' + (n.f || '') + (n.t ? '–' + n.t : '') : '');
+    return 'Floater: ' + n.n + ' covering ' + n.d + ((n.f || n.t) ? ' ' + (n.f || '') + (n.t ? '–' + n.t : '') : '') + (n.g ? ' — added to the schedule' : '');
   } catch(e) { return r.note || r.ack_type || ''; }
 }
 
