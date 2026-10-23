@@ -4847,7 +4847,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.2</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.3</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -6219,17 +6219,20 @@ function getFOHSection(sectionData, di) {
 function getOpenerCloserBg(rawVal) {
   if(!rawVal) return '';
   var s = String(rawVal).trim().toLowerCase().replace(/\s+/g,'');
-  if(/[-\/](c|cl|close)$/.test(s)) return 'background:#cde8f5;'; // light baby blue
+  var isCloser = /[-\/](c|cl|close)$/.test(s);
+  var isOpener = false;
   var startPart = s.split(/[-\/]/)[0];
   var m = startPart.match(/^(\d+)(?:[:.](\d+))?(am|pm)?$/);
-  if(!m) return '';
-  if(m[3] === 'pm') return ''; // explicit PM is never an opener
-  var hour = parseInt(m[1], 10);
-  var mins = m[2] ? parseInt(m[2], 10) : 0;
-  if(m[2] && m[2].length === 1) mins = mins * 10; // ".3" means 30 min, matching this app's own time-parsing convention
-  if(hour === 12) hour = 0; // bare "12" with no am/pm -- treat as midnight, not noon
-  var totalMinutes = hour * 60 + mins;
-  if(totalMinutes <= 540) return 'background:#fff3b0;'; // yellow -- 9:00am or earlier
+  if(m && m[3] !== 'pm') { // explicit PM is never an opener
+    var hour = parseInt(m[1], 10);
+    var mins = m[2] ? parseInt(m[2], 10) : 0;
+    if(m[2] && m[2].length === 1) mins = mins * 10; // ".3" means 30 min, matching this app's own time-parsing convention
+    if(hour === 12) hour = 0; // bare "12" with no am/pm -- treat as midnight, not noon
+    if(hour * 60 + mins <= 540) isOpener = true; // 9:00am or earlier
+  }
+  if(isOpener && isCloser) return 'background:#fbc98f;'; // soft orange -- the blend of the two: opens AND closes (open to close)
+  if(isCloser) return 'background:#f6bcbc;'; // soft red (the app's red, tinted) -- ending the day
+  if(isOpener) return 'background:#fff1a8;'; // soft yellow -- starting the day
   return '';
 }
 
