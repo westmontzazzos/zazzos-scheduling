@@ -759,6 +759,7 @@ body {
 /* Blank scroll space at the bottom of every screen so the Home/Refresh circles never cover the last rows */
 #app-wrap::after{ content:''; display:block; height: calc(96px + env(safe-area-inset-bottom, 0px)); flex:none; }
 @media print { #app-wrap::after{ display:none !important; } }
+@media (orientation: landscape) and (max-height: 500px){ #app-wrap::after{ height: calc(56px + env(safe-area-inset-bottom, 0px)); } }
 
 @media(min-width:768px) {
   /* Nav */
