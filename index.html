@@ -4847,7 +4847,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.3</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.4</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -7355,6 +7355,19 @@ function buildRunSheetPDF(dayName, dateLabel, eventLabel, leftCol, rightCol, MAX
 }
 
 function deliverPDF(blob, filename) {
+  // Computer: open the PDF in its own tab, ready to print -- the same PDF the phone hands to its
+  // share sheet, so desktop printing matches the phone instead of just dropping a file in Downloads.
+  // (Phones and tablets skip this and keep the share sheet below.)
+  try {
+    var _ua = navigator.userAgent || '';
+    var _isPhoneOrTablet = /iPhone|iPad|iPod|Android/i.test(_ua) || (/Macintosh/.test(_ua) && navigator.maxTouchPoints > 1);
+    if(!_isPhoneOrTablet) {
+      var _url = URL.createObjectURL(blob);
+      var _w = window.open(_url, '_blank');
+      if(_w) { setTimeout(function () { URL.revokeObjectURL(_url); }, 300000); return; }
+      URL.revokeObjectURL(_url); // pop-up blocked: fall through to the download below
+    }
+  } catch (e) {}
   // Preferred on modern iOS: native share sheet (offers Print, Save to Files, etc.)
   try {
     if (navigator.canShare) {
