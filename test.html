@@ -756,10 +756,16 @@ body {
 #refresh-fab.refreshing svg{ animation: fab-spin 0.7s linear infinite; transform-origin: 50% 50%; }
 @keyframes fab-spin{ to { transform: rotate(360deg); } }
 @media print { #refresh-fab{ display: none !important; } }
-/* Blank scroll space at the bottom of every screen so the Home/Refresh circles never cover the last rows */
-#app-wrap::after{ content:''; display:block; height: calc(96px + env(safe-area-inset-bottom, 0px)); flex:none; }
-@media print { #app-wrap::after{ display:none !important; } }
-@media (orientation: landscape) and (max-height: 500px){ #app-wrap::after{ height: calc(56px + env(safe-area-inset-bottom, 0px)); } }
+/* Bottom strip: app content stops above it, Home/Refresh sit inside it. Anchored with top/bottom edges, no height math. */
+:root{ --strip-h: 44px; --strip-total: calc(var(--strip-h) + env(safe-area-inset-bottom, 0px)); }
+@media (orientation: landscape) and (max-height: 500px){ :root{ --strip-h: 34px; } }
+#app-wrap{ position: fixed !important; top: 0; left: 0; right: 0; bottom: var(--strip-total); height: auto !important; padding-bottom: 0 !important; }
+#zp-strip{ position: fixed; left: 0; right: 0; bottom: 0; height: var(--strip-total); background: var(--white); border-top: 1px solid var(--gray-200); z-index: 50; }
+#refresh-fab, #floating-home-btn{ width: calc(var(--strip-h) - 8px) !important; height: calc(var(--strip-h) - 8px) !important; bottom: calc(env(safe-area-inset-bottom, 0px) + 4px) !important; box-shadow: none !important; z-index: 2000; }
+#refresh-fab{ right: 12px !important; left: auto !important; }
+#floating-home-btn{ left: 12px !important; right: auto !important; }
+#refresh-fab svg{ width: 20px; height: 20px; }
+@media print { #zp-strip{ display: none !important; } #app-wrap{ position: static !important; } }
 
 @media(min-width:768px) {
   /* Nav */
@@ -4788,6 +4794,7 @@ document.addEventListener("DOMContentLoaded",function(){
   </div>
 </div>
 
+<div id="zp-strip"></div>
 <div id="app-wrap">
 
 <nav class="nav" style="display:none">
