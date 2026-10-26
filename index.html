@@ -7570,11 +7570,11 @@ function acceptError(di, dept, msg, timeOffRequestId) {
 
   // Who buttons
   var whoRow = document.createElement('div');
-  whoRow.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
-  ['Selena','Alex','Ely'].forEach(function(name){
+  whoRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;';
+  ['Alex','Selena','Steve','Dom','Ely'].forEach(function(name){
     var b = document.createElement('button');
     b.className = 'zp-who-btn';
-    b.style.cssText = 'flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
+    b.style.cssText = 'flex:1;min-width:70px;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
     b.textContent = name;
     b.addEventListener('click', function(){ zpSelectOverrider(b, name); });
     whoRow.appendChild(b);
@@ -7724,11 +7724,11 @@ function bulkOverrideOpen() {
   whoLbl.textContent = 'WHO IS OVERRIDING?';
   inner.appendChild(whoLbl);
   var whoRow = document.createElement('div');
-  whoRow.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
-  ['Selena','Alex','Ely'].forEach(function(name){
+  whoRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;';
+  ['Alex','Selena','Steve','Dom','Ely'].forEach(function(name){
     var b = document.createElement('button');
     b.className = 'zp-who-btn';
-    b.style.cssText = 'flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
+    b.style.cssText = 'flex:1;min-width:70px;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
     b.textContent = name;
     b.addEventListener('click', function(){ zpSelectOverrider(b, name); });
     whoRow.appendChild(b);
@@ -8054,7 +8054,7 @@ function printWageRoster() {
   }
   function subRow(lbl,ann){pb(rH+2);rect(p,M,y,PW-2*M,rH,[0.93,0.93,0.91]);text(p,M+4,y+10,lbl+' Subtotal',8,true,[0.35,0.35,0.35]);rtext(p,CA,y+10,'~$'+Math.round(ann).toLocaleString()+' / yr',8.5,true);y+=rH+3;}
   var sections=[
-    {l:'Owners',r:[['Dom',true,60000],['Ely',true,100000],['Lisa Barraco',true,40000]]},
+    {l:'Owners',r:[['Dom',true,60000],['Lisa Barraco',true,40000]]},
     {l:'Managers',r:[['Alex',true,60000],['Brett',true,0],['Selena',true,40292]]},
     {l:'Pizza',r:[['Laura',false,19],['Arturo',false,21],['Junior',false,17.5],['Carlos',false,19.25],['Eddie',false,19],['Jesus',false,21],['Luis',false,20],['Oscar',false,19],['Victor',false,20.5]]},
     {l:'Kitchen',r:[['Laura',false,19]]},
@@ -11962,7 +11962,6 @@ function parseFOHHours(entry, di, role) {
 // MANAGERS section (managers are never scheduled by full name); fullName is
 // only for the print report, which needs real last names for payroll.
 const SALARY_ROSTER = {
-  'Ely':    {salary:100000, role:'Owner',   fullName:'Ely'},
   'Lisa':   {salary:40000,  role:'Owner',   fullName:'Lisa Barraco'},
   'Dom':    {salary:60000,  role:'Owner',   fullName:'Dom'},
   'Selena': {salary:40292,  role:'Manager', fullName:'Selena'},
