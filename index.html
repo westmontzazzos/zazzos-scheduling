@@ -4847,7 +4847,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.5</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.6</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -6239,6 +6239,8 @@ function getOpenerCloserBg(rawVal) {
 function schedSort(entries, typ) {
   // Sort entries alphabetically by name (case-insensitive, natural number order)
   return entries.sort(function(a, b) {
+    if(a[0] === TRAINEE_SLOT && b[0] !== TRAINEE_SLOT) return 1;   // Trainee slot always sits at the bottom
+    if(b[0] === TRAINEE_SLOT && a[0] !== TRAINEE_SLOT) return -1;
     return String(a[0]).localeCompare(String(b[0]), undefined, {sensitivity:'base', numeric:true});
   });
 }
@@ -8495,7 +8497,7 @@ function floaterPeopleForDay(di) {
   var people = {};
   function add(label, rows) {
     (rows || []).forEach(function(r) {
-      var n = r.n || r.name; if(!n) return;
+      var n = r.n || r.name; if(!n || n === TRAINEE_SLOT) return;
       var o = people[n] || (people[n] = {secs: [], times: []});
       if(o.secs.indexOf(label) === -1) o.secs.push(label);
       var t = (r.a || '') + (r.p ? '–' + r.p : '');
@@ -10166,6 +10168,7 @@ function closeSheetView() {
 // B = Bartenders, C = Cashiers, D = Drivers. Two or more go in time order, e.g. "P/PZ".
 // Display only -- nothing is saved or changed.
 function managerCoverAbbr(name, di) {
+  if(name === TRAINEE_SLOT) return '';
   var found = [];
   function startMins(str) {
     var m = /^(\d+)(?::(\d+))?(AM|PM)$/i.exec(String(str || '').replace(/\s+/g, ''));
@@ -10550,6 +10553,7 @@ var CUSTOM_ROLE_TO_SECLBL = {
 // recognized by the same rule that generates approval warnings. Previously
 // these were two separate, duplicated checks that could silently disagree.
 function isNameAllowedInSection(name, sectionLbl) {
+  if(name === TRAINEE_SLOT) return true; // open slot, not a person
   if(Object.keys(MANAGERS).indexOf(name) !== -1) return true; // managers can work any section
   var customAllowed = null;
   if(typeof CUSTOM_ROSTER !== 'undefined' && CUSTOM_ROSTER.length) {
@@ -10666,7 +10670,22 @@ function mergeCustomSalariedIntoSalaryRoster() {
   });
 }
 
+// "Trainee" is an open slot at the bottom of Managers, Kitchen, Pizza, Prep, Bus and Dish: a place for someone
+// who is training, or someone still to be scheduled. It is not a person, so no role, roster or wage
+// check is applied to it (and it never counts as a real manager).
+var TRAINEE_SLOT = 'Trainee';
+function ensureTraineeSlots() {
+  [MANAGERS, KITCHEN, PIZZA, PREP, BUS, DISH].forEach(function(sec) {
+    if(sec && !sec[TRAINEE_SLOT]) sec[TRAINEE_SLOT] = [null,null,null,null,null,null,null];
+  });
+}
+function managersWithoutTrainee() {
+  var o = {};
+  Object.keys(MANAGERS).forEach(function(k){ if(k !== TRAINEE_SLOT) o[k] = MANAGERS[k]; });
+  return o;
+}
 function seedCustomRosterIntoSections() {
+  ensureTraineeSlots();
   if(typeof CUSTOM_ROSTER !== 'undefined' && CUSTOM_ROSTER.length) {
     CUSTOM_ROSTER.forEach(function(person){
       if(person.is_salaried && person.role_label === 'Manager') {
@@ -11665,6 +11684,7 @@ function renderPrivate() {
     Object.entries(sec.d||{}).forEach(function(entry){
       var name=entry[0], arr=entry[1];
       if(!arr || !arr.some(Boolean)) return;           // no shifts this week
+      if(name === TRAINEE_SLOT) return;                 // open slot, no wage to match
       if(SAL_NAMES[name]) return;                       // salaried, reported above
       if(coveredArrs.has(arr)) return;                  // covered by HLY roster
       var wh = sec.type==='b' ? weekHrsB(arr) : weekHrsF(arr, sec.role2);
@@ -14013,23 +14033,23 @@ async function checkScheduleErrors() {
     });
 
     // Openers (start ≤ 9AM)
-    if(!Object.entries(KITCHEN).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+    if(!Object.entries(KITCHEN).concat(Object.entries(managersWithoutTrainee())).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'No Kitchen opener (nobody at or before 9AM)'});
-    if(!Object.entries(PIZZA).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+    if(!Object.entries(PIZZA).concat(Object.entries(managersWithoutTrainee())).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'No Pizza opener (nobody at or before 9AM)'});
     if(!Object.entries(PREP).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Prep', msg:'No Prep opener (nobody at or before 9AM)'});
-    if(!Object.entries(MANAGERS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+    if(!Object.entries(managersWithoutTrainee()).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Managers', msg:'No manager opener (nobody at or before 9AM)'});
 
     // Closers (must have C)
-    if(!Object.entries(KITCHEN).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+    if(!Object.entries(KITCHEN).concat(Object.entries(managersWithoutTrainee())).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'No Kitchen closer (nobody with C)'});
-    if(!Object.entries(PIZZA).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+    if(!Object.entries(PIZZA).concat(Object.entries(managersWithoutTrainee())).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'No Pizza closer (nobody with C)'});
     if(!Object.entries(DISH).concat(Object.entries(BUS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Bus / Dish', msg:'No Bus/Dish closer (nobody with C in either)'});
-    if(!Object.entries(MANAGERS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+    if(!Object.entries(managersWithoutTrainee()).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Managers', msg:'No manager closer (nobody with C)'});
 
     // Bus and Dish are interchangeable for this check too -- either section
@@ -14038,7 +14058,7 @@ async function checkScheduleErrors() {
       errors.BOH.push({di:di, day:day, name:'—', dept:'Bus / Dish', msg:'No Bus/Dish staff starting between 3-5PM (in either)'});
 
     // Pizza staffing minimums
-    var _pizzaAll = Object.values(PIZZA).concat(Object.values(MANAGERS));
+    var _pizzaAll = Object.values(PIZZA).concat(Object.values(managersWithoutTrainee()));
     var pizzaCount = _pizzaAll.filter(function(d){ return parseBOHRaw(d[di],di); }).length;
     var pizzaPMCount = _pizzaAll.filter(function(d){
       var p=parseBOHRaw(d[di],di); if(!p) return false;
@@ -14057,7 +14077,7 @@ async function checkScheduleErrors() {
     }
 
     // Kitchen staffing minimums
-    var _kitchenAll = Object.values(KITCHEN).concat(Object.values(MANAGERS));
+    var _kitchenAll = Object.values(KITCHEN).concat(Object.values(managersWithoutTrainee()));
     var kitchenCount = _kitchenAll.filter(function(d){ return parseBOHRaw(d[di],di); }).length;
     var kitchenPMCount = _kitchenAll.filter(function(d){
       var p=parseBOHRaw(d[di],di); if(!p) return false;
@@ -14279,6 +14299,7 @@ async function checkScheduleErrors() {
   }
   ALL_SECS.forEach(function(sec) {
     Object.keys(sec.obj).forEach(function(name) {
+      if(name === TRAINEE_SLOT) return; // open slot, not a person
       var resolvedMgrName = _managerAliasResolve[name.toLowerCase()];
       if(_managerNames.indexOf(name) !== -1 || (resolvedMgrName && _managerNames.indexOf(resolvedMgrName) !== -1)) return; // managers can work any section
       var allowed = getAllowedRoles(name, _customAllowedMap[name]);
@@ -14986,6 +15007,8 @@ async function readScheduleImage(dataUrl, type) {
             }
           });
         }
+        // The open "Trainee" slot is not a person and is allowed under Managers like in every other section.
+        if(MANAGER_ALLOWLIST.indexOf('Trainee') === -1) { MANAGER_ALLOWLIST.push('Trainee'); managerAliasResolve['trainee'] = 'Trainee'; }
         window._approvedManagerNames = MANAGER_ALLOWLIST.slice();
         var rejectedManagers = [];
         Object.keys(sched.MANAGERS).forEach(function(name){
@@ -16776,10 +16799,10 @@ function printSchedSection(range) {
     Object.entries(secData).forEach(function(e){
       var name = shortName(e[0]), days = e[1];
       var hasShift = daysToShow.some(function(di){ return days[di] && /\d/.test(String(days[di])); });
-      if(!hasShift) return;
+      if(!hasShift && e[0] !== 'Trainee') return;   // the open Trainee slot always prints, even when empty
       secRows += '<tr><td>'+name+'</td>' + daysToShow.map(function(di){
         var val = days[di];
-        if(!val || !/\d/.test(String(val))) return '<td style="color:#ccc;">-</td>';
+        if(!val || !/\d/.test(String(val))) return (e[0] === 'Trainee') ? '<td></td>' : '<td style="color:#ccc;">-</td>';
         return '<td>'+fmtTimeForPrint(val)+'</td>';
       }).join('') + '</tr>';
     });
