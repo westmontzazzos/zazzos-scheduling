@@ -4847,7 +4847,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.6</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.7</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -16858,8 +16858,14 @@ function printSchedSection(range) {
   var dayColPct = (100 - nameColPct) / daysToShow.length;
   var colgroup = '<colgroup><col style="width:'+nameColPct+'%;">' + daysToShow.map(function(){ return '<col style="width:'+dayColPct+'%;">'; }).join('') + '</colgroup>';
 
+  // A phone/tablet prints through its own print sheet (portrait, natural size). A computer used to obey the
+  // landscape page rule and shrink everything onto one page, so it printed differently. On a computer we now
+  // print the same way the phone does: portrait, natural size, no shrinking.
+  var _ua = navigator.userAgent || '';
+  var _phoneOrTablet = /iPhone|iPad|iPod|Android/i.test(_ua) || (/Macintosh/.test(_ua) && navigator.maxTouchPoints > 1);
+  var _pageRule = _phoneOrTablet ? '@page{size:landscape;margin:6mm;}' : '@page{size:letter portrait;margin:0.58in;}';
   var html = '<!DOCTYPE html><html><head><title>'+title+' Schedule</title>'
-    + '<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@media print{@page{size:landscape;margin:6mm;}button{display:none;}}body{font-family:Arial,sans-serif;font-size:12px;padding:8px;}h1{font-size:17px;color:#c8102e;margin:0 0 1px;}table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:6px;}th,td{border:1px solid #ddd;padding:2px 3px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px;}th{background:#f5f5f5;}</style>'
+    + '<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@media print{'+_pageRule+'button{display:none;}}body{font-family:Arial,sans-serif;font-size:12px;padding:8px;}h1{font-size:17px;color:#c8102e;margin:0 0 1px;}table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:6px;}th,td{border:1px solid #ddd;padding:2px 3px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px;}th{background:#f5f5f5;}</style>'
     + '</head><body>'
     + '<div id="print-page1">'
     + '<h1>'+title+'</h1>'
@@ -16882,7 +16888,7 @@ function printSchedSection(range) {
     var maxH = 760, maxW = 1030;
     var contentH = page1.scrollHeight, contentW = page1.scrollWidth;
     var scale = Math.min(1, maxH / contentH, maxW / contentW);
-    if(scale < 1) {
+    if(scale < 1 && _phoneOrTablet) {
       page1.style.transform = 'scale(' + scale + ')';
       page1.style.transformOrigin = 'top left';
       page1.style.width = (100 / scale) + '%';
