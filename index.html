@@ -326,6 +326,11 @@ body {
 .xl-table .xl-head .xl-ev{ color:var(--red); }
 .xl-table tr.xl-bar td{ background:var(--red); color:var(--white); font-size:calc(9px*var(--z)); letter-spacing:0.1em; text-transform:uppercase; border-bottom:none; }
 .xl-table tr.xl-bar td .xl-barlbl{ left:calc(6px*var(--z)); }
+#sheet-edit-btn, #sheet-save-btn, #sheet-cancel-btn{ flex:none; height:26px; margin-left:6px; padding:0 12px; font:600 12px 'DM Sans',Arial,sans-serif; border:1px solid var(--gray-200); border-radius:999px; background:var(--white); color:var(--gray-600); -webkit-appearance:none; cursor:pointer; }
+#sheet-save-btn{ background:var(--red); border-color:var(--red); color:var(--white); }
+@media (orientation:landscape) and (max-height:500px){ #sheet-edit-btn, #sheet-save-btn, #sheet-cancel-btn{ height:22px; font-size:11px; padding:0 10px; } }
+.xl-table input.xl-in{ width:100%; box-sizing:border-box; margin:0; padding:0; border:none; border-radius:0; background:transparent; color:inherit; font:inherit; text-align:center; text-transform:uppercase; outline:none; -webkit-appearance:none; }
+.xl-table input.xl-in:focus{ outline:2px solid var(--red); outline-offset:-2px; background:rgba(255,255,255,0.75); }
 
 .sched-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 180px); border-radius: var(--radius); box-shadow: var(--shadow); }
 .sched-table {
@@ -4847,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.7</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.8</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -10007,11 +10012,18 @@ function timeOffBadgeHtml(name) {
 var _sheetZoom = 1, _sheetUserZoomed = false;
 var SHEET_BASE_W = 0 + 64 + 7*62;   // (no row-number col) + name col + 7 day cols at zoom 1
 
-function buildSheetHtml() {
+function buildSheetHtml(editMode) {
   var el = document.getElementById('schedule-content');
   var savedView = currentSchedView, savedEdit = window._schedEditMode;
   window._schedEditMode = false;
   var headCells = null, groups = [];
+  if(editMode) {
+    // headers come from the normal (read-only) render so the event boxes don't get pulled into the sheet
+    currentSchedView = 'boh'; renderSchedule();
+    var _t0 = el.querySelector('table');
+    if(_t0) headCells = Array.prototype.map.call(_t0.querySelectorAll('thead th'), function(th){ return th.innerHTML; });
+    window._schedEditMode = true;   // the groups below are rendered with their edit inputs
+  }
   [['drivers','Drivers'],['foh','Front of House'],['boh','Back of House']].forEach(function(g) {
     currentSchedView = g[0];
     renderSchedule();
@@ -10022,11 +10034,22 @@ function buildSheetHtml() {
     function bar(label) { rn++; rows.push('<tr class="xl-bar"><th class="xl-rn">'+rn+'</th><td colspan="8"><span class="xl-barlbl">'+label+'</span></td></tr>'); }
     Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function(tr) {
       if(tr.classList.contains('sched-sec-hdr')) { bar(tr.textContent.trim()); return; }
+      if(editMode && !tr.querySelector('input.sched-inline-input')) return;   // notes rows etc. are not part of the sheet
       var cells = tr.children;
       if(!cells.length) return;
       rn++;
       var h = '<tr><th class="xl-rn">'+rn+'</th><th class="xl-nm">'+cells[0].innerHTML+'</th>';
       for(var i=1; i<cells.length && i<=7; i++) {
+        var _inp = editMode ? cells[i].querySelector('input.sched-inline-input') : null;
+        if(_inp) {
+          // the very same kind of input the Edit screen uses (same class + section/name/day), so Save reads it unchanged
+          var _c = _inp.cloneNode(true);
+          _c.removeAttribute('placeholder'); _c.removeAttribute('style');   // the Edit screen's own sizing would override the sheet's
+          _c.setAttribute('class', 'sched-inline-input xl-in');
+          var _bgE = getOpenerCloserBg((_inp.value || '').replace(/[–—]/g,'-').replace(/\s+/g,''));
+          h += '<td'+(_bgE ? ' style="'+_bgE+'"' : '')+'>'+_c.outerHTML+'</td>';
+          continue;
+        }
         var txt = (cells[i].textContent || '').trim().split('\n')[0];
         var bg = getOpenerCloserBg(txt.replace(/[–—]/g,'-').replace(/\s+/g,''));
         h += '<td'+(bg ? ' style="'+bg+'"' : '')+'>'+cells[i].innerHTML.replace(/\s+–\s+/g,'–')+'</td>';
@@ -10132,15 +10155,16 @@ function sheetInitGestures(sc) {
   }, {passive:true});
   ['gesturestart','gesturechange'].forEach(function(n){ sc.addEventListener(n, function(e){ e.preventDefault(); }); });   // iOS Safari's own page pinch
 }
-function openSheetView() {
-  var html = buildSheetHtml();
+function openSheetView(editMode, keepKey) {
+  var html = buildSheetHtml(editMode);
   var v = document.getElementById('sheet-view');
   if(!v) {
     v = document.createElement('div');
     v.id = 'sheet-view';
-    v.innerHTML = '<div id="sheet-topbar"><button id="sheet-close-btn" type="button" onclick="closeSheetView()" aria-label="Close">\u2715</button><div id="sheet-tabs"></div></div><div id="sheet-scroll"></div>';
+    v.innerHTML = '<div id="sheet-topbar"><button id="sheet-close-btn" type="button" onclick="closeSheetView()" aria-label="Close">\u2715</button><div id="sheet-tabs"></div><button id="sheet-edit-btn" type="button" onclick="sheetEnterEdit()">\u270F\uFE0F Edit</button><button id="sheet-save-btn" type="button" onclick="sheetSaveEdit()" style="display:none">Save</button><button id="sheet-cancel-btn" type="button" onclick="sheetCancelEdit()" style="display:none">Cancel</button></div><div id="sheet-scroll"></div>';
     document.body.appendChild(v);
     sheetInitGestures(document.getElementById('sheet-scroll'));
+    document.getElementById('sheet-scroll').addEventListener('input', sheetOnCellInput);
     window.addEventListener('resize', sheetOnResize);
     window.addEventListener('orientationchange', sheetOnResize);
   }
@@ -10154,11 +10178,71 @@ function openSheetView() {
   if(tabsEl) {
     var gs = window._sheetGroups || [];
     tabsEl.innerHTML = gs.map(function(g){ return '<button type="button" data-grp="'+g.key+'" onclick="sheetShowTab(\''+g.key+'\')">'+g.label+'</button>'; }).join('');
-    var startKey = gs.some(function(g){ return g.key === currentSchedView; }) ? currentSchedView : (gs[0] && gs[0].key);
+    var startKey = keepKey || (gs.some(function(g){ return g.key === currentSchedView; }) ? currentSchedView : (gs[0] && gs[0].key));
     if(startKey) sheetShowTab(startKey);
   }
 }
+// ---- Editing from the Excel view ----
+// The sheet's cells become the same inputs the Edit screen uses, so Save is the Edit screen's own save.
+window._sheetEditing = false;
+var _sheetDirty = false;
+function sheetActiveKey() {
+  var b = document.querySelector('#sheet-tabs button.on');
+  return b ? b.getAttribute('data-grp') : null;
+}
+function sheetSyncButtons() {
+  var ed = !!window._sheetEditing;
+  var e = document.getElementById('sheet-edit-btn'), s = document.getElementById('sheet-save-btn'), c = document.getElementById('sheet-cancel-btn');
+  if(e) e.style.display = ed ? 'none' : '';
+  if(s) s.style.display = ed ? '' : 'none';
+  if(c) c.style.display = ed ? '' : 'none';
+}
+function sheetOnCellInput(ev) {
+  var t = ev.target;
+  if(!t || !t.classList || !t.classList.contains('xl-in')) return;
+  _sheetDirty = true;
+  var td = t.closest('td');
+  if(td) td.style.cssText = getOpenerCloserBg((t.value || '').replace(/[–—]/g,'-').replace(/\s+/g,'')) || '';   // colour follows what you type
+}
+async function sheetEnterEdit() {
+  if(!window._editorUnlocked) {
+    var pin = await askPin('Enter PIN to edit schedule');
+    if(pin !== APP_PIN) { if(pin !== null) alert('Incorrect PIN.'); return; }
+    window._editorUnlocked = true;
+  }
+  var key = sheetActiveKey();
+  openSheetView(true, key);          // rebuild the sheet with editable cells
+  window._schedEditMode = true;      // the Edit screen's own save reads cells while this is on
+  window._sheetEditing = true; _sheetDirty = false;
+  sheetSyncButtons();
+  // open zoomed in so cells are comfortable to tap and the text is 16px+ (which also stops the iPhone zooming the page on focus)
+  var _sc = document.getElementById('sheet-scroll');
+  _sheetUserZoomed = true; sheetApplyZoom(1.55);
+  if(_sc) { _sc.scrollLeft = 0; _sc.scrollTop = 0; }
+}
+function sheetExitEdit(rebuild) {
+  var key = sheetActiveKey();
+  window._sheetEditing = false; _sheetDirty = false;
+  window._schedEditMode = false;
+  sheetSyncButtons();
+  if(rebuild) openSheetView(false, key);
+}
+async function sheetSaveEdit() {
+  var btn = document.getElementById('sheet-save-btn');
+  if(btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  await saveSchedInlineEdits();       // the Edit screen's own save (shows its own success / failure message)
+  if(btn) { btn.disabled = false; btn.textContent = 'Save'; }
+  if(window._schedEditMode === false) sheetExitEdit(true);   // it saved: show the sheet again with the saved values
+}
+function sheetCancelEdit() {
+  if(_sheetDirty && !confirm('Discard your unsaved changes?')) return;
+  sheetExitEdit(true);
+}
 function closeSheetView() {
+  if(window._sheetEditing) {
+    if(_sheetDirty && !confirm('Discard your unsaved changes?')) return;
+    sheetExitEdit(false);
+  }
   var v = document.getElementById('sheet-view');
   if(v) v.style.display = 'none';
 }
