@@ -283,7 +283,14 @@ body {
 /* ── EXCEL-STYLE FULL-SCREEN SCHEDULE VIEW (screen only) ── */
 #sheet-view{ --z:1; --dcpx:62; --rn-w:calc(22px*var(--z)); --nm-w:calc(64px*var(--z)); --dc-w:calc(var(--dcpx)*1px*var(--z)); --fs:calc(10.5px*var(--z)); --lt-h:calc(16px*var(--z)); --rh:calc(20px*var(--z));
   position:fixed; inset:0; z-index:100002; background:#fff; display:none; overscroll-behavior:contain; }
-#sheet-scroll{ position:absolute; top:env(safe-area-inset-top,0px); left:env(safe-area-inset-left,0px); right:env(safe-area-inset-right,0px); bottom:env(safe-area-inset-bottom,0px);
+#sheet-topbar{ position:absolute; top:env(safe-area-inset-top,0px); left:env(safe-area-inset-left,0px); right:env(safe-area-inset-right,0px); height:32px; background:#111; display:flex; align-items:center; padding:0 6px; z-index:5; }
+#sheet-tabs{ display:flex; gap:6px; margin-left:8px; flex:1 1 auto; min-width:0; overflow-x:auto; scrollbar-width:none; }
+#sheet-tabs::-webkit-scrollbar{ display:none; }
+#sheet-tabs button{ flex:none; height:26px; padding:0 12px; font:700 12px Arial,Helvetica,sans-serif; border:1px solid #555; border-radius:6px; background:#222; color:#ddd; white-space:nowrap; -webkit-appearance:none; cursor:pointer; }
+#sheet-tabs button.on{ background:#fff; color:#111; border-color:#fff; }
+#sheet-close-btn{ flex:none; width:40px; height:26px; padding:0; font:700 15px Arial,Helvetica,sans-serif; line-height:1; border:none; border-radius:6px; background:#c8102e; color:#fff; -webkit-appearance:none; cursor:pointer; }
+@media (orientation:landscape) and (max-height:500px){ #sheet-topbar{ height:26px; } #sheet-close-btn{ width:36px; height:22px; font-size:13px; } #sheet-tabs button{ height:22px; font-size:11px; padding:0 10px; } #sheet-scroll{ top:calc(env(safe-area-inset-top,0px) + 26px) !important; } }
+#sheet-scroll{ position:absolute; top:calc(env(safe-area-inset-top,0px) + 32px); left:env(safe-area-inset-left,0px); right:env(safe-area-inset-right,0px); bottom:env(safe-area-inset-bottom,0px);
   overflow:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; touch-action:pan-x pan-y; background:#fff; }
 .xl-table{ border-collapse:separate; border-spacing:0; table-layout:fixed; width:calc(var(--rn-w) + var(--nm-w) + 7*var(--dc-w)); font:var(--fs)/1.15 Arial,Helvetica,sans-serif; color:#000; background:#fff; }
 .xl-table th,.xl-table td{ box-sizing:border-box; height:var(--rh); padding:0 calc(3px*var(--z)); border-right:1px solid #2b2b2b; border-bottom:1px solid #2b2b2b; white-space:nowrap; overflow:hidden; text-align:center; vertical-align:middle; font-weight:400; font-size:calc(var(--fs)*var(--k,1)); }
@@ -303,6 +310,27 @@ body {
 .xl-table .xl-letters th:nth-child(2){ position:sticky; left:var(--rn-w); z-index:6; }
 .xl-table tr.xl-bar td .xl-barlbl{ position:sticky; left:calc(var(--rn-w) + 6px*var(--z)); display:inline-block; }
 @media print { #sheet-view{ display:none !important; } }
+/* Excel view restyled to match the app: same fonts, black header, red section bars, light row lines, pill tabs. Shift highlights are untouched. */
+#sheet-view{ --rn-w:0px; --lt-h:0px; background:var(--off-white); }
+#sheet-scroll{ background:var(--off-white); }
+#sheet-topbar{ background:var(--off-white); border-bottom:1px solid var(--gray-200); }
+#sheet-close-btn{ background:var(--red); font-family:'DM Sans',sans-serif; }
+#sheet-tabs button{ font:600 12px 'DM Sans',sans-serif; background:var(--white); color:var(--gray-600); border:1px solid var(--gray-200); border-radius:999px; }
+#sheet-tabs button.on{ background:var(--red); color:var(--white); border-color:var(--red); }
+.xl-table{ font-family:'DM Sans',sans-serif; color:var(--gray-800); background:var(--white); }
+.xl-table th,.xl-table td{ border-right:none; border-bottom:1px solid var(--gray-100); }
+.xl-table .xl-letters, .xl-table .xl-rn{ display:none; }
+.xl-table .xl-nm{ background:var(--gray-50); font-weight:500; }
+.xl-table .xl-head th{ background:var(--black); color:var(--white); font-weight:600; letter-spacing:0.04em; border-bottom:none; }
+.xl-table .xl-head th.xl-nm{ background:var(--black); color:var(--white); text-align:left; cursor:default; }
+.xl-table .xl-head .xl-ev{ color:var(--red); }
+.xl-table tr.xl-bar td{ background:var(--red); color:var(--white); font-size:calc(9px*var(--z)); letter-spacing:0.1em; text-transform:uppercase; border-bottom:none; }
+.xl-table tr.xl-bar td .xl-barlbl{ left:calc(6px*var(--z)); }
+#sheet-edit-btn, #sheet-save-btn, #sheet-cancel-btn{ flex:none; height:26px; margin-left:6px; padding:0 12px; font:600 12px 'DM Sans',Arial,sans-serif; border:1px solid var(--gray-200); border-radius:999px; background:var(--white); color:var(--gray-600); -webkit-appearance:none; cursor:pointer; }
+#sheet-save-btn{ background:var(--red); border-color:var(--red); color:var(--white); }
+@media (orientation:landscape) and (max-height:500px){ #sheet-edit-btn, #sheet-save-btn, #sheet-cancel-btn{ height:22px; font-size:11px; padding:0 10px; } }
+.xl-table input.xl-in{ width:100%; box-sizing:border-box; margin:0; padding:0; border:none; border-radius:0; background:transparent; color:inherit; font:inherit; text-align:center; text-transform:uppercase; outline:none; -webkit-appearance:none; }
+.xl-table input.xl-in:focus{ outline:2px solid var(--red); outline-offset:-2px; background:rgba(255,255,255,0.75); }
 
 .sched-wrap { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 180px); border-radius: var(--radius); box-shadow: var(--shadow); }
 .sched-table {
@@ -4824,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v3.4 STRIP 2</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.9</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -4833,7 +4861,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="TCard" style="position:relative;" onclick="gatedTileClick(function(){showTab('messaging',null);})"><div id="messaging-badge" style="display:none;position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:12px;min-width:20px;height:20px;border-radius:10px;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box;">0</div><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('hitlist',null);})"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
-      <div class="TCard" onclick="gatedTileClick(function(){showTab('drawer',null);})"><span class="TCard-icon">💰</span><span class="TCard-title">Drawer Count</span><span class="TCard-sub">Register counts by shift</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('tools',null);})"><span class="TCard-icon">🛠️</span><span class="TCard-title">Manager Tools</span><span class="TCard-sub">Drawer count &amp; forms</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('events',null);})"><span class="TCard-icon">🎉</span><span class="TCard-title">Events</span><span class="TCard-sub">This week's events</span></div>
     </div>
   </div>
@@ -5228,7 +5256,32 @@ document.addEventListener("DOMContentLoaded",function(){
 </div>
 
 <!-- DRAWER COUNT -->
+<div id="tab-tools" class="main" style="display:none">
+  <div class="report-header">
+    <div class="report-title">MANAGER TOOLS</div>
+    <div class="report-sub">Drawer counts and printable forms</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:11px;">
+    <div class="TCard" onclick="showTab('drawer',null)"><span class="TCard-icon">💰</span><span class="TCard-title">Drawer Count</span><span class="TCard-sub">Register counts by shift</span></div>
+    <div class="TCard" onclick="showTab('forms',null)"><span class="TCard-icon">📄</span><span class="TCard-title">Forms</span><span class="TCard-sub">Zelle tip sheet, closing &amp; payroll</span></div>
+  </div>
+</div>
+
+<div id="tab-forms" class="main" style="display:none">
+  <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="showTab('tools',null)">‹ Manager Tools</button>
+  <div class="report-header">
+    <div class="report-title">FORMS</div>
+    <div class="report-sub">Tap a form to print a blank copy</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:11px;">
+    <div class="TCard" onclick="printForm('zelle')"><span class="TCard-icon">💸</span><span class="TCard-title">Zelle Tip Sheet</span><span class="TCard-sub">Server, party &amp; bar tips</span></div>
+    <div class="TCard" onclick="printForm('closing')"><span class="TCard-icon">🧾</span><span class="TCard-title">Closing Paperwork</span><span class="TCard-sub">Drop, drawer totals &amp; notes</span></div>
+    <div class="TCard" onclick="printForm('payroll')"><span class="TCard-icon">📝</span><span class="TCard-title">Payroll Adjustment</span><span class="TCard-sub">Hours, deductions &amp; raises</span></div>
+  </div>
+</div>
+
 <div id="tab-drawer" class="main" style="display:none">
+  <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="showTab('tools',null)">‹ Manager Tools</button>
   <div class="report-header">
     <div class="report-title">DRAWER COUNT</div>
     <div class="report-sub">Count coins, rolls &amp; bills — enter what the register opened at, and it'll calculate the correct pull</div>
@@ -6196,23 +6249,28 @@ function getFOHSection(sectionData, di) {
 function getOpenerCloserBg(rawVal) {
   if(!rawVal) return '';
   var s = String(rawVal).trim().toLowerCase().replace(/\s+/g,'');
-  if(/[-\/](c|cl|close)$/.test(s)) return 'background:#cde8f5;'; // light baby blue
+  var isCloser = /[-\/](c|cl|close)$/.test(s);
+  var isOpener = false;
   var startPart = s.split(/[-\/]/)[0];
   var m = startPart.match(/^(\d+)(?:[:.](\d+))?(am|pm)?$/);
-  if(!m) return '';
-  if(m[3] === 'pm') return ''; // explicit PM is never an opener
-  var hour = parseInt(m[1], 10);
-  var mins = m[2] ? parseInt(m[2], 10) : 0;
-  if(m[2] && m[2].length === 1) mins = mins * 10; // ".3" means 30 min, matching this app's own time-parsing convention
-  if(hour === 12) hour = 0; // bare "12" with no am/pm -- treat as midnight, not noon
-  var totalMinutes = hour * 60 + mins;
-  if(totalMinutes <= 540) return 'background:#fff3b0;'; // yellow -- 9:00am or earlier
+  if(m && m[3] !== 'pm') { // explicit PM is never an opener
+    var hour = parseInt(m[1], 10);
+    var mins = m[2] ? parseInt(m[2], 10) : 0;
+    if(m[2] && m[2].length === 1) mins = mins * 10; // ".3" means 30 min, matching this app's own time-parsing convention
+    if(hour === 12) hour = 0; // bare "12" with no am/pm -- treat as midnight, not noon
+    if(hour * 60 + mins <= 540) isOpener = true; // 9:00am or earlier
+  }
+  if(isOpener && isCloser) return 'background:#fbc98f;'; // soft orange -- the blend of the two: opens AND closes (open to close)
+  if(isCloser) return 'background:#f6bcbc;'; // soft red (the app's red, tinted) -- ending the day
+  if(isOpener) return 'background:#fff1a8;'; // soft yellow -- starting the day
   return '';
 }
 
 function schedSort(entries, typ) {
   // Sort entries alphabetically by name (case-insensitive, natural number order)
   return entries.sort(function(a, b) {
+    if(a[0] === TRAINEE_SLOT && b[0] !== TRAINEE_SLOT) return 1;   // Trainee slot always sits at the bottom
+    if(b[0] === TRAINEE_SLOT && a[0] !== TRAINEE_SLOT) return -1;
     return String(a[0]).localeCompare(String(b[0]), undefined, {sensitivity:'base', numeric:true});
   });
 }
@@ -6749,7 +6807,7 @@ function sizeHomeScreen() {
 
 function goHome() {
   currentTab = 'home';
-  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging','events'].forEach(t => {
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','tools','forms','timeoff','messaging','events'].forEach(t => {
     document.getElementById('tab-'+t).style.display = 'none';
   });
   document.getElementById('home-screen').style.display = 'flex';
@@ -6777,7 +6835,7 @@ function showTab(tab, btn) {
   document.getElementById('home-header').style.display = 'none';
   document.getElementById('floating-home-btn').style.display = 'flex';
   document.getElementById('app-wrap').style.overflowY = 'scroll';
-  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging','events'].forEach(t => {
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','tools','forms','timeoff','messaging','events'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -7329,6 +7387,19 @@ function buildRunSheetPDF(dayName, dateLabel, eventLabel, leftCol, rightCol, MAX
 }
 
 function deliverPDF(blob, filename) {
+  // Computer: open the PDF in its own tab, ready to print -- the same PDF the phone hands to its
+  // share sheet, so desktop printing matches the phone instead of just dropping a file in Downloads.
+  // (Phones and tablets skip this and keep the share sheet below.)
+  try {
+    var _ua = navigator.userAgent || '';
+    var _isPhoneOrTablet = /iPhone|iPad|iPod|Android/i.test(_ua) || (/Macintosh/.test(_ua) && navigator.maxTouchPoints > 1);
+    if(!_isPhoneOrTablet) {
+      var _url = URL.createObjectURL(blob);
+      var _w = window.open(_url, '_blank');
+      if(_w) { setTimeout(function () { URL.revokeObjectURL(_url); }, 300000); return; }
+      URL.revokeObjectURL(_url); // pop-up blocked: fall through to the download below
+    }
+  } catch (e) {}
   // Preferred on modern iOS: native share sheet (offers Print, Save to Files, etc.)
   try {
     if (navigator.canShare) {
@@ -7531,11 +7602,11 @@ function acceptError(di, dept, msg, timeOffRequestId) {
 
   // Who buttons
   var whoRow = document.createElement('div');
-  whoRow.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
-  ['Selena','Alex','Ely'].forEach(function(name){
+  whoRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;';
+  ['Alex','Selena','Lori','Dom','Ely'].forEach(function(name){
     var b = document.createElement('button');
     b.className = 'zp-who-btn';
-    b.style.cssText = 'flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
+    b.style.cssText = 'flex:1;min-width:70px;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
     b.textContent = name;
     b.addEventListener('click', function(){ zpSelectOverrider(b, name); });
     whoRow.appendChild(b);
@@ -7685,11 +7756,11 @@ function bulkOverrideOpen() {
   whoLbl.textContent = 'WHO IS OVERRIDING?';
   inner.appendChild(whoLbl);
   var whoRow = document.createElement('div');
-  whoRow.style.cssText = 'display:flex;gap:8px;margin-bottom:14px;';
-  ['Selena','Alex','Ely'].forEach(function(name){
+  whoRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;';
+  ['Alex','Selena','Lori','Dom','Ely'].forEach(function(name){
     var b = document.createElement('button');
     b.className = 'zp-who-btn';
-    b.style.cssText = 'flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
+    b.style.cssText = 'flex:1;min-width:70px;padding:10px;border:2px solid #e0e0e0;border-radius:8px;background:#fff;font-size:13px;font-weight:600;cursor:pointer;';
     b.textContent = name;
     b.addEventListener('click', function(){ zpSelectOverrider(b, name); });
     whoRow.appendChild(b);
@@ -8015,7 +8086,7 @@ function printWageRoster() {
   }
   function subRow(lbl,ann){pb(rH+2);rect(p,M,y,PW-2*M,rH,[0.93,0.93,0.91]);text(p,M+4,y+10,lbl+' Subtotal',8,true,[0.35,0.35,0.35]);rtext(p,CA,y+10,'~$'+Math.round(ann).toLocaleString()+' / yr',8.5,true);y+=rH+3;}
   var sections=[
-    {l:'Owners',r:[['Dom',true,60000],['Ely',true,100000],['Lisa Barraco',true,40000]]},
+    {l:'Owners',r:[['Dom',true,60000],['Lisa Barraco',true,40000]]},
     {l:'Managers',r:[['Alex',true,60000],['Brett',true,0],['Selena',true,40292]]},
     {l:'Pizza',r:[['Laura',false,19],['Arturo',false,21],['Junior',false,17.5],['Carlos',false,19.25],['Eddie',false,19],['Jesus',false,21],['Luis',false,20],['Oscar',false,19],['Victor',false,20.5]]},
     {l:'Kitchen',r:[['Laura',false,19]]},
@@ -8424,6 +8495,7 @@ async function loadAllFloaters() {
       if(!out[ws]) out[ws] = {};
       if(!out[ws][di]) out[ws][di] = [];
       if(row.ack_type === 'floater') {
+        if(note.g) return;   // written into the schedule grid itself -- the grid shows it, so it is not listed again as a floater
         var f = {id: row.id, name: note.n, dept: note.d, from: note.f || '', to: note.t || ''};
         if(!/^Floater added:/.test(row.msg || '')) { f.errDept = row.dept; f.errMsg = row.msg; }   // it was covering a specific error
         out[ws][di].push(f);
@@ -8455,7 +8527,7 @@ function floaterPeopleForDay(di) {
   var people = {};
   function add(label, rows) {
     (rows || []).forEach(function(r) {
-      var n = r.n || r.name; if(!n) return;
+      var n = r.n || r.name; if(!n || n === TRAINEE_SLOT) return;
       var o = people[n] || (people[n] = {secs: [], times: []});
       if(o.secs.indexOf(label) === -1) o.secs.push(label);
       var t = (r.a || '') + (r.p ? '–' + r.p : '');
@@ -8510,6 +8582,55 @@ function openFloaterModal(di, errDept, errMsg) {
     + '<button onclick="confirmFloater()" style="flex:1;padding:12px;background:#c8102e;color:#fff;border:none;border-radius:10px;font-family:\'Bebas Neue\',sans-serif;font-size:17px;letter-spacing:0.05em;cursor:pointer;">SAVE</button></div></div>';
   document.body.appendChild(ov);
 }
+// A manager covering another area gets their shift written into the schedule grid itself
+// (the same place a manual edit would put it), so it is one action instead of two.
+// Only managers: an hourly person covering a second area on top of their own shift would have
+// their hours counted twice. Everyone else keeps the original Run-Sheet-only behavior.
+// Returns {done:true} when the grid was written, otherwise {done:false, why:'...'} and nothing changed.
+async function floaterTryWriteGrid(name, dept, di, from, to) {
+  var T = {'Pizza':['PIZZA','boh_data'], 'Kitchen':['KITCHEN','boh_data'], 'Prep':['PREP','boh_data'],
+           'Servers':['SERVERS','foh_data'], 'Bartenders':['BARTENDERS','foh_data'], 'Cashiers':['CASHIERS','foh_data'], 'Hosts':['HOSTS','foh_data']};
+  if(Object.keys(MANAGERS).indexOf(name) === -1) return {done:false, why: name + ' is not listed under Managers.'};
+  if(dept === 'Managers') return {done:false, why: name + ' is already in the Managers section.'};
+  if(!T[dept]) return {done:false, why: dept + ' cannot be written to the grid.'};
+  if(!from) return {done:false, why: 'no start time was entered.'};
+  var label = T[dept][0], col = T[dept][1];
+  var raw = (String(from).replace(/\s+/g,'').toUpperCase()) + (to ? '-' + String(to).replace(/\s+/g,'').toUpperCase() : '');
+  var maps = {PIZZA:PIZZA, KITCHEN:KITCHEN, PREP:PREP, SERVERS:SERVERS, BARTENDERS:BARTENDERS, CASHIERS:CASHIERS, HOSTS:HOSTS};
+  function isEmptyCell(c) {
+    if(c == null || c === '') return true;
+    if(Array.isArray(c)) return !c[0] || /^off$/i.test(String(c[0]).trim());
+    return /^off$/i.test(String(c).trim());
+  }
+  try {
+    var wk = allWeeks && allWeeks[currentWeekIdx];
+    if(!wk || !wk.id) return {done:false, why: 'no week is loaded.'};
+    var hdr = {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY};
+    // Read the saved copy right now and change only this one cell, so nobody else's edits get overwritten.
+    var r = await fetch(SUPABASE_URL + '/rest/v1/schedules?id=eq.' + wk.id + '&select=' + col, {headers: hdr});
+    if(!r.ok) return {done:false, why: 'the schedule could not be read.'};
+    var rows = await r.json();
+    var data = rows && rows[0] && rows[0][col];
+    if(typeof data === 'string') data = JSON.parse(data);
+    if(!data || typeof data !== 'object') return {done:false, why: 'the saved schedule could not be read.'};
+    if(!data[label]) data[label] = {};
+    if(data[label][name] === undefined) data[label][name] = [null,null,null,null,null,null,null];
+    if(!isEmptyCell(data[label][name][di])) return {done:false, why: name + ' already has a shift in ' + dept + ' that day.'};
+    setShiftValue(label, data[label], name, di, raw);
+    var up = await fetch(SUPABASE_URL + '/rest/v1/schedules?id=eq.' + wk.id, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify((function(){ var o = {}; o[col] = JSON.stringify(data); o.last_edited_by = getCurrentUser(); o.last_edited_at = new Date().toISOString(); return o; })())
+    });
+    if(!up.ok) return {done:false, why: 'the schedule could not be saved.'};
+    // keep what is on screen in step with what was just saved
+    var mem = maps[label];
+    if(mem[name] === undefined) mem[name] = [null,null,null,null,null,null,null];
+    setShiftValue(label, mem, name, di, raw);
+    wk[col] = JSON.stringify(data);
+    return {done:true};
+  } catch(e) { return {done:false, why: 'something went wrong (' + e.message + ').'}; }
+}
 async function confirmFloater() {
   var ctx = window._floaterCtx; if(!ctx) return;
   var name = document.getElementById('fl-name').value, dept = document.getElementById('fl-dept').value;
@@ -8519,6 +8640,19 @@ async function confirmFloater() {
   if(!dept) { err.textContent = 'Choose what they are covering.'; return; }
   var ws = floaterWeekStart(), di = ctx.di;
   if(!ws) { err.textContent = 'No week is loaded.'; return; }
+  var gridRes = await floaterTryWriteGrid(name, dept, di, from, to);
+  if(gridRes.done) {
+    // The shift is now in the schedule grid, so the schedule itself covers the gap. This row only records it in the Schedule Log.
+    var logRow = await floaterPostRow('floater', di, ctx.errDept || dept, ctx.errMsg || ('Floater added: ' + dept), {n: name, d: dept, f: from, t: to, g: 1});
+    closeFloaterModal();
+    var schedEl = document.getElementById('schedule-content');
+    if(schedEl && schedEl.offsetParent !== null) renderSchedule();
+    checkScheduleErrors(); if(typeof renderAcceptedErrors === 'function') renderAcceptedErrors();
+    var rsEl = document.getElementById('run-sheet-display');
+    if(rsEl && rsEl.offsetParent !== null) renderRunSheet(currentDay);
+    if(!logRow) alert('The shift was added to the schedule, but the Schedule Log entry did not save.');
+    return;
+  }
   var row = await floaterPostRow('floater', di, ctx.errDept || dept, ctx.errMsg || ('Floater added: ' + dept), {n: name, d: dept, f: from, t: to});
   if(!row) { err.textContent = 'Could not save. Check your connection and try again.'; return; }
   if(!_floatersByWeek[ws]) _floatersByWeek[ws] = {};
@@ -8540,6 +8674,7 @@ async function confirmFloater() {
   if(ctx.errMsg) { checkScheduleErrors(); if(typeof renderAcceptedErrors === 'function') renderAcceptedErrors(); }
   var el = document.getElementById('run-sheet-display');
   if(el && el.offsetParent !== null) renderRunSheet(currentDay);
+  if(gridRes && gridRes.why) alert('Added as a floater on the Run Sheet only. It was not added to the schedule grid: ' + gridRes.why);
 }
 async function removeFloater(di, idx) {
   var ws = floaterWeekStart(), list = (_floatersByWeek[ws] || {})[di];
@@ -8579,7 +8714,7 @@ function floaterLogText(r, removed) {
   try {
     var n = JSON.parse(r.note || '{}');
     if(removed) return 'Floater removed: ' + n.n + ' (' + n.d + ')';
-    return 'Floater: ' + n.n + ' covering ' + n.d + ((n.f || n.t) ? ' ' + (n.f || '') + (n.t ? '–' + n.t : '') : '');
+    return 'Floater: ' + n.n + ' covering ' + n.d + ((n.f || n.t) ? ' ' + (n.f || '') + (n.t ? '–' + n.t : '') : '') + (n.g ? ' — added to the schedule' : '');
   } catch(e) { return r.note || r.ack_type || ''; }
 }
 
@@ -9900,45 +10035,78 @@ function timeOffBadgeHtml(name) {
 // text comes from renderSchedule() itself (same names, formats, visibility
 // rules, time-off badges) -- nothing here touches any print code.
 var _sheetZoom = 1, _sheetUserZoomed = false;
-var SHEET_BASE_W = 22 + 64 + 7*62;   // row-number col + name col + 7 day cols at zoom 1
+var SHEET_BASE_W = 0 + 64 + 7*62;   // (no row-number col) + name col + 7 day cols at zoom 1
 
-function buildSheetHtml() {
+function buildSheetHtml(editMode) {
   var el = document.getElementById('schedule-content');
   var savedView = currentSchedView, savedEdit = window._schedEditMode;
   window._schedEditMode = false;
-  var headCells = null, rows = [], rn = 1;   // row 1 is the day-header row
-  function bar(label) { rn++; rows.push('<tr class="xl-bar"><th class="xl-rn">'+rn+'</th><td colspan="8"><span class="xl-barlbl">'+label+'</span></td></tr>'); }
-  [['drivers','DRIVERS'],['foh',''],['boh','']].forEach(function(g) {
+  var headCells = null, groups = [];
+  if(editMode) {
+    // headers come from the normal (read-only) render so the event boxes don't get pulled into the sheet
+    currentSchedView = 'boh'; renderSchedule();
+    var _t0 = el.querySelector('table');
+    if(_t0) headCells = Array.prototype.map.call(_t0.querySelectorAll('thead th'), function(th){ return th.innerHTML; });
+    window._schedEditMode = true;   // the groups below are rendered with their edit inputs
+  }
+  [['drivers','Drivers'],['foh','Front of House'],['boh','Back of House']].forEach(function(g) {
     currentSchedView = g[0];
     renderSchedule();
     var t = el.querySelector('table');
     if(!t) return;
     if(!headCells) headCells = Array.prototype.map.call(t.querySelectorAll('thead th'), function(th){ return th.innerHTML; });
-    if(g[1]) bar(g[1]);
+    var rows = [], rn = 1;   // row 1 is the day-header row (each tab numbers its own rows)
+    function bar(label) { rn++; rows.push('<tr class="xl-bar"><th class="xl-rn">'+rn+'</th><td colspan="8"><span class="xl-barlbl">'+label+'</span></td></tr>'); }
     Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function(tr) {
       if(tr.classList.contains('sched-sec-hdr')) { bar(tr.textContent.trim()); return; }
+      if(editMode && !tr.querySelector('input.sched-inline-input')) return;   // notes rows etc. are not part of the sheet
       var cells = tr.children;
       if(!cells.length) return;
       rn++;
       var h = '<tr><th class="xl-rn">'+rn+'</th><th class="xl-nm">'+cells[0].innerHTML+'</th>';
       for(var i=1; i<cells.length && i<=7; i++) {
+        var _inp = editMode ? cells[i].querySelector('input.sched-inline-input') : null;
+        if(_inp) {
+          // the very same kind of input the Edit screen uses (same class + section/name/day), so Save reads it unchanged
+          var _c = _inp.cloneNode(true);
+          _c.removeAttribute('placeholder'); _c.removeAttribute('style');   // the Edit screen's own sizing would override the sheet's
+          _c.setAttribute('class', 'sched-inline-input xl-in');
+          var _bgE = getOpenerCloserBg((_inp.value || '').replace(/[–—]/g,'-').replace(/\s+/g,''));
+          h += '<td'+(_bgE ? ' style="'+_bgE+'"' : '')+'>'+_c.outerHTML+'</td>';
+          continue;
+        }
         var txt = (cells[i].textContent || '').trim().split('\n')[0];
         var bg = getOpenerCloserBg(txt.replace(/[–—]/g,'-').replace(/\s+/g,''));
         h += '<td'+(bg ? ' style="'+bg+'"' : '')+'>'+cells[i].innerHTML.replace(/\s+–\s+/g,'–')+'</td>';
       }
       rows.push(h+'</tr>');
     });
+    groups.push({key: g[0], label: g[1], rows: rows});
   });
   currentSchedView = savedView; window._schedEditMode = savedEdit;
   renderSchedule();   // put the normal grid back exactly as it was
+  window._sheetGroups = groups.map(function(g){ return {key: g.key, label: g.label}; });
   var letters = ['A','B','C','D','E','F','G','H'];
-  var out = '<table class="xl-table"><thead><tr class="xl-letters"><th class="xl-rn"></th>'
-    + letters.map(function(l){ return '<th>'+l+'</th>'; }).join('') + '</tr>';
   var hc = headCells || ['Name'];
-  out += '<tr class="xl-head"><th class="xl-rn">1</th><th class="xl-nm xl-close" title="Close">✕ Close</th>'
-    + hc.slice(1).map(function(x){ return '<th>'+x.replace(/<div/g,'<div class="xl-ev"')+'</th>'; }).join('') + '</tr></thead><tbody>'
-    + rows.join('') + '</tbody></table>';
+  var out = '';
+  groups.forEach(function(g, i) {
+    out += '<table class="xl-table" data-grp="'+g.key+'"'+(i ? ' style="display:none"' : '')+'><thead><tr class="xl-letters"><th class="xl-rn"></th>'
+      + letters.map(function(l){ return '<th>'+l+'</th>'; }).join('') + '</tr>'
+      + '<tr class="xl-head"><th class="xl-rn">1</th><th class="xl-nm">Name</th>'
+      + hc.slice(1).map(function(x){ return '<th>'+x.replace(/<div/g,'<div class="xl-ev"')+'</th>'; }).join('') + '</tr></thead><tbody>'
+      + g.rows.join('') + '</tbody></table>';
+  });
   return out.replace(/\sonclick="[^"]*"/g,'');   // header event links open modals that would sit behind the sheet
+}
+
+// Show one schedule (Drivers / Front of House / Back of House) at a time in the Excel view.
+function sheetShowTab(key) {
+  var sc = document.getElementById('sheet-scroll');
+  if(!sc) return;
+  Array.prototype.forEach.call(sc.querySelectorAll('.xl-table'), function(t){ t.style.display = (t.getAttribute('data-grp') === key) ? '' : 'none'; });
+  Array.prototype.forEach.call(document.querySelectorAll('#sheet-tabs button'), function(b){ b.classList.toggle('on', b.getAttribute('data-grp') === key); });
+  sc.scrollTop = 0; sc.scrollLeft = 0;
+  sheetShrinkToFit();
 }
 
 function sheetFit() {
@@ -9947,7 +10115,7 @@ function sheetFit() {
   var z = avail / SHEET_BASE_W, dc = 62;
   if(z > 1.15) {            // wide screen (landscape): keep text a comfortable size and widen the day columns instead
     z = 1.15;
-    dc = (avail / z - 22 - 64) / 7;
+    dc = (avail / z - 0 - 64) / 7;
   }
   z = Math.max(0.5, z);
   document.getElementById('sheet-view').style.setProperty('--dcpx', dc.toFixed(2));
@@ -10012,30 +10180,134 @@ function sheetInitGestures(sc) {
   }, {passive:true});
   ['gesturestart','gesturechange'].forEach(function(n){ sc.addEventListener(n, function(e){ e.preventDefault(); }); });   // iOS Safari's own page pinch
 }
-function openSheetView() {
-  var html = buildSheetHtml();
+function openSheetView(editMode, keepKey) {
+  var html = buildSheetHtml(editMode);
   var v = document.getElementById('sheet-view');
   if(!v) {
     v = document.createElement('div');
     v.id = 'sheet-view';
-    v.innerHTML = '<div id="sheet-scroll"></div>';
+    v.innerHTML = '<div id="sheet-topbar"><button id="sheet-close-btn" type="button" onclick="closeSheetView()" aria-label="Close">\u2715</button><div id="sheet-tabs"></div><button id="sheet-edit-btn" type="button" onclick="sheetEnterEdit()">\u270F\uFE0F Edit</button><button id="sheet-save-btn" type="button" onclick="sheetSaveEdit()" style="display:none">Save</button><button id="sheet-cancel-btn" type="button" onclick="sheetCancelEdit()" style="display:none">Cancel</button></div><div id="sheet-scroll"></div>';
     document.body.appendChild(v);
     sheetInitGestures(document.getElementById('sheet-scroll'));
+    document.getElementById('sheet-scroll').addEventListener('input', sheetOnCellInput);
     window.addEventListener('resize', sheetOnResize);
     window.addEventListener('orientationchange', sheetOnResize);
   }
   var sc = document.getElementById('sheet-scroll');
   sc.innerHTML = html;
-  var x = sc.querySelector('.xl-close');
-  if(x) x.addEventListener('click', closeSheetView);
   v.style.display = 'block';
   _sheetUserZoomed = false;
   sheetFit();
   sc.scrollLeft = 0; sc.scrollTop = 0;
+  var tabsEl = document.getElementById('sheet-tabs');
+  if(tabsEl) {
+    var gs = window._sheetGroups || [];
+    tabsEl.innerHTML = gs.map(function(g){ return '<button type="button" data-grp="'+g.key+'" onclick="sheetShowTab(\''+g.key+'\')">'+g.label+'</button>'; }).join('');
+    var startKey = keepKey || (gs.some(function(g){ return g.key === currentSchedView; }) ? currentSchedView : (gs[0] && gs[0].key));
+    if(startKey) sheetShowTab(startKey);
+  }
+}
+// ---- Editing from the Excel view ----
+// The sheet's cells become the same inputs the Edit screen uses, so Save is the Edit screen's own save.
+window._sheetEditing = false;
+var _sheetDirty = false;
+function sheetActiveKey() {
+  var b = document.querySelector('#sheet-tabs button.on');
+  return b ? b.getAttribute('data-grp') : null;
+}
+function sheetSyncButtons() {
+  var ed = !!window._sheetEditing;
+  var e = document.getElementById('sheet-edit-btn'), s = document.getElementById('sheet-save-btn'), c = document.getElementById('sheet-cancel-btn');
+  if(e) e.style.display = ed ? 'none' : '';
+  if(s) s.style.display = ed ? '' : 'none';
+  if(c) c.style.display = ed ? '' : 'none';
+}
+function sheetOnCellInput(ev) {
+  var t = ev.target;
+  if(!t || !t.classList || !t.classList.contains('xl-in')) return;
+  _sheetDirty = true;
+  var td = t.closest('td');
+  if(td) td.style.cssText = getOpenerCloserBg((t.value || '').replace(/[–—]/g,'-').replace(/\s+/g,'')) || '';   // colour follows what you type
+}
+async function sheetEnterEdit() {
+  if(!window._editorUnlocked) {
+    var pin = await askPin('Enter PIN to edit schedule');
+    if(pin !== APP_PIN) { if(pin !== null) alert('Incorrect PIN.'); return; }
+    window._editorUnlocked = true;
+  }
+  var key = sheetActiveKey();
+  openSheetView(true, key);          // rebuild the sheet with editable cells
+  window._schedEditMode = true;      // the Edit screen's own save reads cells while this is on
+  window._sheetEditing = true; _sheetDirty = false;
+  sheetSyncButtons();
+  // open zoomed in so cells are comfortable to tap and the text is 16px+ (which also stops the iPhone zooming the page on focus)
+  var _sc = document.getElementById('sheet-scroll');
+  _sheetUserZoomed = true; sheetApplyZoom(1.55);
+  if(_sc) { _sc.scrollLeft = 0; _sc.scrollTop = 0; }
+}
+function sheetExitEdit(rebuild) {
+  var key = sheetActiveKey();
+  window._sheetEditing = false; _sheetDirty = false;
+  window._schedEditMode = false;
+  sheetSyncButtons();
+  if(rebuild) openSheetView(false, key);
+}
+async function sheetSaveEdit() {
+  var btn = document.getElementById('sheet-save-btn');
+  if(btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+  await saveSchedInlineEdits();       // the Edit screen's own save (shows its own success / failure message)
+  if(btn) { btn.disabled = false; btn.textContent = 'Save'; }
+  if(window._schedEditMode === false) sheetExitEdit(true);   // it saved: show the sheet again with the saved values
+}
+function sheetCancelEdit() {
+  if(_sheetDirty && !confirm('Discard your unsaved changes?')) return;
+  sheetExitEdit(true);
 }
 function closeSheetView() {
+  if(window._sheetEditing) {
+    if(_sheetDirty && !confirm('Discard your unsaved changes?')) return;
+    sheetExitEdit(false);
+  }
   var v = document.getElementById('sheet-view');
   if(v) v.style.display = 'none';
+}
+
+// On a day a manager has no manager shift but is working somewhere else, their Managers cell shows
+// short codes instead of looking like a day off: P = Prep, PZ = Pizza, K = Kitchen, S = Servers,
+// B = Bartenders, C = Cashiers, D = Drivers. Two or more go in time order, e.g. "P/PZ".
+// Display only -- nothing is saved or changed.
+function managerCoverAbbr(name, di) {
+  if(name === TRAINEE_SLOT) return '';
+  var found = [];
+  function startMins(str) {
+    var m = /^(\d+)(?::(\d+))?(AM|PM)$/i.exec(String(str || '').replace(/\s+/g, ''));
+    if(!m) return 99999;
+    var h = parseInt(m[1], 10) % 12; if(m[3].toUpperCase() === 'PM') h += 12;
+    return h * 60 + parseInt(m[2] || 0, 10);
+  }
+  [['P', PREP], ['PZ', PIZZA], ['K', KITCHEN]].forEach(function(s, order) {
+    var days = s[1] && s[1][name];
+    if(!days) return;
+    var p = parseBOH(days[di], di);
+    if(!p) return;
+    found.push({code: s[0], mins: startMins(p.a), order: order});
+  });
+  [['S', SERVERS], ['B', BARTENDERS], ['C', CASHIERS]].forEach(function(s, k) {
+    var days = s[1] && s[1][name];
+    if(!days) return;
+    var e = days[di];
+    if(!e || !Array.isArray(e)) return;
+    var am = fmtFOH(e[0], di, false, false);
+    if(!am) return;
+    found.push({code: s[0], mins: startMins(am), order: 3 + k});
+  });
+  var dv = DRIVERS[name];
+  if(dv && dv[di]) {
+    var t = parseHour(String(dv[di]));
+    if(t) found.push({code: 'D', mins: startMins(t.display), order: 6});
+  }
+  found.sort(function(a, b){ return (a.mins - b.mins) || (a.order - b.order); });
+  return found.map(function(f){ return f.code; }).join('/');
 }
 
 function renderSchedule() {
@@ -10154,7 +10426,11 @@ function renderSchedule() {
             return;
           }
           const p=parseBOH(raw,di);
-          if(!p){html+='<td class="sched-jump-cell" data-name="'+name+'" data-di="'+di+'"></td>';return;}
+          if(!p){
+            var _cover = (l==='MANAGERS') ? managerCoverAbbr(name, di) : '';
+            html+='<td class="sched-jump-cell" data-name="'+name+'" data-di="'+di+'">'+(_cover ? '<span style="font-weight:600;color:var(--gray-600);letter-spacing:0.04em;">'+_cover+'</span>' : '')+'</td>';
+            return;
+          }
           html += buildDayCell('BOH', name, di, '<span class="sched-jump-cell" data-name="'+name+'" data-di="'+di+'">'+(p.p?p.a+' – '+p.p:p.a)+'</span>');
         });
         html+='</tr>';
@@ -10199,6 +10475,87 @@ function jumpToRunSheetEditor(di, name) {
 // DOM'S NOTES
 var _appUnlocked = false;
 var _pendingTileAction = null;
+
+// ---- Manager Tools > Forms: printable blank forms in the app's look ----
+function printForm(kind) {
+  var DATE = new Date().toLocaleDateString('en-US');
+  var LOGO = (typeof ZA_LOGO !== 'undefined') ? ZA_LOGO : '';
+  var TITLES = {zelle:'Zelle Tip Sheet', closing:'Closing Paperwork', payroll:'Payroll Adjustment'};
+  var title = TITLES[kind]; if(!title) return;
+  function rows(n, cells, h) { var r = ''; for(var i=0;i<n;i++) { r += '<tr>' + new Array(cells+1).join('<td' + (h ? ' style="height:'+h+'px"' : '') + '></td>') + '</tr>'; } return r; }
+  function tipTable(first, n) {
+    return '<table class="tips"><thead><tr><th>'+first+'</th><th>Tip</th><th>Party Tip</th><th>Party Tip</th></tr></thead><tbody>'+rows(n,4)+'</tbody></table>';
+  }
+  function lblRow(l, r) { return '<tr><td class="l">'+l+'</td><td></td>' + (r !== undefined ? '<td class="l">'+r+'</td><td></td>' : '') + '</tr>'; }
+  var body = '';
+  if(kind === 'zelle') {
+    body = '<table class="info"><tr><td class="l" style="width:17%">Date</td><td style="width:33%"></td><td class="l" style="width:17%">Manager</td><td style="width:33%"></td></tr></table>'
+      + '<div class="gap"></div>' + tipTable('Server', 15) + '<div class="gap"></div>' + tipTable('Party Server', 4) + '<div class="gap"></div>' + tipTable('Bar', 8);
+  } else if(kind === 'closing') {
+    body = '<table class="info"><tr><td class="l" style="width:22%">Date</td><td></td></tr><tr><td class="l">Manager</td><td></td></tr></table>'
+      + '<div class="sec">Drop <small>(to be bundled separately with the evening\'s cash drop)</small></div>'
+      + '<table class="info"><tr><td class="l" style="width:22%">Zelle</td><td></td></tr><tr><td class="l">Cash</td><td></td></tr></table>'
+      + '<div class="gap"></div>'
+      + '<table class="info four"><colgroup><col style="width:22%"><col style="width:28%"><col style="width:22%"><col style="width:28%"></colgroup>'
+      + lblRow('POS Cash','Credit Card') + lblRow('Cash on Hand','Labor') + lblRow('Plus / Minus','Check') + lblRow('Safe Pull','Net') + lblRow('Safe Refill','Safe')
+      + '<tr><td class="l"></td><td></td><td class="l">Lotto Safe</td><td></td></tr></table>'
+      + '<div class="sec">Customer Complaints</div><table class="box">'+rows(3,1,26)+'</table>'
+      + '<div class="sec">Money Issues</div><table class="box">'+rows(3,1,26)+'</table>'
+      + '<div class="sec">Notes / New Staff</div><table class="box">'+rows(3,1,26)+'</table>';
+  } else {
+    var reasons = ['Add hours to check','Take hours out of check','Misc. deduction from check','Misc. addition to check','Forgot to clock in/out','Forgot to clock on/off break','Raise (per Dom/Mike)'];
+    body = '<div class="two"><div class="fld"><span>Store</span><i></i></div><div class="fld"><span>Date of occurrence</span><i></i></div></div>'
+      + '<div class="fld full"><span>Employee name</span><i></i></div>'
+      + '<div class="sec" style="margin-top:26px">Reason</div>'
+      + reasons.map(function(t){ return '<div class="rsn"><b></b><span>'+t+'</span><i></i></div>'; }).join('')
+      + '<div class="sec" style="margin-top:18px">Additional Information</div>'
+      + new Array(9).join('<div class="ln"></div>');
+  }
+  var css = '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}'
+    + '@page{size:letter portrait;margin:0.5in;}html,body{margin:0;padding:0;}'
+    + "body{font-family:'DM Sans',Arial,sans-serif;color:#1a1a1a;font-size:12px;padding:6px 8px;}"
+    + '.hd{display:flex;align-items:center;gap:12px;padding-bottom:9px;border-bottom:3px solid #E31010;margin-bottom:14px;}'
+    + '.hd img{width:52px;height:52px;object-fit:contain;border-radius:6px;}'
+    + ".hd h1{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;font-size:29px;letter-spacing:0.05em;text-transform:uppercase;color:#E31010;margin:0;line-height:1;}"
+    + '.hd .sub{font-size:11px;color:#777;margin-top:3px;}'
+    + ".sec{font-family:'Bebas Neue',Impact,sans-serif;font-size:17px;letter-spacing:0.05em;text-transform:uppercase;color:#E31010;border-bottom:1.5px solid #E31010;margin:16px 0 7px;padding-bottom:2px;}"
+    + ".sec small{font-family:'DM Sans',Arial,sans-serif;font-size:10px;color:#666;letter-spacing:0;margin-left:8px;text-transform:none;}"
+    + 'table{border-collapse:collapse;width:100%;table-layout:fixed;}.gap{height:12px;}'
+    + 'td,th{border:1px solid #555;padding:3px 8px;font-size:12px;height:23px;text-align:left;}'
+    + 'td.l{background:#f3f2ef;font-weight:700;}'
+    + 'table.info td{height:25px;}table.box td{height:26px;}'
+    + 'table.tips th{background:#0a0a0a;color:#fff;font-size:10px;letter-spacing:0.05em;text-transform:uppercase;font-weight:700;border-color:#0a0a0a;height:24px;}'
+    + 'table.tips td{height:22px;}'
+    + '.two{display:flex;gap:20px;}.two .fld{flex:1;}.fld{margin-bottom:16px;}'
+    + '.fld span{display:block;font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;}'
+    + '.fld i{display:block;border-bottom:1px solid #333;height:26px;}'
+    + '.rsn{display:flex;align-items:flex-end;gap:10px;height:37px;}'
+    + '.rsn b{width:16px;height:16px;border:1.5px solid #333;border-radius:2px;flex:none;margin-bottom:5px;}'
+    + '.rsn span{font-size:13.5px;flex:none;margin-bottom:3px;}.rsn i{flex:1;border-bottom:1px solid #333;height:1px;margin-bottom:6px;}'
+    + '.ln{border-bottom:1px solid #333;height:35px;}'
+    + '.ft{text-align:right;font-size:9px;color:#aaa;margin-top:12px;}';
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+title+'</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">'
+    + '<style>'+css+'</style></head><body>'
+    + '<div class="hd">'+(LOGO ? '<img src="'+LOGO+'">' : '')+'<div><h1>'+title+'</h1><div class="sub">Zazzo\'s Pizza &amp; Catering — Westmont</div></div></div>'
+    + body + '<div class="ft">Printed '+DATE+'</div></body></html>';
+  var iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:816px;height:1056px;border:none;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open(); iframe.contentDocument.write(html); iframe.contentDocument.close();
+  var doc = iframe.contentDocument, fired = false;
+  function go() {
+    if(fired) return; fired = true;
+    iframe.contentWindow.focus(); iframe.contentWindow.print();
+    setTimeout(function(){ if(iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 60000);
+  }
+  var link = doc.querySelector('link');
+  function fontsThenGo() {
+    try { Promise.all([doc.fonts.load('20px "Bebas Neue"'), doc.fonts.load('12px "DM Sans"'), doc.fonts.load('700 12px "DM Sans"')]).then(go, go); } catch(e) { go(); }
+  }
+  if(link) { link.addEventListener('load', fontsThenGo); link.addEventListener('error', go); }
+  setTimeout(go, 3500);   // never wait longer than this for the fonts
+}
 function gatedTileClick(actionFn) {
   if(_appUnlocked) { actionFn(); return; }
   _pendingTileAction = actionFn;
@@ -10386,6 +10743,7 @@ var CUSTOM_ROLE_TO_SECLBL = {
 // recognized by the same rule that generates approval warnings. Previously
 // these were two separate, duplicated checks that could silently disagree.
 function isNameAllowedInSection(name, sectionLbl) {
+  if(name === TRAINEE_SLOT) return true; // open slot, not a person
   if(Object.keys(MANAGERS).indexOf(name) !== -1) return true; // managers can work any section
   var customAllowed = null;
   if(typeof CUSTOM_ROSTER !== 'undefined' && CUSTOM_ROSTER.length) {
@@ -10502,7 +10860,22 @@ function mergeCustomSalariedIntoSalaryRoster() {
   });
 }
 
+// "Trainee" is an open slot at the bottom of Managers, Kitchen, Pizza, Prep, Bus and Dish: a place for someone
+// who is training, or someone still to be scheduled. It is not a person, so no role, roster or wage
+// check is applied to it (and it never counts as a real manager).
+var TRAINEE_SLOT = 'Trainee';
+function ensureTraineeSlots() {
+  [MANAGERS, KITCHEN, PIZZA, PREP, BUS, DISH].forEach(function(sec) {
+    if(sec && !sec[TRAINEE_SLOT]) sec[TRAINEE_SLOT] = [null,null,null,null,null,null,null];
+  });
+}
+function managersWithoutTrainee() {
+  var o = {};
+  Object.keys(MANAGERS).forEach(function(k){ if(k !== TRAINEE_SLOT) o[k] = MANAGERS[k]; });
+  return o;
+}
 function seedCustomRosterIntoSections() {
+  ensureTraineeSlots();
   if(typeof CUSTOM_ROSTER !== 'undefined' && CUSTOM_ROSTER.length) {
     CUSTOM_ROSTER.forEach(function(person){
       if(person.is_salaried && person.role_label === 'Manager') {
@@ -11501,6 +11874,7 @@ function renderPrivate() {
     Object.entries(sec.d||{}).forEach(function(entry){
       var name=entry[0], arr=entry[1];
       if(!arr || !arr.some(Boolean)) return;           // no shifts this week
+      if(name === TRAINEE_SLOT) return;                 // open slot, no wage to match
       if(SAL_NAMES[name]) return;                       // salaried, reported above
       if(coveredArrs.has(arr)) return;                  // covered by HLY roster
       var wh = sec.type==='b' ? weekHrsB(arr) : weekHrsF(arr, sec.role2);
@@ -11798,7 +12172,6 @@ function parseFOHHours(entry, di, role) {
 // MANAGERS section (managers are never scheduled by full name); fullName is
 // only for the print report, which needs real last names for payroll.
 const SALARY_ROSTER = {
-  'Ely':    {salary:100000, role:'Owner',   fullName:'Ely'},
   'Lisa':   {salary:40000,  role:'Owner',   fullName:'Lisa Barraco'},
   'Dom':    {salary:60000,  role:'Owner',   fullName:'Dom'},
   'Selena': {salary:40292,  role:'Manager', fullName:'Selena'},
@@ -13850,23 +14223,23 @@ async function checkScheduleErrors() {
     });
 
     // Openers (start ≤ 9AM)
-    if(!Object.entries(KITCHEN).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+    if(!Object.entries(KITCHEN).concat(Object.entries(managersWithoutTrainee())).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'No Kitchen opener (nobody at or before 9AM)'});
-    if(!Object.entries(PIZZA).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+    if(!Object.entries(PIZZA).concat(Object.entries(managersWithoutTrainee())).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'No Pizza opener (nobody at or before 9AM)'});
     if(!Object.entries(PREP).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Prep', msg:'No Prep opener (nobody at or before 9AM)'});
-    if(!Object.entries(MANAGERS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
+    if(!Object.entries(managersWithoutTrainee()).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.st<=9; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Managers', msg:'No manager opener (nobody at or before 9AM)'});
 
     // Closers (must have C)
-    if(!Object.entries(KITCHEN).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+    if(!Object.entries(KITCHEN).concat(Object.entries(managersWithoutTrainee())).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Kitchen', msg:'No Kitchen closer (nobody with C)'});
-    if(!Object.entries(PIZZA).concat(Object.entries(MANAGERS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+    if(!Object.entries(PIZZA).concat(Object.entries(managersWithoutTrainee())).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Pizza', msg:'No Pizza closer (nobody with C)'});
     if(!Object.entries(DISH).concat(Object.entries(BUS)).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Bus / Dish', msg:'No Bus/Dish closer (nobody with C in either)'});
-    if(!Object.entries(MANAGERS).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
+    if(!Object.entries(managersWithoutTrainee()).some(function(e){ var p=parseBOHRaw(e[1][di],di); return p&&p.hasClose; }))
       errors.BOH.push({di:di, day:day, name:'—', dept:'Managers', msg:'No manager closer (nobody with C)'});
 
     // Bus and Dish are interchangeable for this check too -- either section
@@ -13875,7 +14248,7 @@ async function checkScheduleErrors() {
       errors.BOH.push({di:di, day:day, name:'—', dept:'Bus / Dish', msg:'No Bus/Dish staff starting between 3-5PM (in either)'});
 
     // Pizza staffing minimums
-    var _pizzaAll = Object.values(PIZZA).concat(Object.values(MANAGERS));
+    var _pizzaAll = Object.values(PIZZA).concat(Object.values(managersWithoutTrainee()));
     var pizzaCount = _pizzaAll.filter(function(d){ return parseBOHRaw(d[di],di); }).length;
     var pizzaPMCount = _pizzaAll.filter(function(d){
       var p=parseBOHRaw(d[di],di); if(!p) return false;
@@ -13894,7 +14267,7 @@ async function checkScheduleErrors() {
     }
 
     // Kitchen staffing minimums
-    var _kitchenAll = Object.values(KITCHEN).concat(Object.values(MANAGERS));
+    var _kitchenAll = Object.values(KITCHEN).concat(Object.values(managersWithoutTrainee()));
     var kitchenCount = _kitchenAll.filter(function(d){ return parseBOHRaw(d[di],di); }).length;
     var kitchenPMCount = _kitchenAll.filter(function(d){
       var p=parseBOHRaw(d[di],di); if(!p) return false;
@@ -14116,6 +14489,7 @@ async function checkScheduleErrors() {
   }
   ALL_SECS.forEach(function(sec) {
     Object.keys(sec.obj).forEach(function(name) {
+      if(name === TRAINEE_SLOT) return; // open slot, not a person
       var resolvedMgrName = _managerAliasResolve[name.toLowerCase()];
       if(_managerNames.indexOf(name) !== -1 || (resolvedMgrName && _managerNames.indexOf(resolvedMgrName) !== -1)) return; // managers can work any section
       var allowed = getAllowedRoles(name, _customAllowedMap[name]);
@@ -14823,6 +15197,8 @@ async function readScheduleImage(dataUrl, type) {
             }
           });
         }
+        // The open "Trainee" slot is not a person and is allowed under Managers like in every other section.
+        if(MANAGER_ALLOWLIST.indexOf('Trainee') === -1) { MANAGER_ALLOWLIST.push('Trainee'); managerAliasResolve['trainee'] = 'Trainee'; }
         window._approvedManagerNames = MANAGER_ALLOWLIST.slice();
         var rejectedManagers = [];
         Object.keys(sched.MANAGERS).forEach(function(name){
@@ -16613,10 +16989,10 @@ function printSchedSection(range) {
     Object.entries(secData).forEach(function(e){
       var name = shortName(e[0]), days = e[1];
       var hasShift = daysToShow.some(function(di){ return days[di] && /\d/.test(String(days[di])); });
-      if(!hasShift) return;
+      if(!hasShift && e[0] !== 'Trainee') return;   // the open Trainee slot always prints, even when empty
       secRows += '<tr><td>'+name+'</td>' + daysToShow.map(function(di){
         var val = days[di];
-        if(!val || !/\d/.test(String(val))) return '<td style="color:#ccc;">-</td>';
+        if(!val || !/\d/.test(String(val))) return (e[0] === 'Trainee') ? '<td></td>' : '<td style="color:#ccc;">-</td>';
         return '<td>'+fmtTimeForPrint(val)+'</td>';
       }).join('') + '</tr>';
     });
@@ -16672,8 +17048,14 @@ function printSchedSection(range) {
   var dayColPct = (100 - nameColPct) / daysToShow.length;
   var colgroup = '<colgroup><col style="width:'+nameColPct+'%;">' + daysToShow.map(function(){ return '<col style="width:'+dayColPct+'%;">'; }).join('') + '</colgroup>';
 
+  // A phone/tablet prints through its own print sheet (portrait, natural size). A computer used to obey the
+  // landscape page rule and shrink everything onto one page, so it printed differently. On a computer we now
+  // print the same way the phone does: portrait, natural size, no shrinking.
+  var _ua = navigator.userAgent || '';
+  var _phoneOrTablet = /iPhone|iPad|iPod|Android/i.test(_ua) || (/Macintosh/.test(_ua) && navigator.maxTouchPoints > 1);
+  var _pageRule = _phoneOrTablet ? '@page{size:landscape;margin:6mm;}' : '@page{size:letter portrait;margin:0.58in;}';
   var html = '<!DOCTYPE html><html><head><title>'+title+' Schedule</title>'
-    + '<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@media print{@page{size:landscape;margin:6mm;}button{display:none;}}body{font-family:Arial,sans-serif;font-size:12px;padding:8px;}h1{font-size:17px;color:#c8102e;margin:0 0 1px;}table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:6px;}th,td{border:1px solid #ddd;padding:2px 3px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px;}th{background:#f5f5f5;}</style>'
+    + '<style>*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}@media print{'+_pageRule+'button{display:none;}}body{font-family:Arial,sans-serif;font-size:12px;padding:8px;}h1{font-size:17px;color:#c8102e;margin:0 0 1px;}table{width:100%;table-layout:fixed;border-collapse:collapse;margin-top:6px;}th,td{border:1px solid #ddd;padding:2px 3px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px;}th{background:#f5f5f5;}</style>'
     + '</head><body>'
     + '<div id="print-page1">'
     + '<h1>'+title+'</h1>'
@@ -16696,7 +17078,7 @@ function printSchedSection(range) {
     var maxH = 760, maxW = 1030;
     var contentH = page1.scrollHeight, contentW = page1.scrollWidth;
     var scale = Math.min(1, maxH / contentH, maxW / contentW);
-    if(scale < 1) {
+    if(scale < 1 && _phoneOrTablet) {
       page1.style.transform = 'scale(' + scale + ')';
       page1.style.transformOrigin = 'top left';
       page1.style.width = (100 / scale) + '%';
