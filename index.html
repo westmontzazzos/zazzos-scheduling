@@ -4852,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.2</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.3</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -4915,6 +4915,7 @@ document.addEventListener("DOMContentLoaded",function(){
   </div>
   <div class="sub-nav" id="sched-sub-nav">
     <button class="sub-btn active" onclick="switchSched('drivers',this)">Drivers</button>
+    <button id="sched-add-person" onclick="openAddPersonModal()" style="display:none;flex-shrink:0;padding:6px 14px;background:#fff;color:var(--red);border:2px solid var(--red);border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.06em;cursor:pointer;white-space:nowrap;">➕ Add Person</button>
     <button id="sched-inline-save" onclick="saveSchedInlineEdits()" style="display:none;margin-left:auto;padding:6px 14px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:0.06em;cursor:pointer;">💾 Save Schedule</button>
     <button class="sub-btn" onclick="switchSched('foh',this)">Front of House</button>
     <button class="sub-btn" onclick="switchSched('boh',this)">Back of House</button>
@@ -4928,10 +4929,40 @@ document.addEventListener("DOMContentLoaded",function(){
        jumps, and none of the normal nav/header/sub-nav buttons are shown
        while this is open. Automatically used instead of the normal inline
        edit whenever the screen is desktop-width. (Ported from Darien.) -->
+  <div id="add-person-modal" style="display:none;position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:520px;padding:18px 18px calc(24px + env(safe-area-inset-bottom, 0px));max-height:90vh;overflow-y:auto;box-sizing:border-box;">
+      <div style="width:36px;height:4px;background:#e0e0e0;border-radius:2px;margin:0 auto 14px;"></div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:0.06em;color:var(--black);margin-bottom:10px;">ADD PERSON TO THIS SCHEDULE</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button id="addp-mode-roster" class="btn btn-primary" style="flex:1;" onclick="setAddPersonMode('roster')">On our roster</button>
+        <button id="addp-mode-new" class="btn btn-secondary" style="flex:1;" onclick="setAddPersonMode('new')">New / from another store</button>
+      </div>
+      <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;margin-bottom:4px;">Put them in</label>
+      <select id="addp-section" onchange="addPersonRefreshPeople()" style="width:100%;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:12px;background:#fff;"></select>
+      <div id="addp-roster-box">
+        <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;margin-bottom:4px;">Who</label>
+        <select id="addp-person" style="width:100%;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:12px;background:#fff;"></select>
+      </div>
+      <div id="addp-new-box" style="display:none;">
+        <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;margin-bottom:4px;">Name</label>
+        <input id="addp-name" type="text" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:12px;">
+        <div id="addp-rate-row">
+          <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;margin-bottom:4px;">Hourly rate ($)</label>
+          <input id="addp-rate" type="number" inputmode="decimal" step="0.25" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:6px;">
+        </div>
+        <div style="font-size:12px;color:#777;margin-bottom:12px;">They're added to the wage roster at this rate, so their hours count in labor cost. Remove them any time in Manage Roster.</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:6px;">
+        <button class="btn btn-secondary" style="flex:1;" onclick="closeAddPersonModal()">Cancel</button>
+        <button id="addp-confirm" class="btn btn-primary" style="flex:1;background:var(--red);" onclick="confirmAddPerson()">Add</button>
+      </div>
+    </div>
+  </div>
   <div id="desktop-edit-modal" style="display:none;position:fixed;inset:0;z-index:9500;background:#fff;flex-direction:column;">
     <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-bottom:2px solid var(--red);">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:0.06em;color:var(--black);" id="desktop-edit-week-label">Week</div>
       <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" onclick="openAddPersonModal()">➕ Add Person</button>
         <button class="btn btn-secondary" onclick="closeDesktopEditMode(false)">Cancel</button>
         <button class="btn btn-primary" style="background:var(--red);" onclick="closeDesktopEditMode(true)">💾 Save Schedule</button>
       </div>
@@ -8877,6 +8908,7 @@ async function toggleSchedEditMode() {
       if(pin !== APP_PIN) { if(pin !== null) alert('Incorrect PIN.'); return; }
       window._editorUnlocked = true;
     }
+    snapshotLaborBaseline();
     window._schedEditMode = true;
     document.getElementById('sched-edit-trigger').style.color = 'var(--red)';
     // Show save button
@@ -8988,10 +9020,134 @@ function syncInlineEditsToMemory() {
   });
 }
 
+
+// ---- Add a person (or move someone into another section) from Edit mode ----
+var LABOR_DAILY_TARGET = 2800;   // same target the Heat Map uses
+var ADD_PERSON_SECTIONS = [
+  {label:'Pizza', arr:'PIZZA', role:'Pizza'}, {label:'Kitchen', arr:'KITCHEN', role:'Kitchen'}, {label:'Prep', arr:'PREP', role:'Prep'},
+  {label:'Bus', arr:'BUS', role:'Bus'}, {label:'Dish', arr:'DISH', role:'Dish'},
+  {label:'Servers', arr:'SERVERS', role:'Server'}, {label:'Bartenders', arr:'BARTENDERS', role:'Bartender'},
+  {label:'Cashiers', arr:'CASHIERS', role:'Cashier'}, {label:'Hosts', arr:'HOSTS', role:'Host'}, {label:'Drivers', arr:'DRIVERS', role:'Driver'}
+];
+var _addPersonMode = 'roster';
+function setAddPersonMode(mode) {
+  _addPersonMode = mode;
+  document.getElementById('addp-roster-box').style.display = (mode === 'roster') ? 'block' : 'none';
+  document.getElementById('addp-new-box').style.display = (mode === 'new') ? 'block' : 'none';
+  document.getElementById('addp-mode-roster').className = 'btn ' + (mode === 'roster' ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('addp-mode-new').className = 'btn ' + (mode === 'new' ? 'btn-primary' : 'btn-secondary');
+  addPersonRefreshPeople();
+}
+function addPersonRefreshPeople() {
+  var s = ADD_PERSON_SECTIONS[+document.getElementById('addp-section').value];
+  var obj = SECTION_ARRAYS[s.arr] || {};
+  var names = {};
+  Object.keys(SECTION_ARRAYS).forEach(function(k){ Object.keys(SECTION_ARRAYS[k]).forEach(function(n){ names[n] = 1; }); });
+  delete names['Trainee']; delete names['Dispatch'];
+  var list = Object.keys(names).filter(function(n){ return !obj[n]; }).sort(function(a, b){ return a.localeCompare(b); });
+  document.getElementById('addp-person').innerHTML = list.length
+    ? list.map(function(n){ return '<option value="' + n.replace(/"/g, '&quot;') + '">' + n + '</option>'; }).join('')
+    : '<option value="">(everyone is already in ' + s.label + ')</option>';
+  document.getElementById('addp-rate-row').style.display = (s.role === 'Driver') ? 'none' : 'block';
+}
+function openAddPersonModal() {
+  var sel = document.getElementById('addp-section');
+  sel.innerHTML = ADD_PERSON_SECTIONS.map(function(s, i){ return '<option value="' + i + '">' + s.label + '</option>'; }).join('');
+  sel.value = String(currentSchedView === 'foh' ? 5 : (currentSchedView === 'drivers' ? 9 : 0));
+  document.getElementById('addp-name').value = ''; document.getElementById('addp-rate').value = '';
+  setAddPersonMode('roster');
+  document.getElementById('add-person-modal').style.display = 'flex';
+}
+function closeAddPersonModal() { document.getElementById('add-person-modal').style.display = 'none'; }
+function refreshEditView() {
+  renderSchedule();
+  var m = document.getElementById('desktop-edit-modal');
+  if(m && m.style.display === 'flex') { document.getElementById('desktop-edit-body').innerHTML = ''; openDesktopEditMode(); }
+}
+async function confirmAddPerson() {
+  var s = ADD_PERSON_SECTIONS[+document.getElementById('addp-section').value];
+  var obj = SECTION_ARRAYS[s.arr];
+  var blank = function(){ return [null,null,null,null,null,null,null]; };
+  var btn = document.getElementById('addp-confirm');
+  syncInlineEditsToMemory();   // keep everything already typed in this edit session
+  if(_addPersonMode === 'roster') {
+    var who = document.getElementById('addp-person').value;
+    if(!who) { alert('Pick who to add.'); return; }
+    if(!obj[who]) obj[who] = blank();
+  } else {
+    var name = document.getElementById('addp-name').value.trim();
+    var rate = parseFloat(document.getElementById('addp-rate').value);
+    if(!name) { alert('Enter a name.'); return; }
+    var taken = Object.keys(SECTION_ARRAYS).some(function(k){ return Object.keys(SECTION_ARRAYS[k]).some(function(n){ return n.toLowerCase() === name.toLowerCase(); }); });
+    if(taken) { alert(name + ' is already on the roster. Switch to "On our roster" and pick them from the list.'); return; }
+    var isDriver = s.role === 'Driver';
+    if(!isDriver && (!rate || rate <= 0)) { alert('Enter an hourly rate so their hours count in labor cost.'); return; }
+    if(isDriver) rate = 0;
+    var entry = {name: name, is_salaried: false, roles_json: JSON.stringify([s.role]), rate: rate, added_by: getCurrentUser(), added_at: new Date().toISOString()};
+    if(btn) { btn.disabled = true; btn.textContent = 'Adding...'; }
+    try {
+      var r = await fetch(SUPABASE_URL + '/rest/v1/roster_additions', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=representation'},
+        body: JSON.stringify([entry])
+      });
+      if(!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
+      var rows = await r.json();
+      CUSTOM_ROSTER.push((rows && rows[0]) || entry);
+      try { refreshRoleMap(); } catch(e) {}
+      seedCustomRosterIntoSections();
+      if(!obj[name]) obj[name] = blank();
+    } catch(e) {
+      alert('Could not add ' + name + ': ' + e.message);
+      if(btn) { btn.disabled = false; btn.textContent = 'Add'; }
+      return;
+    }
+    if(btn) { btn.disabled = false; btn.textContent = 'Add'; }
+  }
+  closeAddPersonModal();
+  refreshEditView();
+}
+// the Add Person button only shows while Edit mode is on (follows the Save button)
+window.addEventListener('load', function() {
+  var save = document.getElementById('sched-inline-save'), add = document.getElementById('sched-add-person');
+  if(!save || !add || !window.MutationObserver) return;
+  var sync = function(){ add.style.display = (save.style.display !== 'none') ? 'inline-block' : 'none'; };
+  new MutationObserver(sync).observe(save, {attributes: true, attributeFilter: ['style']});
+  sync();
+});
+
+// ---- Labor cost alert: what a schedule edit does to each day's projected labor cost ----
+// The "before" number is taken when Edit mode STARTS, so anything synced mid-session (for example when a person is added)
+// still counts as a change when you Save.
+function snapshotLaborBaseline() { try { window._laborBaseline = dailyLaborNow(); } catch(e) { window._laborBaseline = null; } }
+function dailyLaborNow() {
+  return computeWeekDailyLaborCost(
+    {MANAGERS: MANAGERS, PIZZA: PIZZA, KITCHEN: KITCHEN, PREP: PREP, BUS: BUS, DISH: DISH},
+    {SERVERS: SERVERS, BARTENDERS: BARTENDERS, CASHIERS: CASHIERS, HOSTS: HOSTS}, DRIVERS);
+}
+function laborChangeMessage(before, after) {
+  if(!before || !after) return '';
+  var D = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], lines = [], over = false;
+  var fmt = function(v){ return '$' + Math.round(v).toLocaleString('en-US'); };
+  for(var i = 0; i < 7; i++) {
+    var d = after[i] - before[i];
+    if(Math.abs(d) < 1) continue;
+    var line = D[i] + ': ' + fmt(before[i]) + ' \u2192 ' + fmt(after[i]) + ' (' + (d > 0 ? '+' : '-') + fmt(Math.abs(d)) + ')';
+    if(after[i] > LABOR_DAILY_TARGET) { line += ' \u2014 OVER the ' + fmt(LABOR_DAILY_TARGET) + ' target'; over = true; }
+    lines.push(line);
+  }
+  if(!lines.length) return '';
+  var tb = before.reduce(function(a, b){ return a + b; }, 0), ta = after.reduce(function(a, b){ return a + b; }, 0);
+  return 'LABOR COST CHANGED' + (over ? ' \u2014 A DAY IS OVER TARGET' : '') + '\n' + lines.join('\n') + '\nWeek total: ' + fmt(tb) + ' \u2192 ' + fmt(ta);
+}
 async function saveSchedInlineEdits() {
+  var _laborBefore = null, _laborAfter = null;
+  _laborBefore = window._laborBaseline || null;
+  if(!_laborBefore) { try { _laborBefore = dailyLaborNow(); } catch(e) {} }
   // Collect all input values and write back to section objects
   syncInlineEditsToMemory();
   syncWeekEventsFromList();
+  try { _laborAfter = dailyLaborNow(); } catch(e) {}
   // Save to Supabase — PATCH the existing row by id, same reliable path Run
   // Sheets' saveEdits() already uses successfully. The previous DELETE+POST
   // approach could silently fail (e.g. a DELETE blocked by an RLS policy,
@@ -9044,7 +9200,8 @@ async function saveSchedInlineEdits() {
     document.getElementById('sched-edit-trigger').style.color = '';
     if(saveBtnEl) { saveBtnEl.style.display = 'none'; saveBtnEl.disabled = false; saveBtnEl.textContent = origSaveLabel; }
     renderSchedule();
-    if(resp.ok) alert('Schedule saved.');
+    window._laborBaseline = null;
+    if(resp.ok) { var _lm = laborChangeMessage(_laborBefore, _laborAfter); alert('Schedule saved.' + (_lm ? '\n\n' + _lm : '')); }
   } catch(e) {
     alert('Save failed — nothing was recorded. Check your connection and try again: ' + e.message);
     if(saveBtnEl) { saveBtnEl.disabled = false; saveBtnEl.textContent = origSaveLabel; }
@@ -10237,6 +10394,7 @@ async function sheetEnterEdit() {
   }
   var key = sheetActiveKey();
   openSheetView(true, key);          // rebuild the sheet with editable cells
+  snapshotLaborBaseline();
   window._schedEditMode = true;      // the Edit screen's own save reads cells while this is on
   window._sheetEditing = true; _sheetDirty = false;
   sheetSyncButtons();
@@ -12428,6 +12586,10 @@ function getEffectiveHourlyRate(name) {
   if(typeof CUSTOM_ROSTER_RATES !== 'undefined') {
     var override = CUSTOM_ROSTER_RATES.find(function(r){ return r.original_name === name && r.annual_salary == null && r.rate != null; });
     if(override) return override.rate;
+  }
+  if(typeof CUSTOM_ROSTER !== 'undefined') {
+    var added = CUSTOM_ROSTER.find(function(p){ return p.name === name && !p.is_salaried && Number(p.rate) > 0; });
+    if(added) return Number(added.rate);   // someone added from Manage Roster / Add Person keeps the rate they were hired at
   }
   return RATES[name] || 9;
 }
