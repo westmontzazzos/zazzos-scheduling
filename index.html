@@ -4839,7 +4839,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <button class="nav-btn" onclick="showTab('schedule',this)">Schedule</button>
     <button class="nav-btn" onclick="showTab('private',this)">Private</button>
     <button class="nav-btn" onclick="showTab('hitlist',this)">Heat Map</button>
-    <button class="nav-btn" onclick="showTab('drawer',this)">💰 Drawer Count</button>
+    <button class="nav-btn" onclick="showTab('drawer',this)">🧰 Manager Tools</button>
     <button class="nav-btn" onclick="showTab('timeoff',this)">Time Off</button>
     <button class="nav-btn" id="update-nav-btn" onclick="showTab('update',this)">⬆ Update</button>
   </div>
@@ -4852,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.8</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.9</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -4861,7 +4861,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="TCard" style="position:relative;" onclick="gatedTileClick(function(){showTab('messaging',null);})"><div id="messaging-badge" style="display:none;position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:12px;min-width:20px;height:20px;border-radius:10px;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box;">0</div><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('hitlist',null);})"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
-      <div class="TCard" onclick="gatedTileClick(function(){showTab('drawer',null);})"><span class="TCard-icon">💰</span><span class="TCard-title">Drawer Count</span><span class="TCard-sub">Register counts by shift</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('drawer',null);})"><span class="TCard-icon">🧰</span><span class="TCard-title">Manager Tools</span><span class="TCard-sub">Drawer count &amp; forms</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('events',null);})"><span class="TCard-icon">🎉</span><span class="TCard-title">Events</span><span class="TCard-sub">This week's events</span></div>
     </div>
   </div>
@@ -5257,6 +5257,35 @@ document.addEventListener("DOMContentLoaded",function(){
 
 <!-- DRAWER COUNT -->
 <div id="tab-drawer" class="main" style="display:none">
+  <!-- MANAGER TOOLS: two tiles -->
+  <div id="mt-landing">
+    <div class="report-header">
+      <div class="report-title">MANAGER TOOLS</div>
+      <div class="report-sub">Drawer counts and printable forms</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px;padding:0 16px 24px;">
+      <div class="TCard" onclick="mtShow('drawer')"><span class="TCard-icon">💰</span><span class="TCard-title">Drawer Count</span><span class="TCard-sub">Register counts by shift</span></div>
+      <div class="TCard" onclick="mtShow('forms')"><span class="TCard-icon">📋</span><span class="TCard-title">Forms</span><span class="TCard-sub">Print blank forms</span></div>
+    </div>
+  </div>
+
+  <!-- FORMS: the three printable forms -->
+  <div id="mt-forms" style="display:none;">
+    <div class="report-header">
+      <div class="report-title">FORMS</div>
+      <div class="report-sub">Tap a form to print</div>
+    </div>
+    <div style="padding:0 16px 24px;">
+      <button class="btn btn-secondary" style="width:100%;text-align:left;margin-bottom:14px;" onclick="mtShow('landing')">&lsaquo; Manager Tools</button>
+      <button class="btn btn-secondary" style="width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;" onclick="printZelleTipSheet()">💵 Zelle Tip Sheet <span style="color:var(--gray-400);">🖨</span></button>
+      <button class="btn btn-secondary" style="width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;" onclick="printClosingPaperwork()">📝 Closing Paperwork <span style="color:var(--gray-400);">🖨</span></button>
+      <button class="btn btn-secondary" style="width:100%;text-align:left;display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;" onclick="printPayrollAdjustmentForm()">📋 Payroll Adjustment <span style="color:var(--gray-400);">🖨</span></button>
+    </div>
+  </div>
+
+  <!-- DRAWER COUNT (unchanged, now one level in) -->
+  <div id="mt-drawer" style="display:none;">
+  <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="mtShow('landing')">&lsaquo; Manager Tools</button>
   <div class="report-header">
     <div class="report-title">DRAWER COUNT</div>
     <div class="report-sub">Count coins, rolls &amp; bills — enter what the register opened at, and it'll calculate the correct pull</div>
@@ -5333,6 +5362,7 @@ document.addEventListener("DOMContentLoaded",function(){
   </div>
 
   <div id="drawer-recent-list" style="font-size:13px;color:#aaa;">Loading...</div>
+  </div>
 </div>
 
 <!-- UPDATE SCHEDULE -->
@@ -6822,7 +6852,7 @@ function showTab(tab, btn) {
   if(tab==='runsheets') renderRunSheet(currentDay);
   if(tab==='schedule') { if(_schedShowingCalendar) renderScheduleCalendar(); else renderSchedule(); }
   if(tab==='hitlist') renderHitList();
-  if(tab==='drawer') renderDrawerTab();
+  if(tab==='drawer') { mtShow('landing'); renderDrawerTab(); }
   if(tab==='update') {
     // Lock update tab every time you navigate to it
     document.getElementById('update-lock').style.display='flex';
@@ -8352,6 +8382,130 @@ function clearDrawerSearch() {
   document.getElementById('drawer-search-to').value = '';
   document.getElementById('drawer-search-shorts-only').checked = false;
   loadRecentDrawerCounts();
+}
+
+// ---------------------------------------------------------------------------
+// MANAGER TOOLS (this tab used to be just Drawer Count): Drawer Count + Forms.
+// All three forms share one look (Zazzo's logo, red headings, Bebas Neue + DM Sans)
+// and are laid out to fill one full page.
+// ---------------------------------------------------------------------------
+function mtShow(which) {
+  document.getElementById('mt-landing').style.display = which === 'landing' ? 'block' : 'none';
+  document.getElementById('mt-forms').style.display = which === 'forms' ? 'block' : 'none';
+  document.getElementById('mt-drawer').style.display = which === 'drawer' ? 'block' : 'none';
+  window.scrollTo(0, 0);
+}
+function formPrintCSS() {
+  return '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">'
+    + '<style>'
+    + 'body{font-family:"DM Sans",Arial,sans-serif;color:#111;padding:22px;max-width:none;margin:0 auto;}'
+    + '.page-head{display:flex;align-items:center;gap:10px;border-bottom:3px solid #E31010;padding-bottom:10px;margin-bottom:14px;}'
+    + '.page-head img{height:38px;width:38px;object-fit:contain;border-radius:6px;}'
+    + '.page-head .ph-title{font-family:"Bebas Neue",sans-serif;font-size:21px;letter-spacing:0.07em;color:#E31010;line-height:1;}'
+    + '.page-head .ph-sub{font-size:10px;color:#999;margin-top:2px;}'
+    + '.frow{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap;}'
+    + '.ffield{flex:1;min-width:120px;font-size:11px;}'
+    + '.ffield b{display:block;font-size:9.5px;color:#777;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:2px;}'
+    + '.ffield .uline{border-bottom:1px solid #999;height:18px;}'
+    + '.psection{font-family:"Bebas Neue",sans-serif;font-size:14px;letter-spacing:0.06em;color:#E31010;margin:16px 0 6px;border-bottom:1px solid #E31010;padding-bottom:3px;}'
+    + '.psection .psub{font-family:"DM Sans",Arial,sans-serif;font-size:9.5px;color:#777;letter-spacing:0;margin-left:6px;}'
+    + '.pfoot{margin-top:16px;font-size:8.5px;color:#aaa;text-align:right;}'
+    + '.fp{display:flex;flex-direction:column;height:9.3in;page-break-inside:avoid;}'
+    + '.gtab{display:flex;flex-direction:column;min-height:0;border:1.2px solid #444;}'
+    + '.gtr{display:flex;flex:1 1 0;min-height:0;}'
+    + '.gtd{flex:1 1 0;border-right:1px solid #777;border-bottom:1px solid #777;padding:2px 7px;font-size:11px;display:flex;align-items:flex-end;}'
+    + '.gtr .gtd:last-child{border-right:none;}'
+    + '.gtab .gtr:last-child .gtd{border-bottom:none;}'
+    + '.gth{background:#0D0D0D;color:#fff;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:0.04em;align-items:center;}'
+    + '.gtl{background:#f3f2ef;font-weight:700;font-size:11px;align-items:center;flex:0 0 20%;}'
+    + '.gap{flex:0 0 10px;}'
+    + '@media print { body{padding:8mm;} }'
+    + '</style>';
+}
+function formPageHead(title) {
+  return '<div class="page-head"><img src="'+ZA_LOGO+'"><div><div class="ph-title">'+title+'</div><div class="ph-sub">Zazzo&#39;s Pizza &amp; Catering &mdash; Westmont</div></div></div>';
+}
+function printFormHTML(docTitle, bodyHtml) {
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+docTitle+'</title>'
+    + formPrintCSS() + '</head><body>' + bodyHtml + '</body></html>';
+  var iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
+  setTimeout(function(){ iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 500);
+}
+// grid-table helpers shared by the Zelle sheet and the Closing Paperwork
+function gtCells(n) { var s = ''; for (var i = 0; i < n; i++) s += '<div class="gtd"></div>'; return s; }
+function gtRows(rows, cellsPerRow) { var s = ''; for (var i = 0; i < rows; i++) s += '<div class="gtr">' + gtCells(cellsPerRow) + '</div>'; return s; }
+function gtLabelRow(label) { return '<div class="gtr"><div class="gtd gtl">'+label+'</div><div class="gtd"></div></div>'; }
+
+function printZelleTipSheet() {
+  function section(headers, rows) {
+    return '<div class="gtab" style="flex:' + (rows + 1) + ' 1 0px;"><div class="gtr">'
+      + headers.map(function(t){ return '<div class="gtd gth">'+t+'</div>'; }).join('')
+      + '</div>' + gtRows(rows, 4) + '</div>';
+  }
+  var body = '<div class="fp">' + formPageHead('ZELLE TIP SHEET')
+    + '<div class="gtab" style="flex:0 0 34px;"><div class="gtr"><div class="gtd gtl">Date</div><div class="gtd"></div><div class="gtd gtl">Manager</div><div class="gtd"></div></div></div>'
+    + '<div class="gap"></div>'
+    + section(['Server','Tip','Party Tip','Party Tip'], 15)
+    + '<div class="gap"></div>'
+    + section(['Party Server','Tip','Party Tip','Party Tip'], 4)
+    + '<div class="gap"></div>'
+    + section(['Bar','Tip','Party Tip','Party Tip'], 8)
+    + '<div class="pfoot">Printed ' + new Date().toLocaleDateString() + '</div></div>';
+  printFormHTML('Zelle Tip Sheet', body);
+}
+
+function printClosingPaperwork() {
+  function pair(l1, l2) {
+    return '<div class="gtr"><div class="gtd gtl">'+l1+'</div><div class="gtd"></div><div class="gtd gtl">'+l2+'</div><div class="gtd"></div></div>';
+  }
+  function box(title) {
+    return '<div class="psection">'+title+'</div><div class="gtab" style="flex:3 1 0px;">' + gtRows(3, 1) + '</div>';
+  }
+  var body = '<div class="fp">' + formPageHead('CLOSING PAPERWORK')
+    + '<div class="gtab" style="flex:2 1 0px;">' + gtLabelRow('Date') + gtLabelRow('Manager') + '</div>'
+    + '<div class="psection">Drop <span class="psub">(to be bundled separately with the evening&#39;s cash drop)</span></div>'
+    + '<div class="gtab" style="flex:3 1 0px;">' + gtLabelRow('Zelle') + gtLabelRow('Lotto') + gtLabelRow('Cash') + '</div>'
+    + '<div class="gap"></div>'
+    + '<div class="gtab" style="flex:6 1 0px;">'
+    +   pair('POS Cash','Credit Card') + pair('Cash on Hand','Labor') + pair('Plus / Minus','Check')
+    +   pair('Safe Pull','Net') + pair('Safe Refill','Safe') + pair('&nbsp;','Lotto Safe')
+    + '</div>'
+    + box('Customer Complaints') + box('Money Issues') + box('Notes / New Staff')
+    + '<div class="pfoot">Printed ' + new Date().toLocaleDateString() + '</div></div>';
+  printFormHTML('Closing Paperwork', body);
+}
+
+function printPayrollAdjustmentForm() {
+  var reasons = ['Add hours to check','Take hours out of check','Misc. deduction from check','Misc. addition to check','Forgot to clock in/out','Forgot to clock on/off break','Raise (per Dom/Mike)'];
+  var rows = reasons.map(function(r){ return '<div class="pc-row"><div class="pc-box"></div><div class="pc-label">'+r+'</div><div class="pc-fill"></div></div>'; }).join('');
+  var lines = ''; for (var i = 0; i < 8; i++) lines += '<div class="pc-line"></div>';
+  var css = '<style>'
+    + '.pc{display:flex;flex-direction:column;height:9.3in;page-break-inside:avoid;}'
+    + '.pc .frow{margin-bottom:18px;}'
+    + '.pc .ffield{font-size:12px;}'
+    + '.pc .ffield b{font-size:11px;}'
+    + '.pc .ffield .uline{height:30px;border-bottom:1px solid #555;}'
+    + '.pc .psection{margin:24px 0 4px;font-size:16px;}'
+    + '.pc-row{display:flex;align-items:flex-end;gap:12px;height:50px;}'
+    + '.pc-box{width:15px;height:15px;border:1.5px solid #222;flex-shrink:0;margin-bottom:4px;}'
+    + '.pc-label{font-size:13.5px;white-space:nowrap;margin-bottom:2px;}'
+    + '.pc-fill{flex:1;border-bottom:1px solid #555;margin-bottom:5px;}'
+    + '.pc-lines{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding-top:24px;padding-bottom:6px;}'
+    + '.pc-line{border-bottom:1px solid #555;height:1px;}'
+    + '</style>';
+  var body = css + '<div class="pc">' + formPageHead('PAYROLL ADJUSTMENT')
+    + '<div class="frow"><div class="ffield"><b>Store</b><div class="uline"></div></div><div class="ffield"><b>Date of Occurrence</b><div class="uline"></div></div></div>'
+    + '<div class="frow"><div class="ffield"><b>Employee Name</b><div class="uline"></div></div></div>'
+    + '<div class="psection">Reason</div>' + rows
+    + '<div class="psection">Additional Information</div>'
+    + '<div class="pc-lines">' + lines + '</div>'
+    + '<div class="pfoot">Printed ' + new Date().toLocaleDateString() + '</div></div>';
+  printFormHTML('Payroll Adjustment', body);
 }
 
 function printDrawerCounts() {
