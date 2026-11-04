@@ -4852,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.8</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v4.9</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -4861,7 +4861,7 @@ document.addEventListener("DOMContentLoaded",function(){
       <div class="TCard" style="position:relative;" onclick="gatedTileClick(function(){showTab('messaging',null);})"><div id="messaging-badge" style="display:none;position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:12px;min-width:20px;height:20px;border-radius:10px;align-items:center;justify-content:center;padding:0 5px;box-sizing:border-box;">0</div><span class="TCard-icon">💬</span><span class="TCard-title">Messaging</span><span class="TCard-sub">Manager messages</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('hitlist',null);})"><span class="TCard-icon">🌡️</span><span class="TCard-title">Heat Map</span><span class="TCard-sub">Labor cost tracking</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('timeoff',null);})"><span class="TCard-icon">🗓️</span><span class="TCard-title">Time Off</span><span class="TCard-sub">Requests by person</span></div>
-      <div class="TCard" onclick="gatedTileClick(function(){showTab('drawer',null);})"><span class="TCard-icon">💰</span><span class="TCard-title">Drawer Count</span><span class="TCard-sub">Register counts by shift</span></div>
+      <div class="TCard" onclick="gatedTileClick(function(){showTab('tools',null);})"><span class="TCard-icon">🛠️</span><span class="TCard-title">Manager Tools</span><span class="TCard-sub">Drawer count &amp; forms</span></div>
       <div class="TCard" onclick="gatedTileClick(function(){showTab('events',null);})"><span class="TCard-icon">🎉</span><span class="TCard-title">Events</span><span class="TCard-sub">This week's events</span></div>
     </div>
   </div>
@@ -5256,7 +5256,32 @@ document.addEventListener("DOMContentLoaded",function(){
 </div>
 
 <!-- DRAWER COUNT -->
+<div id="tab-tools" class="main" style="display:none">
+  <div class="report-header">
+    <div class="report-title">MANAGER TOOLS</div>
+    <div class="report-sub">Drawer counts and printable forms</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:11px;">
+    <div class="TCard" onclick="showTab('drawer',null)"><span class="TCard-icon">💰</span><span class="TCard-title">Drawer Count</span><span class="TCard-sub">Register counts by shift</span></div>
+    <div class="TCard" onclick="showTab('forms',null)"><span class="TCard-icon">📄</span><span class="TCard-title">Forms</span><span class="TCard-sub">Zelle tip sheet, closing &amp; payroll</span></div>
+  </div>
+</div>
+
+<div id="tab-forms" class="main" style="display:none">
+  <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="showTab('tools',null)">‹ Manager Tools</button>
+  <div class="report-header">
+    <div class="report-title">FORMS</div>
+    <div class="report-sub">Tap a form to print a blank copy</div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr;gap:11px;">
+    <div class="TCard" onclick="printForm('zelle')"><span class="TCard-icon">💸</span><span class="TCard-title">Zelle Tip Sheet</span><span class="TCard-sub">Server, party &amp; bar tips</span></div>
+    <div class="TCard" onclick="printForm('closing')"><span class="TCard-icon">🧾</span><span class="TCard-title">Closing Paperwork</span><span class="TCard-sub">Drop, drawer totals &amp; notes</span></div>
+    <div class="TCard" onclick="printForm('payroll')"><span class="TCard-icon">📝</span><span class="TCard-title">Payroll Adjustment</span><span class="TCard-sub">Hours, deductions &amp; raises</span></div>
+  </div>
+</div>
+
 <div id="tab-drawer" class="main" style="display:none">
+  <button class="btn btn-secondary" style="margin-bottom:10px;" onclick="showTab('tools',null)">‹ Manager Tools</button>
   <div class="report-header">
     <div class="report-title">DRAWER COUNT</div>
     <div class="report-sub">Count coins, rolls &amp; bills — enter what the register opened at, and it'll calculate the correct pull</div>
@@ -6782,7 +6807,7 @@ function sizeHomeScreen() {
 
 function goHome() {
   currentTab = 'home';
-  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging','events'].forEach(t => {
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','tools','forms','timeoff','messaging','events'].forEach(t => {
     document.getElementById('tab-'+t).style.display = 'none';
   });
   document.getElementById('home-screen').style.display = 'flex';
@@ -6810,7 +6835,7 @@ function showTab(tab, btn) {
   document.getElementById('home-header').style.display = 'none';
   document.getElementById('floating-home-btn').style.display = 'flex';
   document.getElementById('app-wrap').style.overflowY = 'scroll';
-  ['runsheets','schedule','private','hitlist','update','rules','drawer','timeoff','messaging','events'].forEach(t => {
+  ['runsheets','schedule','private','hitlist','update','rules','drawer','tools','forms','timeoff','messaging','events'].forEach(t => {
     document.getElementById('tab-'+t).style.display = t===tab ? 'block' : 'none';
   });
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -10450,6 +10475,87 @@ function jumpToRunSheetEditor(di, name) {
 // DOM'S NOTES
 var _appUnlocked = false;
 var _pendingTileAction = null;
+
+// ---- Manager Tools > Forms: printable blank forms in the app's look ----
+function printForm(kind) {
+  var DATE = new Date().toLocaleDateString('en-US');
+  var LOGO = (typeof ZA_LOGO !== 'undefined') ? ZA_LOGO : '';
+  var TITLES = {zelle:'Zelle Tip Sheet', closing:'Closing Paperwork', payroll:'Payroll Adjustment'};
+  var title = TITLES[kind]; if(!title) return;
+  function rows(n, cells, h) { var r = ''; for(var i=0;i<n;i++) { r += '<tr>' + new Array(cells+1).join('<td' + (h ? ' style="height:'+h+'px"' : '') + '></td>') + '</tr>'; } return r; }
+  function tipTable(first, n) {
+    return '<table class="tips"><thead><tr><th>'+first+'</th><th>Tip</th><th>Party Tip</th><th>Party Tip</th></tr></thead><tbody>'+rows(n,4)+'</tbody></table>';
+  }
+  function lblRow(l, r) { return '<tr><td class="l">'+l+'</td><td></td>' + (r !== undefined ? '<td class="l">'+r+'</td><td></td>' : '') + '</tr>'; }
+  var body = '';
+  if(kind === 'zelle') {
+    body = '<table class="info"><tr><td class="l" style="width:17%">Date</td><td style="width:33%"></td><td class="l" style="width:17%">Manager</td><td style="width:33%"></td></tr></table>'
+      + '<div class="gap"></div>' + tipTable('Server', 15) + '<div class="gap"></div>' + tipTable('Party Server', 4) + '<div class="gap"></div>' + tipTable('Bar', 8);
+  } else if(kind === 'closing') {
+    body = '<table class="info"><tr><td class="l" style="width:22%">Date</td><td></td></tr><tr><td class="l">Manager</td><td></td></tr></table>'
+      + '<div class="sec">Drop <small>(to be bundled separately with the evening\'s cash drop)</small></div>'
+      + '<table class="info"><tr><td class="l" style="width:22%">Zelle</td><td></td></tr><tr><td class="l">Cash</td><td></td></tr></table>'
+      + '<div class="gap"></div>'
+      + '<table class="info four"><colgroup><col style="width:22%"><col style="width:28%"><col style="width:22%"><col style="width:28%"></colgroup>'
+      + lblRow('POS Cash','Credit Card') + lblRow('Cash on Hand','Labor') + lblRow('Plus / Minus','Check') + lblRow('Safe Pull','Net') + lblRow('Safe Refill','Safe')
+      + '<tr><td class="l"></td><td></td><td class="l">Lotto Safe</td><td></td></tr></table>'
+      + '<div class="sec">Customer Complaints</div><table class="box">'+rows(3,1,26)+'</table>'
+      + '<div class="sec">Money Issues</div><table class="box">'+rows(3,1,26)+'</table>'
+      + '<div class="sec">Notes / New Staff</div><table class="box">'+rows(3,1,26)+'</table>';
+  } else {
+    var reasons = ['Add hours to check','Take hours out of check','Misc. deduction from check','Misc. addition to check','Forgot to clock in/out','Forgot to clock on/off break','Raise (per Dom/Mike)'];
+    body = '<div class="two"><div class="fld"><span>Store</span><i></i></div><div class="fld"><span>Date of occurrence</span><i></i></div></div>'
+      + '<div class="fld full"><span>Employee name</span><i></i></div>'
+      + '<div class="sec" style="margin-top:26px">Reason</div>'
+      + reasons.map(function(t){ return '<div class="rsn"><b></b><span>'+t+'</span><i></i></div>'; }).join('')
+      + '<div class="sec" style="margin-top:18px">Additional Information</div>'
+      + new Array(9).join('<div class="ln"></div>');
+  }
+  var css = '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}'
+    + '@page{size:letter portrait;margin:0.5in;}html,body{margin:0;padding:0;}'
+    + "body{font-family:'DM Sans',Arial,sans-serif;color:#1a1a1a;font-size:12px;padding:6px 8px;}"
+    + '.hd{display:flex;align-items:center;gap:12px;padding-bottom:9px;border-bottom:3px solid #E31010;margin-bottom:14px;}'
+    + '.hd img{width:52px;height:52px;object-fit:contain;border-radius:6px;}'
+    + ".hd h1{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;font-size:29px;letter-spacing:0.05em;text-transform:uppercase;color:#E31010;margin:0;line-height:1;}"
+    + '.hd .sub{font-size:11px;color:#777;margin-top:3px;}'
+    + ".sec{font-family:'Bebas Neue',Impact,sans-serif;font-size:17px;letter-spacing:0.05em;text-transform:uppercase;color:#E31010;border-bottom:1.5px solid #E31010;margin:16px 0 7px;padding-bottom:2px;}"
+    + ".sec small{font-family:'DM Sans',Arial,sans-serif;font-size:10px;color:#666;letter-spacing:0;margin-left:8px;text-transform:none;}"
+    + 'table{border-collapse:collapse;width:100%;table-layout:fixed;}.gap{height:12px;}'
+    + 'td,th{border:1px solid #555;padding:3px 8px;font-size:12px;height:23px;text-align:left;}'
+    + 'td.l{background:#f3f2ef;font-weight:700;}'
+    + 'table.info td{height:25px;}table.box td{height:26px;}'
+    + 'table.tips th{background:#0a0a0a;color:#fff;font-size:10px;letter-spacing:0.05em;text-transform:uppercase;font-weight:700;border-color:#0a0a0a;height:24px;}'
+    + 'table.tips td{height:22px;}'
+    + '.two{display:flex;gap:20px;}.two .fld{flex:1;}.fld{margin-bottom:16px;}'
+    + '.fld span{display:block;font-size:10px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;}'
+    + '.fld i{display:block;border-bottom:1px solid #333;height:26px;}'
+    + '.rsn{display:flex;align-items:flex-end;gap:10px;height:37px;}'
+    + '.rsn b{width:16px;height:16px;border:1.5px solid #333;border-radius:2px;flex:none;margin-bottom:5px;}'
+    + '.rsn span{font-size:13.5px;flex:none;margin-bottom:3px;}.rsn i{flex:1;border-bottom:1px solid #333;height:1px;margin-bottom:6px;}'
+    + '.ln{border-bottom:1px solid #333;height:35px;}'
+    + '.ft{text-align:right;font-size:9px;color:#aaa;margin-top:12px;}';
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+title+'</title>'
+    + '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">'
+    + '<style>'+css+'</style></head><body>'
+    + '<div class="hd">'+(LOGO ? '<img src="'+LOGO+'">' : '')+'<div><h1>'+title+'</h1><div class="sub">Zazzo\'s Pizza &amp; Catering — Westmont</div></div></div>'
+    + body + '<div class="ft">Printed '+DATE+'</div></body></html>';
+  var iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:816px;height:1056px;border:none;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open(); iframe.contentDocument.write(html); iframe.contentDocument.close();
+  var doc = iframe.contentDocument, fired = false;
+  function go() {
+    if(fired) return; fired = true;
+    iframe.contentWindow.focus(); iframe.contentWindow.print();
+    setTimeout(function(){ if(iframe.parentNode) iframe.parentNode.removeChild(iframe); }, 60000);
+  }
+  var link = doc.querySelector('link');
+  function fontsThenGo() {
+    try { Promise.all([doc.fonts.load('20px "Bebas Neue"'), doc.fonts.load('12px "DM Sans"'), doc.fonts.load('700 12px "DM Sans"')]).then(go, go); } catch(e) { go(); }
+  }
+  if(link) { link.addEventListener('load', fontsThenGo); link.addEventListener('error', go); }
+  setTimeout(go, 3500);   // never wait longer than this for the fonts
+}
 function gatedTileClick(actionFn) {
   if(_appUnlocked) { actionFn(); return; }
   _pendingTileAction = actionFn;
