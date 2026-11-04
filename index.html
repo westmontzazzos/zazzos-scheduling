@@ -4852,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.0</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.1</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -10512,7 +10512,7 @@ function printForm(kind) {
       + new Array(9).join('<div class="ln"></div>');
   }
   var css = '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}'
-    + 'html,body{margin:0;}@media print{body{padding:8mm;}}.pc{display:flex;flex-direction:column;height:9in;overflow:hidden;page-break-inside:avoid;break-inside:avoid;page-break-after:avoid;}'
+    + 'html,body{margin:0;}@media print{body{padding:8mm;}}.pc{display:flex;flex-direction:column;height:8.4in;overflow:hidden;page-break-inside:avoid;break-inside:avoid;page-break-after:avoid;}'
     + "body{font-family:'DM Sans',Arial,sans-serif;color:#1a1a1a;font-size:12px;padding:22px;}"
     + '.hd{display:flex;align-items:center;gap:12px;padding-bottom:9px;border-bottom:3px solid #E31010;margin-bottom:14px;}'
     + '.hd img{width:52px;height:52px;object-fit:contain;border-radius:6px;}'
@@ -10538,7 +10538,7 @@ function printForm(kind) {
     + '<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">'
     + '<style>'+css+'</style></head><body>'
     + '<div class="pc"><div class="hd">'+(LOGO ? '<img src="'+LOGO+'">' : '')+'<div><h1>'+title+'</h1><div class="sub">Zazzo\'s Pizza &amp; Catering — Westmont</div></div></div>'
-    + body + '<div class="ft">Printed '+DATE+'</div></div></body></html>';
+    + body + '</div></body></html>';
   var iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;';
   document.body.appendChild(iframe);
