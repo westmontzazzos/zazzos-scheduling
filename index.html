@@ -4852,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.1</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.2</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -10477,7 +10477,144 @@ var _appUnlocked = false;
 var _pendingTileAction = null;
 
 // ---- Manager Tools > Forms: printable blank forms in the app's look ----
-function printForm(kind) {
+
+// ---- Manager Tools > Forms as real PDFs ----
+// A PDF has a fixed US Letter page, so a form can never spill onto a second page the way a
+// web page can when a phone or browser lays it out differently. Same method the Run Sheets use.
+function loadLogoJpeg() {
+  return new Promise(function(res, rej) {
+    var im = new Image();
+    im.onload = function() {
+      try {
+        var sz = 200, c = document.createElement('canvas'); c.width = sz; c.height = sz;
+        var g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, sz, sz);
+        var r = Math.min(sz / im.width, sz / im.height), w = im.width * r, h = im.height * r;
+        g.drawImage(im, (sz - w) / 2, (sz - h) / 2, w, h);
+        res({w: sz, h: sz, bin: atob(c.toDataURL('image/jpeg', 0.92).split(',')[1])});
+      } catch(e) { rej(e); }
+    };
+    im.onerror = rej; im.src = ZA_LOGO;
+  });
+}
+async function buildFormPDF(kind) {
+  var PW = 612, PH = 792, M = 40, W = PW - 2 * M;
+  var RED = [0.89, 0.06, 0.06], INK = [0.1, 0.1, 0.1], GRAY = [0.45, 0.45, 0.45], LINE = [0.33, 0.33, 0.33];
+  var LBL = [0.953, 0.949, 0.937], BLACK = [0.04, 0.04, 0.04], WHITE = [1, 1, 1];
+  var ops = [];
+  function n(v) { return Math.round(v * 100) / 100; }
+  function Y(y) { return PH - y; }
+  function esc(str) {
+    var o = '';
+    for(var i = 0; i < str.length; i++) {
+      var ch = str.charAt(i), code = str.charCodeAt(i);
+      if(ch === '\\' || ch === '(' || ch === ')') o += '\\' + ch;
+      else if(code === 0x2014) o += String.fromCharCode(0x97);
+      else if(code === 0x2019) o += String.fromCharCode(0x92);
+      else if(code < 32 || code > 126) o += '?';
+      else o += ch;
+    }
+    return o;
+  }
+  function text(x, y, str, size, bold, c) { ops.push(c[0]+' '+c[1]+' '+c[2]+' rg BT /'+(bold ? 'F2' : 'F1')+' '+size+' Tf '+n(x)+' '+n(Y(y))+' Td ('+esc(str)+') Tj ET'); }
+  function fillRect(x, y, w, h, c) { ops.push(c[0]+' '+c[1]+' '+c[2]+' rg '+n(x)+' '+n(Y(y + h))+' '+n(w)+' '+n(h)+' re f'); }
+  function strokeRect(x, y, w, h, c, lw) { ops.push(c[0]+' '+c[1]+' '+c[2]+' RG '+lw+' w '+n(x)+' '+n(Y(y + h))+' '+n(w)+' '+n(h)+' re S'); }
+  function line(x1, y1, x2, y2, c, lw) { ops.push(c[0]+' '+c[1]+' '+c[2]+' RG '+lw+' w '+n(x1)+' '+n(Y(y1))+' m '+n(x2)+' '+n(Y(y2))+' l S'); }
+  var mctx = document.createElement('canvas').getContext('2d');
+  function tw(str, size, bold) { mctx.font = (bold ? 'bold ' : '') + size + 'px Helvetica, Arial, sans-serif'; return mctx.measureText(str).width; }
+  function cell(x, y, w, h, label, filled) {
+    if(filled) fillRect(x, y, w, h, LBL);
+    strokeRect(x, y, w, h, LINE, 0.7);
+    if(label) text(x + 6, y + h / 2 + 3.5, label, 9, true, INK);
+  }
+  function secTitle(y, title, note) {
+    var t = title.toUpperCase();
+    text(M, y, t, 12.5, true, RED);
+    if(note) text(M + tw(t, 12.5, true) + 8, y, note, 7.5, false, GRAY);
+    line(M, y + 5, PW - M, y + 5, RED, 1);
+  }
+  var TITLES = {zelle: 'Zelle Tip Sheet', closing: 'Closing Paperwork', payroll: 'Payroll Adjustment'};
+  var title = TITLES[kind];
+  var img = null;
+  try { img = await loadLogoJpeg(); } catch(e) { img = null; }
+  if(img) ops.push('q 44 0 0 44 '+M+' '+n(Y(36 + 44))+' cm /Im1 Do Q');
+  text(M + 54, 62, title.toUpperCase(), 22, true, RED);
+  text(M + 54, 76, "Zazzo's Pizza & Catering " + String.fromCharCode(0x2014) + " Westmont", 9, false, GRAY);
+  line(M, 90, PW - M, 90, RED, 2.5);
+
+  if(kind === 'zelle') {
+    cell(M, 102, 90, 22, 'Date', true); cell(M + 90, 102, 176, 22, '', false);
+    cell(M + 266, 102, 90, 22, 'Manager', true); cell(M + 356, 102, 176, 22, '', false);
+    var tip = function(yTop, first, rows) {
+      var cw = W / 4, labels = [first, 'TIP', 'PARTY TIP', 'PARTY TIP'];
+      fillRect(M, yTop, W, 18, BLACK);
+      for(var c = 0; c < 4; c++) text(M + c * cw + 6, yTop + 12.5, labels[c].toUpperCase(), 7.5, true, WHITE);
+      for(var r = 0; r < rows; r++) for(var c2 = 0; c2 < 4; c2++) strokeRect(M + c2 * cw, yTop + 18 + r * 19, cw, 19, LINE, 0.6);
+      strokeRect(M, yTop, W, 18 + rows * 19, LINE, 0.9);
+      return yTop + 18 + rows * 19;
+    };
+    var yy = tip(134, 'Server', 15); yy = tip(yy + 14, 'Party Server', 4); tip(yy + 14, 'Bar', 8);
+  } else if(kind === 'closing') {
+    cell(M, 102, 118, 22, 'Date', true); cell(M + 118, 102, W - 118, 22, '', false);
+    cell(M, 124, 118, 22, 'Manager', true); cell(M + 118, 124, W - 118, 22, '', false);
+    secTitle(168, 'Drop', "(to be bundled separately with the evening's cash drop)");
+    cell(M, 180, 118, 22, 'Zelle', true); cell(M + 118, 180, W - 118, 22, '', false);
+    cell(M, 202, 118, 22, 'Cash', true); cell(M + 118, 202, W - 118, 22, '', false);
+    var rowsL = [['POS Cash','Credit Card'],['Cash on Hand','Labor'],['Plus / Minus','Check'],['Safe Pull','Net'],['Safe Refill','Safe'],['','Lotto Safe']];
+    rowsL.forEach(function(r, i) {
+      var y = 236 + i * 24;
+      cell(M, y, 118, 24, r[0], true); cell(M + 118, y, 148, 24, '', false);
+      cell(M + 266, y, 118, 24, r[1], true); cell(M + 384, y, 148, 24, '', false);
+    });
+    var box = function(yTop) { for(var i = 0; i < 3; i++) strokeRect(M, yTop + i * 24, W, 24, LINE, 0.7); strokeRect(M, yTop, W, 72, LINE, 1); };
+    secTitle(404, 'Customer Complaints'); box(414);
+    secTitle(516, 'Money Issues'); box(526);
+    secTitle(628, 'Notes / New Staff'); box(638);
+  } else {
+    text(M, 110, 'STORE', 7, true, GRAY); text(M + 282, 110, 'DATE OF OCCURRENCE', 7, true, GRAY);
+    line(M, 136, M + 250, 136, LINE, 0.8); line(M + 282, 136, PW - M, 136, LINE, 0.8);
+    text(M, 162, 'EMPLOYEE NAME', 7, true, GRAY); line(M, 188, PW - M, 188, LINE, 0.8);
+    secTitle(232, 'Reason');
+    var reasons = ['Add hours to check','Take hours out of check','Misc. deduction from check','Misc. addition to check','Forgot to clock in/out','Forgot to clock on/off break','Raise (per Dom/Mike)'];
+    reasons.forEach(function(t, i) {
+      var y = 272 + i * 34;
+      strokeRect(M, y - 10, 11, 11, INK, 1);
+      text(M + 19, y, t, 10.5, false, INK);
+      line(M + 19 + tw(t, 10.5, false) + 8, y + 1.5, PW - M, y + 1.5, LINE, 0.8);
+    });
+    secTitle(532, 'Additional Information');
+    for(var i = 0; i < 8; i++) line(M, 568 + i * 25, PW - M, 568 + i * 25, LINE, 0.8);
+  }
+
+  var content = ops.join('\n');
+  var res = '/Font << /F1 3 0 R /F2 4 0 R >>' + (img ? ' /XObject << /Im1 5 0 R >>' : '');
+  var objs = [];
+  objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+  objs[2] = '<< /Type /Pages /Kids [6 0 R] /Count 1 >>';
+  objs[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
+  objs[4] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>';
+  objs[5] = img ? ('<< /Type /XObject /Subtype /Image /Width '+img.w+' /Height '+img.h+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+img.bin.length+' >>\nstream\n'+img.bin+'\nendstream') : '<< >>';
+  objs[6] = '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+PW+' '+PH+'] /Resources << '+res+' >> /Contents 7 0 R >>';
+  objs[7] = '<< /Length '+content.length+' >>\nstream\n'+content+'\nendstream';
+  var out = '%PDF-1.4\n', offs = [];
+  for(var k = 1; k <= 7; k++) { offs[k] = out.length; out += k + ' 0 obj\n' + objs[k] + '\nendobj\n'; }
+  var xrefPos = out.length;
+  out += 'xref\n0 8\n0000000000 65535 f \n';
+  for(var k2 = 1; k2 <= 7; k2++) { var z = '0000000000' + offs[k2]; out += z.slice(z.length - 10) + ' 00000 n \n'; }
+  out += 'trailer\n<< /Size 8 /Root 1 0 R >>\nstartxref\n' + xrefPos + '\n%%EOF';
+  var bytes = new Uint8Array(out.length);
+  for(var b = 0; b < out.length; b++) bytes[b] = out.charCodeAt(b) & 255;
+  return new Blob([bytes], {type: 'application/pdf'});
+}
+async function printForm(kind) {
+  var NAMES = {zelle: 'Zazzos-ZelleTipSheet.pdf', closing: 'Zazzos-ClosingPaperwork.pdf', payroll: 'Zazzos-PayrollAdjustment.pdf'};
+  try {
+    var blob = await buildFormPDF(kind);
+    deliverPDF(blob, NAMES[kind]);
+  } catch(e) {
+    printFormHTML_fallback(kind);   // only if the PDF cannot be built for some reason
+  }
+}
+function printFormHTML_fallback(kind) {
   var DATE = new Date().toLocaleDateString('en-US');
   var LOGO = (typeof ZA_LOGO !== 'undefined') ? ZA_LOGO : '';
   var TITLES = {zelle:'Zelle Tip Sheet', closing:'Closing Paperwork', payroll:'Payroll Adjustment'};
