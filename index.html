@@ -4852,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.3</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.4</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -4947,10 +4947,10 @@ document.addEventListener("DOMContentLoaded",function(){
         <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;margin-bottom:4px;">Name</label>
         <input id="addp-name" type="text" autocomplete="off" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:12px;">
         <div id="addp-rate-row">
-          <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;margin-bottom:4px;">Hourly rate ($)</label>
+          <label id="addp-rate-label" style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;margin-bottom:4px;">Hourly rate ($)</label>
           <input id="addp-rate" type="number" inputmode="decimal" step="0.25" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:1px solid #ccc;border-radius:8px;margin-bottom:6px;">
         </div>
-        <div style="font-size:12px;color:#777;margin-bottom:12px;">They're added to the wage roster at this rate, so their hours count in labor cost. Remove them any time in Manage Roster.</div>
+        <div id="addp-new-note" style="font-size:12px;color:#777;margin-bottom:12px;"></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:6px;">
         <button class="btn btn-secondary" style="flex:1;" onclick="closeAddPersonModal()">Cancel</button>
@@ -9024,6 +9024,7 @@ function syncInlineEditsToMemory() {
 // ---- Add a person (or move someone into another section) from Edit mode ----
 var LABOR_DAILY_TARGET = 2800;   // same target the Heat Map uses
 var ADD_PERSON_SECTIONS = [
+  {label:'Managers', arr:'MANAGERS', role:'Manager'},
   {label:'Pizza', arr:'PIZZA', role:'Pizza'}, {label:'Kitchen', arr:'KITCHEN', role:'Kitchen'}, {label:'Prep', arr:'PREP', role:'Prep'},
   {label:'Bus', arr:'BUS', role:'Bus'}, {label:'Dish', arr:'DISH', role:'Dish'},
   {label:'Servers', arr:'SERVERS', role:'Server'}, {label:'Bartenders', arr:'BARTENDERS', role:'Bartender'},
@@ -9044,21 +9045,56 @@ function addPersonRefreshPeople() {
   var names = {};
   Object.keys(SECTION_ARRAYS).forEach(function(k){ Object.keys(SECTION_ARRAYS[k]).forEach(function(n){ names[n] = 1; }); });
   delete names['Trainee']; delete names['Dispatch'];
-  var list = Object.keys(names).filter(function(n){ return !obj[n]; }).sort(function(a, b){ return a.localeCompare(b); });
+  if(s.role === 'Manager') { names = {}; Object.keys(SALARY_ROSTER).forEach(function(n){ names[n] = 1; }); }   // managers are salaried people
+  var list = Object.keys(names).filter(function(n){ return !obj[n] && n !== 'Trainee'; }).sort(function(a, b){ return a.localeCompare(b); });
   document.getElementById('addp-person').innerHTML = list.length
     ? list.map(function(n){ return '<option value="' + n.replace(/"/g, '&quot;') + '">' + n + '</option>'; }).join('')
     : '<option value="">(everyone is already in ' + s.label + ')</option>';
   document.getElementById('addp-rate-row').style.display = (s.role === 'Driver') ? 'none' : 'block';
+  document.getElementById('addp-rate-label').textContent = (s.role === 'Manager') ? 'Annual salary ($)' : 'Hourly rate ($)';
+  document.getElementById('addp-rate').step = (s.role === 'Manager') ? '1000' : '0.25';
+  document.getElementById('addp-new-note').textContent = (s.role === 'Manager')
+    ? "They're added to the roster as a salaried manager at this salary. Remove them any time in Manage Roster."
+    : "They're added to the wage roster at this rate, so their hours count in labor cost. Remove them any time in Manage Roster.";
 }
 function openAddPersonModal() {
   var sel = document.getElementById('addp-section');
   sel.innerHTML = ADD_PERSON_SECTIONS.map(function(s, i){ return '<option value="' + i + '">' + s.label + '</option>'; }).join('');
-  sel.value = String(currentSchedView === 'foh' ? 5 : (currentSchedView === 'drivers' ? 9 : 0));
+  var _wantLbl = currentSchedView === 'foh' ? 'Servers' : (currentSchedView === 'drivers' ? 'Drivers' : 'Pizza');
+  sel.value = String(ADD_PERSON_SECTIONS.findIndex(function(x){ return x.label === _wantLbl; }));
   document.getElementById('addp-name').value = ''; document.getElementById('addp-rate').value = '';
   setAddPersonMode('roster');
   document.getElementById('add-person-modal').style.display = 'flex';
 }
 function closeAddPersonModal() { document.getElementById('add-person-modal').style.display = 'none'; }
+
+// ---- Remove someone's row from the schedule (Edit mode, the red x by their name) ----
+function delRowBtn(sec, name) {
+  if(!window._schedEditMode || name === TRAINEE_SLOT || name === 'Dispatch') return '';
+  return '<button type="button" class="sched-del-row" data-sec="' + sec + '" data-name="' + String(name).replace(/"/g, '&quot;') + '" onclick="deleteSchedRow(this)" title="Remove from this schedule" style="float:right;margin-left:6px;border:none;background:none;color:#c0392b;font-size:16px;line-height:1;padding:0 2px;cursor:pointer;">\u2715</button>';
+}
+async function deleteSchedRow(btn) {
+  var sec = btn.getAttribute('data-sec'), name = btn.getAttribute('data-name');
+  var obj = SECTION_ARRAYS[sec];
+  if(!obj || !obj[name]) return;
+  syncInlineEditsToMemory();   // keep everything already typed in this edit session
+  var meta = ADD_PERSON_SECTIONS.find(function(x){ return x.arr === sec; });
+  var label = meta ? meta.label : sec;
+  var hasShifts = (obj[name] || []).some(function(d){ return d && (Array.isArray(d) ? (d[0] || d[1]) : String(d).trim() !== ''); });
+  if(!confirm('Remove ' + name + ' from ' + label + ' on this schedule?' + (hasShifts ? '\n\nTheir shifts in ' + label + ' this week are deleted when you Save.' : ''))) return;
+  delete obj[name];
+  // People added through the roster are put back as an empty row every time the app loads, unless they leave the roster too.
+  var add = (typeof CUSTOM_ROSTER !== 'undefined') ? CUSTOM_ROSTER.find(function(p){ return p.name === name && p.id; }) : null;
+  if(add && confirm(name + " was added through the roster, so they'd keep coming back as an empty row.\n\nRemove them from the roster too? Their past pay history is unaffected.")) {
+    try {
+      var r = await fetch(SUPABASE_URL + '/rest/v1/roster_additions?id=eq.' + add.id, {method: 'DELETE', headers: {'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY}});
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      CUSTOM_ROSTER = CUSTOM_ROSTER.filter(function(p){ return p.id !== add.id; });
+      if(add.is_salaried && SALARY_ROSTER[name]) delete SALARY_ROSTER[name];
+    } catch(e) { alert('Removed from the schedule, but could not remove ' + name + ' from the roster: ' + e.message); }
+  }
+  refreshEditView();
+}
 function refreshEditView() {
   renderSchedule();
   var m = document.getElementById('desktop-edit-modal');
@@ -9080,10 +9116,13 @@ async function confirmAddPerson() {
     if(!name) { alert('Enter a name.'); return; }
     var taken = Object.keys(SECTION_ARRAYS).some(function(k){ return Object.keys(SECTION_ARRAYS[k]).some(function(n){ return n.toLowerCase() === name.toLowerCase(); }); });
     if(taken) { alert(name + ' is already on the roster. Switch to "On our roster" and pick them from the list.'); return; }
-    var isDriver = s.role === 'Driver';
-    if(!isDriver && (!rate || rate <= 0)) { alert('Enter an hourly rate so their hours count in labor cost.'); return; }
+    var isDriver = s.role === 'Driver', isMgr = s.role === 'Manager';
+    if(isMgr && (!rate || rate <= 0)) { alert('Enter their annual salary.'); return; }
+    if(!isDriver && !isMgr && (!rate || rate <= 0)) { alert('Enter an hourly rate so their hours count in labor cost.'); return; }
     if(isDriver) rate = 0;
-    var entry = {name: name, is_salaried: false, roles_json: JSON.stringify([s.role]), rate: rate, added_by: getCurrentUser(), added_at: new Date().toISOString()};
+    var entry = isMgr
+      ? {name: name, is_salaried: true, role_label: 'Manager', annual_salary: rate, added_by: getCurrentUser(), added_at: new Date().toISOString()}
+      : {name: name, is_salaried: false, roles_json: JSON.stringify([s.role]), rate: rate, added_by: getCurrentUser(), added_at: new Date().toISOString()};
     if(btn) { btn.disabled = true; btn.textContent = 'Adding...'; }
     try {
       var r = await fetch(SUPABASE_URL + '/rest/v1/roster_additions', {
@@ -9094,6 +9133,7 @@ async function confirmAddPerson() {
       if(!r.ok) throw new Error('HTTP ' + r.status + ': ' + (await r.text()));
       var rows = await r.json();
       CUSTOM_ROSTER.push((rows && rows[0]) || entry);
+      try { mergeCustomSalariedIntoSalaryRoster(); } catch(e) {}   // a new manager's salary counts right away
       try { refreshRoleMap(); } catch(e) {}
       seedCustomRosterIntoSections();
       if(!obj[name]) obj[name] = blank();
@@ -10519,7 +10559,7 @@ function renderSchedule() {
     html+='</tr>';
     schedSort(Object.entries(DRIVERS),'drv')
       .forEach(([name,days])=>{
-        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}</td>`;
+        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}${delRowBtn('DRIVERS',name)}</td>`;
         days.forEach((raw,di)=>{
           if(window._schedEditMode){
             var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="DRIVERS" data-name="${name}" data-di="${di}" value="${getShiftDisplay('DRIVERS', raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;${getOpenerCloserBg(raw)}">`;
@@ -10549,7 +10589,7 @@ function renderSchedule() {
         // removed directly -- only the normal read view hides it.
         if(!window._schedEditMode && !isNameAllowedInSection(name, _secLblMap[l])) return;
         fohAllNames.push(name);
-        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}</td>`;
+        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}${delRowBtn(l,name)}</td>`;
         days.forEach((e,di)=>{
           if(window._schedEditMode){
             var rawVal = getShiftDisplay(l, e);
@@ -10576,7 +10616,7 @@ function renderSchedule() {
         // definition); everyone else follows the same rule as FOH above.
         if(l!=='MANAGERS' && !window._schedEditMode && !isNameAllowedInSection(name, _secLblMapBOH[l])) return;
         bohAllNames.push(name);
-        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}</td>`;
+        html+=`<tr><td>${shortName(name)}${timeOffBadgeHtml(name)}${delRowBtn(l,name)}</td>`;
         days.forEach((raw,di)=>{
           if(window._schedEditMode){
             var inputHtml = `<input class="sched-inline-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-section="${l}" data-name="${name}" data-di="${di}" value="${getShiftDisplay(l, raw)}" onkeydown="scheduleCellKeyNav(event)" style="width:70px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:4px;${getOpenerCloserBg(raw)}">`;
