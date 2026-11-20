@@ -4852,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.4</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.5</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -14432,6 +14432,9 @@ async function checkCrossLocationConflicts(errors, weekStart) {
   } catch(e) { /* Darien check is best-effort -- never block Westmont's own error report over it */ }
 }
 
+// People who never get the "Schedule Errors Detected" pop-up on their own when they open Schedule or Run Sheets
+// (the checks still run; the pop-up just doesn't interrupt them). Names match the sign-in names.
+var NO_AUTO_POPUP_USERS = ['Dom'];
 async function checkScheduleErrors() {
   // Never show anything -- not even silently compute -- before the app is
   // actually unlocked. This function gets triggered from loadAllWeeks(),
@@ -15013,7 +15016,7 @@ async function checkScheduleErrors() {
   window._currentErrorSig = errorSig;
   var _onErrorEligibleTab = (currentTab === 'schedule' || currentTab === 'runsheets');
   var _errorPopupEligible = _onErrorEligibleTab || !window._signInErrorCheckDone;
-  if(totalErrors > 0 && _errorPopupEligible && !window._errorPopupShownForThisVisit && window._dismissedErrorSig !== errorSig) {
+  if(totalErrors > 0 && _errorPopupEligible && !window._errorPopupShownForThisVisit && window._dismissedErrorSig !== errorSig && NO_AUTO_POPUP_USERS.indexOf(getCurrentUser()) === -1) {
     document.getElementById('sched-error-modal').style.display = 'flex';
     window._errorPopupShownForThisVisit = true;
   }
