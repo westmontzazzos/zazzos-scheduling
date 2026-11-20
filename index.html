@@ -4852,7 +4852,7 @@ document.addEventListener("DOMContentLoaded",function(){
     <div style="text-align:center;margin-bottom:14px;">
       <div style="font-family:'Libre Baskerville',Georgia,serif;font-size:40px;font-weight:700;color:#C8102E;line-height:1;touch-action:manipulation;">Z<span onclick="tapZazzosA();" style="cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation;display:inline-block;padding:14px 8px;margin:-14px -8px;">a</span>zzo's</div>
       <div id="home-westmont-tap" onclick="tapWestmontSecret()" style="font-family:Georgia,'Playfair Display',serif;font-size:24px;color:#222;margin-top:2px;cursor:pointer;-webkit-tap-highlight-color:transparent;">Westmont</div>
-      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.5</div>
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#777;letter-spacing:0.1em;text-align:center;">v5.6</div>
     </div>
     <div id="home-tile-grid" class="Home-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:11px;">
       <div class="TCard" onclick="gatedTileClick(function(){showTab('schedule',null);})"><span class="TCard-icon">📅</span><span class="TCard-title">Schedule</span><span class="TCard-sub">Weekly staff schedule</span></div>
@@ -14434,6 +14434,115 @@ async function checkCrossLocationConflicts(errors, weekStart) {
 
 // People who never get the "Schedule Errors Detected" pop-up on their own when they open Schedule or Run Sheets
 // (the checks still run; the pop-up just doesn't interrupt them). Names match the sign-in names.
+
+// ---- Dismissing schedule errors takes accountability ----
+// First time an error is dismissed: nothing extra. From the second dismissal on (while it is still not corrected):
+// a typed reason is required, every time, until the error is corrected. Every dismissal is saved in the Schedule Log.
+var _dismissPending = null, _dismissSyncAt = 0;
+function dismissErrorList() {
+  var cur = window._currentErrors || {BOH: [], FOH: [], Drivers: []};
+  return (cur.BOH || []).concat(cur.FOH || []).concat(cur.Drivers || []);
+}
+function dismissKey(e) { return bypassKey(e.di, e.dept, e.msg); }
+async function fetchDismissEvents() {
+  var r = await fetch(SUPABASE_URL + '/rest/v1/override_log?week_label=eq.' + encodeURIComponent(floaterWeekStart())
+    + '&ack_type=in.(dismissed,dismiss_reset)&select=day_index,dept,msg,ack_type,logged_at&order=logged_at.asc&limit=2000',
+    {headers: {'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY}});
+  if(!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+// how many times each error has been dismissed since it last went away
+function dismissCountsFrom(rows) {
+  var c = {}, orig = {};
+  (rows || []).forEach(function(r) {
+    var k = bypassKey(r.day_index, r.dept, r.msg);
+    if(r.ack_type === 'dismiss_reset') c[k] = 0; else { c[k] = (c[k] || 0) + 1; orig[k] = r; }
+  });
+  return {counts: c, orig: orig};
+}
+async function logDismissals(errs, reason) {
+  var DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var now = new Date().toISOString();
+  var rows = errs.map(function(e) {
+    return {week_label: floaterWeekStart(), day_index: e.di, day_name: DAYS_FULL[e.di] || '', dept: e.dept, msg: e.msg,
+            who: getCurrentUser(), ack_type: 'dismissed', logged_at: now, note: JSON.stringify({reason: reason || ''})};
+  });
+  try {
+    var r = await fetch(SUPABASE_URL + '/rest/v1/override_log', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify(rows)
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+function finishErrorDismiss() {
+  window._dismissedErrorSig = window._currentErrorSig;
+  document.getElementById('sched-error-modal').style.display = 'none';
+  window._overrideUnlocked = false;
+  var m = document.getElementById('dismiss-reason-modal'); if(m) m.style.display = 'none';
+  _dismissPending = null;
+}
+async function requestErrorDismiss() {
+  var errs = dismissErrorList();
+  if(!errs.length) { finishErrorDismiss(); return; }
+  var repeated;
+  try {
+    var counts = dismissCountsFrom(await fetchDismissEvents()).counts;
+    repeated = errs.filter(function(e){ return (counts[dismissKey(e)] || 0) >= 1; });
+  } catch(e) { repeated = errs; }   // could not check the history: be strict and ask for a reason
+  if(!repeated.length) { await logDismissals(errs, ''); finishErrorDismiss(); return; }
+  _dismissPending = {errs: errs, repeated: repeated};
+  var esc = function(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  document.getElementById('dismiss-reason-list').innerHTML = repeated.map(function(e){
+    return '<div style="padding:6px 0;border-bottom:1px solid #eee;"><div style="font-weight:700;color:#c8102e;">' + esc(e.dept) + ' \u2014 ' + esc(e.day || '') + '</div><div>' + esc(e.msg) + '</div></div>';
+  }).join('');
+  document.getElementById('dismiss-reason-text').value = '';
+  document.getElementById('dismiss-reason-err').textContent = '';
+  document.getElementById('dismiss-reason-modal').style.display = 'flex';
+}
+function closeDismissReason() { document.getElementById('dismiss-reason-modal').style.display = 'none'; _dismissPending = null; }
+async function submitDismissReason() {
+  if(!_dismissPending) return;
+  var txt = document.getElementById('dismiss-reason-text').value.trim();
+  var err = document.getElementById('dismiss-reason-err');
+  if(txt.length < 8) { err.textContent = 'Please explain why in a few words (at least 8 characters).'; return; }
+  var btn = document.getElementById('dismiss-reason-go');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  var ok = await logDismissals(_dismissPending.errs, txt);
+  btn.disabled = false; btn.textContent = 'Dismiss with reason';
+  if(!ok) { err.textContent = 'Could not save your reason. Check your connection and try again.'; return; }
+  finishErrorDismiss();
+}
+// An error that has gone away starts over: next time it appears, the first dismissal is free again.
+async function syncDismissalResets(errorsNow) {
+  if(Date.now() - _dismissSyncAt < 90000) return;
+  if(!(allWeeks && allWeeks[currentWeekIdx])) return;   // week not loaded yet: do not mistake "no data" for "fixed"
+  _dismissSyncAt = Date.now();
+  var DAYS_FULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  var res = dismissCountsFrom(await fetchDismissEvents());
+  var present = {};
+  ['BOH','FOH','Drivers'].forEach(function(sec){ (errorsNow[sec] || []).forEach(function(e){ present[dismissKey(e)] = true; }); });
+  var resets = [];
+  Object.keys(res.counts).forEach(function(k) {
+    if(res.counts[k] > 0 && !present[k]) {
+      var o = res.orig[k];
+      resets.push({week_label: floaterWeekStart(), day_index: o.day_index, day_name: DAYS_FULL[o.day_index] || '', dept: o.dept, msg: o.msg,
+                   who: 'SYSTEM', ack_type: 'dismiss_reset', logged_at: new Date().toISOString(), note: JSON.stringify({reason: 'error corrected'})});
+    }
+  });
+  if(resets.length) {
+    fetch(SUPABASE_URL + '/rest/v1/override_log', {method: 'POST',
+      headers: {'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Prefer':'return=minimal'},
+      body: JSON.stringify(resets)}).catch(function(){});
+  }
+}
+function dismissLogText(r) {
+  var reason = '';
+  try { reason = (JSON.parse(r.note || '{}') || {}).reason || ''; } catch(e) {}
+  var esc = function(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
+  return reason ? 'Dismissed \u2014 reason: \u201c' + esc(reason) + '\u201d' : 'Dismissed (first time)';
+}
 var NO_AUTO_POPUP_USERS = ['Dom'];
 async function checkScheduleErrors() {
   // Never show anything -- not even silently compute -- before the app is
@@ -14912,6 +15021,7 @@ async function checkScheduleErrors() {
     errors.Drivers = errors.Drivers.filter(notBypassed);
   }
   var totalErrors = errors.BOH.length + errors.FOH.length + errors.Drivers.length;
+  try { syncDismissalResets(errors).catch(function(){}); } catch(e) {}
 
   // If no errors, close modal if open and return
   if(totalErrors === 0) {
@@ -15720,6 +15830,25 @@ async function saveToSupabase(weekStart, bohData, fohData, drvData, eventData) {
   </div>
 </div>
 <!-- ── SCHEDULE ERROR MODAL ── -->
+<div id="dismiss-reason-modal" style="display:none;position:fixed;inset:0;z-index:10010;background:rgba(0,0,0,0.65);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:#fff;border-radius:14px;max-width:440px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.35);">
+    <div style="background:var(--red);border-radius:14px 14px 0 0;padding:16px 18px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;letter-spacing:0.08em;color:#fff;">WHY NOT FIX IT?</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.88);margin-top:2px;">This was already dismissed and still isn't corrected.</div>
+    </div>
+    <div style="padding:16px 18px;">
+      <div id="dismiss-reason-list" style="font-size:12px;color:#333;margin-bottom:12px;"></div>
+      <label style="display:block;font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#777;margin-bottom:4px;">Your reason</label>
+      <textarea id="dismiss-reason-text" rows="3" oninput="document.getElementById('dismiss-reason-err').textContent=''" placeholder="Why are you dismissing this instead of correcting it?" style="width:100%;box-sizing:border-box;font-size:16px;padding:10px;border:2px solid #e0e0e0;border-radius:8px;font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>
+      <div id="dismiss-reason-err" style="font-size:12px;color:#c8102e;min-height:16px;margin:6px 0;"></div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn btn-secondary" style="flex:1;" onclick="closeDismissReason()">Go back</button>
+        <button id="dismiss-reason-go" class="btn btn-primary" style="flex:1;background:var(--red);" onclick="submitDismissReason()">Dismiss with reason</button>
+      </div>
+      <div style="font-size:11px;color:#999;text-align:center;margin-top:10px;">Your name, the time and your reason are saved in the Schedule Log.</div>
+    </div>
+  </div>
+</div>
 <div id="sched-error-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;padding:16px;">
   <div style="background:#fff;border-radius:14px;max-width:480px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.3);">
     <!-- Header -->
@@ -15736,7 +15865,7 @@ async function saveToSupabase(weekStart, bohData, fohData, drvData, eventData) {
     <div style="padding:12px 18px 16px;border-top:1px solid #eee;">
       <div style="display:flex;gap:10px;margin-bottom:8px;">
         <button onclick="printScheduleErrors();" style="flex:1;padding:11px;background:var(--black);color:#fff;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.06em;cursor:pointer;">🖨 PRINT ERROR REPORT</button>
-        <button onclick="window._dismissedErrorSig=window._currentErrorSig;document.getElementById('sched-error-modal').style.display='none';window._overrideUnlocked=false;" style="flex:1;padding:11px;background:#eee;color:#333;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.06em;cursor:pointer;">DISMISS & CONTINUE</button>
+        <button onclick="requestErrorDismiss()" style="flex:1;padding:11px;background:#eee;color:#333;border:none;border-radius:8px;font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:0.06em;cursor:pointer;">DISMISS & CONTINUE</button>
       </div>
       <div style="font-size:10.5px;color:#999;text-align:center;">Dismiss to keep using the app — you can print this report at any time from the errors button.</div>
     </div>
@@ -16469,7 +16598,8 @@ function showOverrideLog(btn) {
            r.ack_type === 'upload_errors' ? 'Uploaded with errors' :
            r.ack_type === 'bypass_now' ? 'Bypassed for now' :
            r.ack_type === 'copy_week' ? 'Schedule copied' :
-           r.ack_type === 'floater' ? floaterLogText(r, false) :
+           r.ack_type === 'dismissed' ? dismissLogText(r) :
+            r.ack_type === 'floater' ? floaterLogText(r, false) :
            r.ack_type === 'floater_removed' ? floaterLogText(r, true) :
            r.note || r.ack_type || '';
   }
@@ -16481,7 +16611,8 @@ function showOverrideLog(btn) {
            r.ack_type === 'edit' ? '#1a7a3c' :
            r.ack_type === 'upload' ? '#1a7a3c' :
            r.ack_type === 'copy_week' ? '#1a7a3c' :
-           r.ack_type === 'floater' ? '#1a5fb4' :
+           r.ack_type === 'dismissed' ? '#b36b00' :
+            r.ack_type === 'floater' ? '#1a5fb4' :
            r.ack_type === 'upload_errors' ? '#c8102e' :
            r.ack_type === 'uncleared' ? '#888' :
            r.ack_type === 'published' ? '#1a7a3c' : '#c8102e';
@@ -16507,7 +16638,7 @@ function showOverrideLog(btn) {
       headers: {'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
     }).then(function(r){ return r.json(); }).catch(function(){ return []; })
   ]).then(function(results){
-    var overrideRows = results[0] || [];
+    var overrideRows = (results[0] || []).filter(function(r){ return r.ack_type !== 'dismiss_reset'; });
     var domsAckRows = results[1] || [];
     var domsNotesById = {};
     (results[2] || []).forEach(function(n){ domsNotesById[n.id] = n; });
